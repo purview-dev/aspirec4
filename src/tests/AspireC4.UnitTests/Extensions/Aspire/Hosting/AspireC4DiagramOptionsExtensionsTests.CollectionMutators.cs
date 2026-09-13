@@ -11,7 +11,7 @@ public sealed partial class AspireC4DiagramOptionsExtensionsTests
 	{
 		// Arrange
 		var sut = CreateSut();
-		var spec = new LikeC4ElementKindSpec("queue");
+		LikeC4ElementKindSpec spec = new("queue");
 
 		// Act
 		var result = sut.WithElementKindSpec(spec);
@@ -36,8 +36,8 @@ public sealed partial class AspireC4DiagramOptionsExtensionsTests
 	{
 		// Arrange
 		var sut = CreateSut();
-		var s1 = new LikeC4ElementKindSpec("queue");
-		var s2 = new LikeC4ElementKindSpec("topic");
+		LikeC4ElementKindSpec s1 = new("queue");
+		LikeC4ElementKindSpec s2 = new("topic");
 
 		// Act
 		sut.WithElementKindSpec(s1).WithElementKindSpec(s2);

@@ -1,19 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<IsPackable>true</IsPackable>
-		<AssemblyName>AspireC4.Hosting</AssemblyName>
 		<AssemblyTitle>AspireC4 Hosting</AssemblyTitle>
 		<Description>Aspire hosting extension for the AspireC4 plugin, generating a dynamic LikeC4 architecture diagram for your Aspire application.</Description>
 		<COPYRIGHT_YEAR>2026</COPYRIGHT_YEAR>
 		<PackageId>AspireC4.Hosting</PackageId>
 		<Title>AspireC4.Hosting - Aspire LikeC4 Visualisation</Title>
-		<Authors>Purview Constributors</Authors>
+		<Authors>Purview Contributors</Authors>
 		<Copyright>Purview-Dev., $(COPYRIGHT_YEAR) | All rights reserved.</Copyright>
 		<PackageIcon>likec4-logo.png</PackageIcon>
 		<PackageLicenseFile>LICENSE.md</PackageLicenseFile>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<PackageProjectUrl>https://kjl.dev/projects/aspirec4</PackageProjectUrl>
-		<RepositoryUrl>https://github.com/kjldev/aspirec4</RepositoryUrl>
+		<RepositoryUrl>https://github.com/purview-dev/aspirec4</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
 		<PackageTags>aspire;dotnet;aspnetcore;c4;likec4;architecture;diagram;visualisation;visualization;</PackageTags>
 		<IncludeSymbols>true</IncludeSymbols>
@@ -43,7 +41,7 @@
 
 	<ItemGroup>
 		<ProjectReference
-			Include="..\AspireC4.SourceGenerators\AspireC4.SourceGenerators.csproj"
+			Include="..\SourceGenerators\SourceGenerators.csproj"
 			OutputItemType="Analyzer"
 			ReferenceOutputAssembly="false"
 			PrivateAssets="all"

@@ -10,8 +10,8 @@ partial class ModelBuilderTests
 	{
 		// Arrange
 		var api = CreateProjectResource("api");
-		var param = new ParameterResource("db-password", _ => "secret", secret: true);
-		var excludedTypes = new HashSet<Type> { typeof(ParameterResource) };
+		ParameterResource param = new("db-password", _ => "secret", secret: true);
+		HashSet<Type> excludedTypes = [typeof(ParameterResource)];
 
 		// Act
 		var model = ModelBuilder.Build([api, param], excludedResourceTypes: excludedTypes);
@@ -25,8 +25,8 @@ partial class ModelBuilderTests
 	{
 		// Arrange
 		var api = CreateProjectResource("api");
-		var param = new ParameterResource("db-password", _ => "secret", secret: true);
-		var excludedTypes = new HashSet<Type> { typeof(ParameterResource) };
+		ParameterResource param = new("db-password", _ => "secret", secret: true);
+		HashSet<Type> excludedTypes = [typeof(ParameterResource)];
 
 		// Act
 		var model = ModelBuilder.Build([api, param], excludedResourceTypes: excludedTypes);
@@ -42,7 +42,7 @@ partial class ModelBuilderTests
 		// ContainerResource is a base type; ProjectResource is NOT a subclass of ContainerResource.
 		var container = CreateContainerResource("redis");
 		var project = CreateProjectResource("api");
-		var excludedTypes = new HashSet<Type> { typeof(ContainerResource) };
+		HashSet<Type> excludedTypes = [typeof(ContainerResource)];
 
 		// Act
 		var model = ModelBuilder.Build([container, project], excludedResourceTypes: excludedTypes);
@@ -56,7 +56,7 @@ partial class ModelBuilderTests
 	public async Task Build_WithNullExcludedResourceTypes_IncludesParameterResources()
 	{
 		// Arrange
-		var param = new ParameterResource("db-password", _ => "secret", secret: true);
+		ParameterResource param = new("db-password", _ => "secret", secret: true);
 
 		// Act
 		var model = ModelBuilder.Build([param], excludedResourceTypes: null);
@@ -70,8 +70,8 @@ partial class ModelBuilderTests
 	{
 		// Arrange
 		var api = CreateProjectResource("api");
-		var param = new ParameterResource("db-password", _ => "secret", secret: true);
-		var excludedTypes = new HashSet<Type> { typeof(ParameterResource) };
+		ParameterResource param = new("db-password", _ => "secret", secret: true);
+		HashSet<Type> excludedTypes = [typeof(ParameterResource)];
 
 		// Act
 		var names = ModelBuilder.GetVisibleResourceNames([api, param], excludedTypes);
@@ -86,7 +86,7 @@ partial class ModelBuilderTests
 	{
 		// Arrange
 		var api = CreateProjectResource("api");
-		var param = new ParameterResource("db-password", _ => "secret", secret: true);
+		ParameterResource param = new("db-password", _ => "secret", secret: true);
 
 		// Act
 		var names = ModelBuilder.GetVisibleResourceNames([api, param], excludedResourceTypes: null);

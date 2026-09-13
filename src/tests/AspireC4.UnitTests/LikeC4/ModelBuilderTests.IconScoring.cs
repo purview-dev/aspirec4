@@ -15,7 +15,7 @@ partial class ModelBuilderTests
 		// "rabbit mq container resource" → stop ["container","resource"] → queryTokens ["rabbit","mq"].
 		// effectiveQueryLength = 1 (only "rabbit" ≥ MinContainmentLength=3; "mq" is excluded from
 		// the denominator but "rabbit" prefix-matches "rabbitmq" at 0.6/1 = 0.6 → tech:rabbitmq.
-		var resource = new RabbitMQContainerResource("my-queue");
+		RabbitMQContainerResource resource = new("my-queue");
 
 		// Act
 		var model = ModelBuilder.Build([resource]);
@@ -32,7 +32,7 @@ partial class ModelBuilderTests
 		// from "MySQLDatabaseResource" (previously "my sqldatabase resource").
 		// In practice, MySQL resources are named "mysql" or similar — the resource name is the
 		// primary signal and produces an exact match for tech:mysql.
-		var resource = new MySQLDatabaseResource("mysql");
+		MySQLDatabaseResource resource = new("mysql");
 
 		// Act
 		var model = ModelBuilder.Build([resource]);
@@ -49,7 +49,7 @@ partial class ModelBuilderTests
 		// query tokens that score marginally above MinScore for a wrong icon, the clean resource
 		// name candidate scores higher overall and wins.
 		// This resource has a generic type name but a clear resource name "mongodb".
-		var resource = new GenericDatabaseContainerResource("mongodb");
+		GenericDatabaseContainerResource resource = new("mongodb");
 
 		// Act
 		var model = ModelBuilder.Build([resource]);

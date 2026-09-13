@@ -130,14 +130,11 @@ public sealed class AspireC4ResourceExtensionsTests
 	{
 		using var sp = appBuilder.Services.BuildServiceProvider();
 		var annotations = resource.Annotations.OfType<CommandLineArgsCallbackAnnotation>().ToList();
-		var args = new List<object>();
-		var executionContext = new DistributedApplicationExecutionContext(
-			new DistributedApplicationExecutionContextOptions(DistributedApplicationOperation.Run)
-			{
-				ServiceProvider = sp,
-			}
+		List<object> args = [];
+		DistributedApplicationExecutionContext executionContext = new(
+			new DistributedApplicationExecutionContextOptions(DistributedApplicationOperation.Run) { Services = sp }
 		);
-		var context = new CommandLineArgsCallbackContext(args, resource, cancellationToken)
+		CommandLineArgsCallbackContext context = new(args, resource, cancellationToken)
 		{
 			ExecutionContext = executionContext,
 		};

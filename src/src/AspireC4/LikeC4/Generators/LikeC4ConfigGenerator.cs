@@ -46,7 +46,7 @@ public static class LikeC4ConfigGenerator
 	)
 	{
 		ArgumentNullException.ThrowIfNull(imageAliases);
-		var root = new JsonObject { ["$schema"] = "https://likec4.dev/schemas/config.json", ["name"] = name };
+		JsonObject root = new() { ["$schema"] = "https://likec4.dev/schemas/config.json", ["name"] = name };
 
 		if (!string.IsNullOrWhiteSpace(title))
 			root["title"] = title;
@@ -54,7 +54,7 @@ public static class LikeC4ConfigGenerator
 		var paths = includePaths.ToList();
 		if (paths.Count > 0)
 		{
-			var pathArray = new JsonArray();
+			JsonArray pathArray = [];
 			foreach (var p in paths)
 				pathArray.Add(JsonValue.Create(p));
 
@@ -63,7 +63,7 @@ public static class LikeC4ConfigGenerator
 
 		if (imageAliases.Count > 0)
 		{
-			var aliasesObject = new JsonObject();
+			JsonObject aliasesObject = [];
 			foreach (var (key, relativePath) in imageAliases)
 				aliasesObject[key] = relativePath;
 

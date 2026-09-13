@@ -5,7 +5,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\src\AspireC4.TestAppHost\AspireC4.TestAppHost.csproj" />
+		<ProjectReference Include="..\..\src\TestAppHost\TestAppHost.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

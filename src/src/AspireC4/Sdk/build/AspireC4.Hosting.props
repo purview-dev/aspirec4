@@ -1,7 +1,0 @@
-<Project>
-	<!-- Expose MSBuild properties to the AspireC4 source generator. -->
-	<ItemGroup>
-		<CompilerVisibleProperty Include="AspireC4Strict" />
-		<CompilerVisibleProperty Include="DisableAspireC4SourceGenerator" />
-	</ItemGroup>
-</Project>

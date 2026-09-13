@@ -36,7 +36,7 @@ public sealed partial class AspireC4DiagramOptionsExtensionsTests
 	{
 		// Arrange
 		var sut = CreateSut();
-		var spec = new LikeC4RelationshipKindSpec("async");
+		LikeC4RelationshipKindSpec spec = new("async");
 
 		// Act
 		var result = sut.WithRelationshipKindSpec(spec);

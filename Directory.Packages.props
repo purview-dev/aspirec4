@@ -1,30 +1,25 @@
 <Project>
 	<PropertyGroup>
 		<CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
-		<!--
-			Keep compiler-facing Roslyn packages aligned with the minimum supported by
-			Purview.SourceGeneratorFramework. Roslyn 4.13 uses the .NET 8 Immutable baseline,
-			allowing the generator assembly to be referenced by net8.0-net10.0 test projects.
-		-->
-		<RoslynCompilerVersion Condition="'$(RoslynCompilerVersion)' == ''">[4.13.0,)</RoslynCompilerVersion>
-		<RoslynAnalyzersVersion Condition="'$(RoslynAnalyzersVersion)' == ''">[5.6.0,)</RoslynAnalyzersVersion>
-		<TUnitVersion>[1.65.0,)</TUnitVersion>
-		<PurviewSourceGenVersion>[1.0.0-prerelease.21,)</PurviewSourceGenVersion>
+		<RoslynCompilerVersion>5.9.0</RoslynCompilerVersion>
+		<RoslynAnalyzersVersion>5.9.0</RoslynAnalyzersVersion>
+		<TUnitVersion>1.67.0</TUnitVersion>
+		<PurviewSourceGenVersion>1.0.0-prerelease.40</PurviewSourceGenVersion>
+		<AspireVersion>13.5.3</AspireVersion>
 	</PropertyGroup>
 	<ItemGroup>
-		<PackageVersion Include="Aspire.Hosting" Version="[13.4.3,)" />
-		<PackageVersion Include="Aspire.Hosting.AppHost" Version="[13.4.3,)" />
-		<PackageVersion Include="Aspire.Hosting.Testing" Version="[13.4.3,)" />
-		<PackageVersion Include="Aspire.Hosting.JavaScript" Version="[13.4.3,)" />
-		<PackageVersion Include="Aspire.Hosting.Azure.PostgreSQL" Version="[13.4.3,)" />
-		<PackageVersion Include="Aspire.Hosting.Azure.Redis" Version="[13.4.3,)" />
-		<PackageVersion Include="Microsoft.SourceLink.GitHub" Version="[10.0.300,)" />
+		<PackageVersion Include="Aspire.Hosting" Version="$(AspireVersion)" />
+		<PackageVersion Include="Aspire.Hosting.Testing" Version="$(AspireVersion)" />
+		<PackageVersion Include="Aspire.Hosting.JavaScript" Version="$(AspireVersion)" />
+		<PackageVersion Include="Aspire.Hosting.Azure.PostgreSQL" Version="$(AspireVersion)" />
+		<PackageVersion Include="Aspire.Hosting.Azure.Redis" Version="$(AspireVersion)" />
+		<PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.401" />
 		<PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="$(RoslynCompilerVersion)" />
 		<PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="$(RoslynAnalyzersVersion)" />
 		<PackageVersion Include="Purview.SourceGeneratorFramework" Version="$(PurviewSourceGenVersion)" />
 		<PackageVersion Include="Purview.SourceGeneratorFramework.Testing.TUnit" Version="$(PurviewSourceGenVersion)" />
-		<PackageVersion Include="Purview.Telemetry.SourceGenerator" Version="[4.4.0,)" />
-		<PackageVersion Include="Bogus" Version="[35.6.5,)" />
+		<PackageVersion Include="Purview.Telemetry.SourceGenerator" Version="5.0.0-prerelease.7" />
+		<PackageVersion Include="Bogus" Version="35.6.5" />
 		<PackageVersion Include="TUnit" Version="$(TUnitVersion)" />
 		<PackageVersion Include="TUnit.Aspire" Version="$(TUnitVersion)" />
 		<PackageVersion Include="TUnit.Core" Version="$(TUnitVersion)" />

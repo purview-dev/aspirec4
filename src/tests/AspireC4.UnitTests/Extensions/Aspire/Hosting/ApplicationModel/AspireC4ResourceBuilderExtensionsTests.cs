@@ -1,6 +1,6 @@
 using Aspire.Hosting.AspireC4.LikeC4.Annotations;
 
-namespace Aspire.Hosting;
+namespace Aspire.Hosting.ApplicationModel;
 
 public sealed class AspireC4ResourceBuilderExtensionsTests
 {

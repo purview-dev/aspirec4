@@ -26,9 +26,12 @@ sealed partial class AspireC4LifecycleHook
 		var outputDir = Path.GetFullPath(opts.OutputDirectory);
 
 		// Collect all host-side directory paths that must be visible inside the container.
-		var allPaths = new List<string> { outputDir };
-		allPaths.AddRange(opts.AdditionalDSLFolders.Select(Path.GetFullPath));
-		allPaths.AddRange(opts.ImageAliases.Values.Select(Path.GetFullPath));
+		List<string> allPaths =
+		[
+			outputDir,
+			.. opts.AdditionalDSLFolders.Select(Path.GetFullPath),
+			.. opts.ImageAliases.Values.Select(Path.GetFullPath),
+		];
 
 		var commonAncestor = ComputeCommonAncestor(allPaths);
 		var normalizedSource = commonAncestor;

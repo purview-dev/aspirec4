@@ -3,7 +3,7 @@ namespace Aspire.Hosting.AspireC4.LikeC4.Runtime;
 public sealed class LatestVersionResolverTests
 {
 	[Test]
-	public async Task TryExtractVersion_FullCliOutput_ExtractsVersionToken()
+	public async Task TryExtractVersion_FullCLIOutput_ExtractsVersionToken()
 	{
 		// Arrange
 		const string cliOutput = "@likec4/cli/1.57.0 linux-x64 node-v22.14.0";

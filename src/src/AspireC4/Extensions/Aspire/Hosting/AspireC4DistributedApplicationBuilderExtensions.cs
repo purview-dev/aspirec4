@@ -172,7 +172,7 @@ public static class AspireC4DistributedApplicationBuilderExtensions
 				opts =>
 				{
 					opts.DisplayText = "View LikeC4 Diagram";
-					opts.DisplayOrder = 0;
+					//opts.DisplayOrder = 0;
 					opts.DisplayLocation = UrlDisplayLocation.SummaryAndDetails;
 					opts.Url = string.IsNullOrWhiteSpace(defaultViewId) ? "/" : $"/view/{defaultViewId}";
 				}
@@ -183,12 +183,10 @@ public static class AspireC4DistributedApplicationBuilderExtensions
 			// from AspireC4DiagramOptions so it respects configuration overrides at runtime.
 			.WithArgs(async context =>
 			{
-				var wsOpts = context.ExecutionContext.ServiceProvider.GetRequiredService<
+				var wsOpts = context.ExecutionContext.Services.GetRequiredService<
 					IOptions<ContainerWorkspaceOptions>
 				>();
-				var diagOpts = context.ExecutionContext.ServiceProvider.GetRequiredService<
-					IOptions<AspireC4DiagramOptions>
-				>();
+				var diagOpts = context.ExecutionContext.Services.GetRequiredService<IOptions<AspireC4DiagramOptions>>();
 
 				context.Args.Add("start");
 				context.Args.Add(wsOpts.Value.ContainerServePath);
@@ -247,7 +245,7 @@ public static class AspireC4DistributedApplicationBuilderExtensions
 				opts =>
 				{
 					opts.DisplayText = "LikeC4 HMR Endpoint";
-					opts.DisplayOrder = 1;
+					//opts.DisplayOrder = 1;
 					opts.DisplayLocation = UrlDisplayLocation.DetailsOnly;
 				}
 			);

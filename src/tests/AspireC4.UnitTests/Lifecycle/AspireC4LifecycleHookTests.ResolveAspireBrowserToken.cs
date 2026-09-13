@@ -60,7 +60,7 @@ public sealed partial class AspireC4LifecycleHookTests
 		// Safety default: IncludeAspireTokenInDashboardLinks must be false out of the box
 		// so that tokens are never accidentally embedded in generated diagrams.
 		var config = CreateConfig("should-not-appear");
-		var options = new AspireC4DiagramOptions();
+		AspireC4DiagramOptions options = new();
 
 		// Act
 		var result = AspireC4LifecycleHook.ResolveAspireBrowserToken(config, options);

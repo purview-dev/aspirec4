@@ -3,24 +3,24 @@
 	"version": "1.0.0",
 	"private": true,
 	"type": "module",
+	"packageManager": "bun@1.4.2",
 	"engines": {
-		"node": "^20.19.0 || ^22.13.0 || >=24"
+		"bun": ">=1.2"
 	},
 	"scripts": {
 		"dev": "aspire run",
-		"build": "tsx",
-		"lint": "biome lint apphost.mts"
+		"format": "oxfmt --check apphost.mts",
+		"format:fix": "oxfmt --write apphost.mts",
+		"lint": "oxlint apphost.mts"
 	},
 	"dependencies": {
-		"vscode-jsonrpc": "^8.2.0"
+		"vscode-jsonrpc": "^9.0.2"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "2.4.16",
-		"@types/node": "^22.0.0",
-		"nodemon": "^3.1.14",
-		"tsx": "^4.21.0",
-		"typescript": "^5.9.3",
-		"typescript-eslint": "^8.57.1"
+		"@types/node": "^26.5.1",
+		"oxfmt": "0.67.0",
+		"oxlint": "1.82.0",
+		"typescript": "^7.0.2"
 	},
 	"allowScripts": {
 		"esbuild@0.28.0": true

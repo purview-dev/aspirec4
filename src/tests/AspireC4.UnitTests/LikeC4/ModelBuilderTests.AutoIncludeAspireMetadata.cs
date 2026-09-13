@@ -85,7 +85,7 @@ partial class ModelBuilderTests
 	{
 		// Arrange
 		var resource = CreateProjectResource("api");
-		var endpoint = new EndpointAnnotation(System.Net.Sockets.ProtocolType.Tcp, uriScheme: "http", name: "http");
+		EndpointAnnotation endpoint = new(System.Net.Sockets.ProtocolType.Tcp, uriScheme: "http", name: "http");
 		endpoint.AllocatedEndpoint = new AllocatedEndpoint(endpoint, "localhost", 5000);
 		resource.Annotations.Add(endpoint);
 
@@ -120,7 +120,7 @@ partial class ModelBuilderTests
 	{
 		// Arrange
 		var resource = CreateProjectResource("api");
-		var endpoint = new EndpointAnnotation(System.Net.Sockets.ProtocolType.Tcp, uriScheme: "grpc", name: "grpc");
+		EndpointAnnotation endpoint = new(System.Net.Sockets.ProtocolType.Tcp, uriScheme: "grpc", name: "grpc");
 		endpoint.AllocatedEndpoint = new AllocatedEndpoint(endpoint, "localhost", 5001);
 		resource.Annotations.Add(endpoint);
 
@@ -153,7 +153,7 @@ partial class ModelBuilderTests
 	{
 		// Arrange
 		var resource = CreateProjectResource("api");
-		var endpoint = new EndpointAnnotation(System.Net.Sockets.ProtocolType.Tcp, uriScheme: "http", name: "http");
+		EndpointAnnotation endpoint = new(System.Net.Sockets.ProtocolType.Tcp, uriScheme: "http", name: "http");
 		endpoint.AllocatedEndpoint = new AllocatedEndpoint(endpoint, "localhost", 5000);
 		resource.Annotations.Add(endpoint);
 		resource.Annotations.Add(

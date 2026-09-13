@@ -11,8 +11,8 @@ partial class ModelBuilderTests
 	{
 		// Arrange
 		var resource = CreateContainerResource("api");
-		var states = new Dictionary<string, string?> { { "api", KnownResourceStates.Running } };
-		var stateTagMap = new Dictionary<string, string?> { [KnownResourceStates.Running] = "custom-running-tag" };
+		Dictionary<string, string?> states = new() { { "api", KnownResourceStates.Running } };
+		Dictionary<string, string?> stateTagMap = new() { [KnownResourceStates.Running] = "custom-running-tag" };
 
 		// Act
 		var model = ModelBuilder.Build([resource], resourceStates: states, stateTagMap: stateTagMap);
@@ -27,8 +27,8 @@ partial class ModelBuilderTests
 	{
 		// Arrange
 		var resource = CreateContainerResource("api");
-		var states = new Dictionary<string, string?> { { "api", KnownResourceStates.Running } };
-		var stateTagMap = new Dictionary<string, string?> { [KnownResourceStates.Running] = null };
+		Dictionary<string, string?> states = new() { { "api", KnownResourceStates.Running } };
+		Dictionary<string, string?> stateTagMap = new() { [KnownResourceStates.Running] = null };
 
 		// Act
 		var model = ModelBuilder.Build([resource], resourceStates: states, stateTagMap: stateTagMap);
@@ -43,7 +43,7 @@ partial class ModelBuilderTests
 	{
 		// Arrange
 		var resource = CreateContainerResource("api");
-		var states = new Dictionary<string, string?> { { "api", KnownResourceStates.Running } };
+		Dictionary<string, string?> states = new() { { "api", KnownResourceStates.Running } };
 
 		// Act
 		var model = ModelBuilder.Build([resource], resourceStates: states, stateTagMap: null);
@@ -60,8 +60,8 @@ partial class ModelBuilderTests
 		var resource = CreateContainerResource("api");
 		resource.Annotations.Add(new LikeC4NodeDetailsAnnotation("API").WithTag("backend").WithTag("v2"));
 
-		var states = new Dictionary<string, string?> { { "api", KnownResourceStates.FailedToStart } };
-		var stateTagMap = new Dictionary<string, string?> { [KnownResourceStates.FailedToStart] = "custom-error-tag" };
+		Dictionary<string, string?> states = new() { { "api", KnownResourceStates.FailedToStart } };
+		Dictionary<string, string?> stateTagMap = new() { [KnownResourceStates.FailedToStart] = "custom-error-tag" };
 
 		// Act
 		var model = ModelBuilder.Build([resource], resourceStates: states, stateTagMap: stateTagMap);
@@ -78,8 +78,8 @@ partial class ModelBuilderTests
 	{
 		// Arrange
 		var resource = CreateContainerResource("api");
-		var states = new Dictionary<string, string?> { { "api", KnownResourceStates.RuntimeUnhealthy } };
-		var stateTagMap = new Dictionary<string, string?>
+		Dictionary<string, string?> states = new() { { "api", KnownResourceStates.RuntimeUnhealthy } };
+		Dictionary<string, string?> stateTagMap = new()
 		{
 			[KnownResourceStates.RuntimeUnhealthy] = "my-custom-failed-tag",
 		};

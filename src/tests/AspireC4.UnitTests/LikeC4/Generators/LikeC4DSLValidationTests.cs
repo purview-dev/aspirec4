@@ -58,7 +58,7 @@ public sealed class LikeC4DSLValidationTests
 	{
 		await File.WriteAllTextAsync(_dslFile, dsl);
 
-		var filesToValidate = new List<string> { _dslFile };
+		List<string> filesToValidate = [_dslFile];
 
 		if (additionalFiles != null)
 		{
@@ -88,7 +88,7 @@ public sealed class LikeC4DSLValidationTests
 			shellArgs = $"-c \"npx --yes likec4 validate --json --no-layout{useDotFlag} {fileArgs} '{_tempDir}'\"";
 		}
 
-		using var process = new Process
+		using Process process = new()
 		{
 			StartInfo = new ProcessStartInfo
 			{
@@ -164,7 +164,7 @@ public sealed class LikeC4DSLValidationTests
 	public async Task Generate_SingleElement_ProducesNoValidationErrors(CancellationToken cancellationToken)
 	{
 		// Arrange
-		var model = new LikeC4Model
+		LikeC4Model model = new()
 		{
 			Elements =
 			[
@@ -195,7 +195,7 @@ public sealed class LikeC4DSLValidationTests
 	)
 	{
 		// Arrange
-		var model = new LikeC4Model
+		LikeC4Model model = new()
 		{
 			Elements =
 			[
@@ -238,7 +238,7 @@ public sealed class LikeC4DSLValidationTests
 	)
 	{
 		// Arrange
-		var model = new LikeC4Model
+		LikeC4Model model = new()
 		{
 			Elements =
 			[
@@ -272,7 +272,7 @@ public sealed class LikeC4DSLValidationTests
 	)
 	{
 		// Arrange
-		var model = new LikeC4Model
+		LikeC4Model model = new()
 		{
 			Elements =
 			[
@@ -314,7 +314,7 @@ public sealed class LikeC4DSLValidationTests
 	public async Task Generate_NestedElements_ProducesNoValidationErrors(CancellationToken cancellationToken)
 	{
 		// Arrange
-		var model = new LikeC4Model
+		LikeC4Model model = new()
 		{
 			Elements =
 			[
@@ -365,7 +365,7 @@ public sealed class LikeC4DSLValidationTests
 	)
 	{
 		// Arrange
-		var options = new AspireC4DiagramOptions
+		AspireC4DiagramOptions options = new()
 		{
 			Title = "Styled Architecture",
 			OutputDirectory = "./likec4",
@@ -384,7 +384,7 @@ public sealed class LikeC4DSLValidationTests
 				},
 			],
 		};
-		var model = new LikeC4Model
+		LikeC4Model model = new()
 		{
 			Elements =
 			[
@@ -426,7 +426,7 @@ public sealed class LikeC4DSLValidationTests
 					}
 			)
 			.ToList();
-		var model = new LikeC4Model { Elements = elements, Relationships = [] };
+		LikeC4Model model = new() { Elements = elements, Relationships = [] };
 
 		// Act
 		var dsl = LikeC4DSLGenerator.Generate(model, DefaultOptions);
@@ -443,7 +443,7 @@ public sealed class LikeC4DSLValidationTests
 	)
 	{
 		// Arrange
-		var model = new LikeC4Model
+		LikeC4Model model = new()
 		{
 			Elements =
 			[

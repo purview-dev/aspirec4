@@ -3,28 +3,32 @@
 	"version": "1.0.0",
 	"description": "Sample Node.js service that connects to Redis and PostgreSQL via Aspire.",
 	"main": "index.ts",
+	"packageManager": "bun@1.4.2",
 	"scripts": {
-		"start": "node --import ./instrumentation.ts index.ts"
+		"start": "bun --import ./instrumentation.ts index.ts"
 	},
 	"keywords": [],
 	"author": "",
 	"license": "ISC",
 	"type": "module",
+	"engines": {
+		"bun": ">=1.2"
+	},
 	"dependencies": {
-		"@opentelemetry/api": "^1.9.0",
-		"@opentelemetry/auto-instrumentations-node": "^0.75.0",
-		"@opentelemetry/exporter-metrics-otlp-http": "^0.200.0",
-		"@opentelemetry/exporter-trace-otlp-http": "^0.200.0",
-		"@opentelemetry/sdk-metrics": "^2.0.0",
-		"@opentelemetry/sdk-node": "^0.217.0",
-		"express": "^5.1.0",
-		"ioredis": "^5.4.2",
-		"pg": "^8.13.3"
+		"@opentelemetry/api": "^1.9.1",
+		"@opentelemetry/auto-instrumentations-node": "^0.80.0",
+		"@opentelemetry/exporter-metrics-otlp-http": "^0.222.0",
+		"@opentelemetry/exporter-trace-otlp-http": "^0.222.0",
+		"@opentelemetry/sdk-metrics": "^2.11.0",
+		"@opentelemetry/sdk-node": "^0.222.0",
+		"express": "^5.2.1",
+		"ioredis": "^6.0.0",
+		"pg": "^8.23.0"
 	},
 	"devDependencies": {
 		"@types/express": "^5.0.6",
-		"@types/node": "^22.15.17",
-		"@types/pg": "^8.11.11",
-		"typescript": "^5.9.3"
+		"@types/node": "^26.5.1",
+		"@types/pg": "^8.23.1",
+		"typescript": "^7.0.2"
 	}
 }

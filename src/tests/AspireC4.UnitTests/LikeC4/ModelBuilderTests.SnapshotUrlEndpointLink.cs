@@ -13,11 +13,11 @@ partial class ModelBuilderTests
 		// When resourceSnapshotUrls are provided they should take precedence over
 		// EndpointAnnotation.AllocatedEndpoint (which may reflect an internal/wrong port).
 		var resource = CreateProjectResource("api");
-		var endpoint = new EndpointAnnotation(System.Net.Sockets.ProtocolType.Tcp, uriScheme: "http", name: "http");
+		EndpointAnnotation endpoint = new(System.Net.Sockets.ProtocolType.Tcp, uriScheme: "http", name: "http");
 		endpoint.AllocatedEndpoint = new AllocatedEndpoint(endpoint, "localhost", 9999); // wrong port
 		resource.Annotations.Add(endpoint);
 
-		var snapshotUrls = new Dictionary<string, IReadOnlyList<(string Url, string Name)>>(
+		Dictionary<string, IReadOnlyList<(string Url, string Name)>> snapshotUrls = new(
 			StringComparer.OrdinalIgnoreCase
 		)
 		{
@@ -40,7 +40,7 @@ partial class ModelBuilderTests
 		// Arrange
 		var resource = CreateProjectResource("api");
 
-		var snapshotUrls = new Dictionary<string, IReadOnlyList<(string Url, string Name)>>(
+		Dictionary<string, IReadOnlyList<(string Url, string Name)>> snapshotUrls = new(
 			StringComparer.OrdinalIgnoreCase
 		)
 		{
@@ -62,7 +62,7 @@ partial class ModelBuilderTests
 		// Arrange
 		// No snapshot URLs → should fall back to EndpointAnnotation as before.
 		var resource = CreateProjectResource("api");
-		var endpoint = new EndpointAnnotation(System.Net.Sockets.ProtocolType.Tcp, uriScheme: "http", name: "http");
+		EndpointAnnotation endpoint = new(System.Net.Sockets.ProtocolType.Tcp, uriScheme: "http", name: "http");
 		endpoint.AllocatedEndpoint = new AllocatedEndpoint(endpoint, "localhost", 5000);
 		resource.Annotations.Add(endpoint);
 
@@ -82,7 +82,7 @@ partial class ModelBuilderTests
 		var resource = CreateProjectResource("api");
 		resource.Annotations.Add(new LikeC4NodeDetailsAnnotation("API").WithLink("http://localhost:5000", "My link"));
 
-		var snapshotUrls = new Dictionary<string, IReadOnlyList<(string Url, string Name)>>(
+		Dictionary<string, IReadOnlyList<(string Url, string Name)>> snapshotUrls = new(
 			StringComparer.OrdinalIgnoreCase
 		)
 		{

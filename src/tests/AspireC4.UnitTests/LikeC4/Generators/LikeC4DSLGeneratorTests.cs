@@ -1028,7 +1028,7 @@ public sealed partial class LikeC4DSLGeneratorTests
 	public async Task Generate_CustomGeneratedViewId_UsesCustomId()
 	{
 		// Arrange
-		var opts = new AspireC4DiagramOptions
+		AspireC4DiagramOptions opts = new()
 		{
 			Title = DefaultOptions.Title,
 			OutputDirectory = DefaultOptions.OutputDirectory,
@@ -1048,14 +1048,14 @@ public sealed partial class LikeC4DSLGeneratorTests
 	public async Task Generate_NullOrWhitespaceGeneratedViewId_FallsBackToIndex()
 	{
 		// Arrange
-		var optsNull = new AspireC4DiagramOptions
+		AspireC4DiagramOptions optsNull = new()
 		{
 			Title = DefaultOptions.Title,
 			OutputDirectory = DefaultOptions.OutputDirectory,
 			FileName = DefaultOptions.FileName,
 			GeneratedViewId = null,
 		};
-		var optsEmpty = new AspireC4DiagramOptions
+		AspireC4DiagramOptions optsEmpty = new()
 		{
 			Title = DefaultOptions.Title,
 			OutputDirectory = DefaultOptions.OutputDirectory,
@@ -1076,7 +1076,7 @@ public sealed partial class LikeC4DSLGeneratorTests
 	public async Task DefaultViewId_DefaultsToIndex()
 	{
 		// Arrange
-		var opts = new AspireC4DiagramOptions();
+		AspireC4DiagramOptions opts = new();
 
 		// Act
 
@@ -1088,7 +1088,7 @@ public sealed partial class LikeC4DSLGeneratorTests
 	public async Task DefaultViewId_WhenNull_IsNull()
 	{
 		// Arrange
-		var opts = new AspireC4DiagramOptions { DefaultViewId = null };
+		AspireC4DiagramOptions opts = new() { DefaultViewId = null };
 
 		// Act
 
@@ -1100,7 +1100,7 @@ public sealed partial class LikeC4DSLGeneratorTests
 	public async Task DefaultViewId_WhenCustomValue_ReturnsCustomValue()
 	{
 		// Arrange
-		var opts = new AspireC4DiagramOptions { DefaultViewId = "context" };
+		AspireC4DiagramOptions opts = new() { DefaultViewId = "context" };
 
 		// Act
 
@@ -1416,7 +1416,7 @@ public sealed partial class LikeC4DSLGeneratorTests
 			Relationships = [],
 		};
 
-		var opts = new AspireC4DiagramOptions
+		AspireC4DiagramOptions opts = new()
 		{
 			Title = DefaultOptions.Title,
 			OutputDirectory = DefaultOptions.OutputDirectory,
@@ -1482,7 +1482,7 @@ public sealed partial class LikeC4DSLGeneratorTests
 	public async Task Generate_IncludeDefaultStateStyles_False_EmptyModel_NoStateTagsInSpecification()
 	{
 		// Arrange
-		var opts = new AspireC4DiagramOptions
+		AspireC4DiagramOptions opts = new()
 		{
 			Title = DefaultOptions.Title,
 			OutputDirectory = DefaultOptions.OutputDirectory,

@@ -1,24 +1,24 @@
 {
-	"appHost": {
-		"path": "apphost.mts",
-		"language": "typescript/nodejs"
-	},
-	"sdk": {
-		"version": "13.4.3"
-	},
-	"profiles": {
-		"https": {
-			"applicationUrl": "https://localhost:17084;http://localhost:15085",
-			"environmentVariables": {
-				"ASPIRE_DASHBOARD_OTLP_ENDPOINT_URL": "https://localhost:21026",
-				"ASPIRE_RESOURCE_SERVICE_ENDPOINT_URL": "https://localhost:22162"
-			}
-		}
-	},
-	"packages": {
-		"Aspire.Hosting.Azure.PostgreSQL": "13.4.3",
-		"Aspire.Hosting.Azure.Redis": "13.4.3",
-		"Aspire.Hosting.JavaScript": "13.4.3",
-		"AspireC4.Hosting": "../../src/src/AspireC4/AspireC4.csproj"
-	}
+  "appHost": {
+    "path": "apphost.mts",
+    "language": "typescript/nodejs"
+  },
+  "sdk": {
+    "version": "13.5.3"
+  },
+  "profiles": {
+    "https": {
+      "applicationUrl": "https://localhost:17084;http://localhost:15085",
+      "environmentVariables": {
+        "ASPIRE_DASHBOARD_OTLP_ENDPOINT_URL": "https://localhost:21026",
+        "ASPIRE_RESOURCE_SERVICE_ENDPOINT_URL": "https://localhost:22162"
+      }
+    }
+  },
+  "packages": {
+    "Aspire.Hosting.Azure.PostgreSQL": "13.5.3",
+    "Aspire.Hosting.Azure.Redis": "13.5.3",
+    "Aspire.Hosting.JavaScript": "13.5.3",
+    "AspireC4.Hosting": "13.5.3"
+  }
 }

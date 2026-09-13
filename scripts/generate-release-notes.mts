@@ -1,10 +1,10 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 import { execFileSync } from 'node:child_process'
 
 const range = process.argv[2]
 if (!range) {
-  console.error('Usage: node scripts/generate-release-notes.mts <git-range>')
+  console.error('Usage: bun scripts/generate-release-notes.mts <git-range>')
   process.exit(1)
 }
 

@@ -1,1 +1,1 @@
-﻿global using static Aspire.Hosting.TestHelpers;
+global using static Aspire.Hosting.AspireC4.TestHelpers;

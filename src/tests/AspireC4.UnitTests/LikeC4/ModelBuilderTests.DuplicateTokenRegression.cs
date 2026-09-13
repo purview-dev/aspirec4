@@ -13,7 +13,7 @@ partial class ModelBuilderTests
 		// "aspire" + "hosting" + "javascript"→"node" + "node" + "app" + "resource".
 		// After stop-token removal that gave ["node", "node"] — duplicate tokens inflated
 		// the node-sass score above nodejs.  After .Distinct(), query is ["node"] → nodejs wins.
-		var resource = new NodeAppResource("my-node-app");
+		NodeAppResource resource = new("my-node-app");
 
 		// Act
 		var model = ModelBuilder.Build([resource]);
@@ -24,13 +24,13 @@ partial class ModelBuilderTests
 
 	static ProjectResource CreateProjectResource(string name)
 	{
-		var resource = new ProjectResource(name);
+		ProjectResource resource = new(name);
 		return resource;
 	}
 
 	static ContainerResource CreateContainerResource(string name)
 	{
-		var resource = new ContainerResource(name);
+		ContainerResource resource = new(name);
 		return resource;
 	}
 
