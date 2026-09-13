@@ -58,7 +58,7 @@ public sealed partial class ModelBuilderTests
 	public async Task Build_ExecutableResource_MapsToExecutableKind()
 	{
 		// Arrange
-		var resource = new ExecutableResource("worker", "dotnet", ".");
+		ExecutableResource resource = new("worker", "dotnet", ".");
 		resource.Annotations.Add(
 			new ResourceSnapshotAnnotation(new CustomResourceSnapshot { ResourceType = "Executable", Properties = [] })
 		);
@@ -74,7 +74,7 @@ public sealed partial class ModelBuilderTests
 	public async Task Build_ResourceWithConnectionString_MapsToDatabaseKind()
 	{
 		// Arrange
-		var resource = new TestDatabaseResource("db");
+		TestDatabaseResource resource = new("db");
 
 		// Act
 		var model = ModelBuilder.Build([resource]);
@@ -87,7 +87,7 @@ public sealed partial class ModelBuilderTests
 	public async Task Build_UnknownResource_MapsToSystemKind()
 	{
 		// Arrange
-		var resource = new TestSystemResource("ext");
+		TestSystemResource resource = new("ext");
 
 		// Act
 		var model = ModelBuilder.Build([resource]);
@@ -114,7 +114,7 @@ public sealed partial class ModelBuilderTests
 	public async Task Build_HiddenResource_IsSkipped()
 	{
 		// Arrange
-		var resource = new TestSystemResource("hidden");
+		TestSystemResource resource = new("hidden");
 		resource.Annotations.Add(
 			new ResourceSnapshotAnnotation(
 				new CustomResourceSnapshot
@@ -186,7 +186,7 @@ public sealed partial class ModelBuilderTests
 	public async Task Build_AzureResource_InfersBundledAzureIcon()
 	{
 		// Arrange
-		var resource = new TestSystemResource("redis");
+		TestSystemResource resource = new("redis");
 		resource.Annotations.Add(
 			new ResourceSnapshotAnnotation(new CustomResourceSnapshot { ResourceType = "Azure.Redis", Properties = [] })
 		);
@@ -287,7 +287,7 @@ public sealed partial class ModelBuilderTests
 		// Regression: "node-app-installer" → queryTokens were ["node", "installer"] because
 		// "installer" was not a stop token. The 2-token query diluted the score: 0.533 / 2 = 0.267
 		// (below MinScore 0.35). Adding "installer" to QueryStopTokens leaves ["node"] → 0.533 ✓.
-		var resource = new ExecutableResource("node-app-installer", "node", ".");
+		ExecutableResource resource = new("node-app-installer", "node", ".");
 		resource.Annotations.Add(
 			new ResourceSnapshotAnnotation(new CustomResourceSnapshot { ResourceType = "Executable", Properties = [] })
 		);
@@ -310,7 +310,7 @@ public sealed partial class ModelBuilderTests
 		// Fix: the tokeniser now merges adjacent "java"+"script" bigrams into "javascript"
 		// and a TokenAlias redirects "javascript" → "node", scoring tech:nodejs instead.
 		// Using a neutral resource name ("js-tools") so the type-name path is the primary signal.
-		var resource = new JavaScriptInstallerResource("js-tools");
+		JavaScriptInstallerResource resource = new("js-tools");
 		resource.Annotations.Add(
 			new ResourceSnapshotAnnotation(new CustomResourceSnapshot { ResourceType = "Executable", Properties = [] })
 		);
@@ -330,7 +330,7 @@ public sealed partial class ModelBuilderTests
 		// (e.g. "pnpm-installer"), its exact match (score 1.0) correctly beats the generic
 		// type-name inference ("nodejs" at 0.533).  The result is more accurate — a pnpm
 		// installer really should show the pnpm icon.
-		var resource = new JavaScriptInstallerResource("pnpm-installer");
+		JavaScriptInstallerResource resource = new("pnpm-installer");
 		resource.Annotations.Add(
 			new ResourceSnapshotAnnotation(new CustomResourceSnapshot { ResourceType = "Executable", Properties = [] })
 		);
@@ -348,7 +348,7 @@ public sealed partial class ModelBuilderTests
 		// Arrange
 		// Regression guard: the "java"+"script" bigram merge must not affect genuine Java
 		// resources where "java" appears without a following "script" token.
-		var resource = new TestJavaAppResource("java-app");
+		TestJavaAppResource resource = new("java-app");
 		resource.Annotations.Add(
 			new ResourceSnapshotAnnotation(
 				new CustomResourceSnapshot { ResourceType = "JavaApplication", Properties = [] }
@@ -372,7 +372,7 @@ public sealed partial class ModelBuilderTests
 		var visibleContainer = CreateContainerResource("azure-postgres");
 		visibleContainer.Annotations.Add(new ContainerImageAnnotation { Image = "library/postgres" });
 
-		var hiddenAzureResource = new AzurePostgresFlexibleServerResource("azure-postgres");
+		AzurePostgresFlexibleServerResource hiddenAzureResource = new("azure-postgres");
 		hiddenAzureResource.Annotations.Add(
 			new ResourceSnapshotAnnotation(
 				new CustomResourceSnapshot
@@ -402,7 +402,7 @@ public sealed partial class ModelBuilderTests
 		var visibleContainer = CreateContainerResource("azure-redis");
 		visibleContainer.Annotations.Add(new ContainerImageAnnotation { Image = "library/redis" });
 
-		var hiddenAzureResource = new AzureManagedRedisResource("azure-redis");
+		AzureManagedRedisResource hiddenAzureResource = new("azure-redis");
 		hiddenAzureResource.Annotations.Add(
 			new ResourceSnapshotAnnotation(
 				new CustomResourceSnapshot
@@ -429,7 +429,7 @@ public sealed partial class ModelBuilderTests
 		// Regression: "node-app" was matching "node-sass" because both "node" and "sass" (unmatched)
 		// gave a lower score than the corrected unmatched-token penalty.
 		// After stop tokens strip "app", query is ["node"]; "nodejs" wins at 0.533 over "node-sass" at 0.5.
-		var resource = new ExecutableResource("node-app", "node", ".");
+		ExecutableResource resource = new("node-app", "node", ".");
 
 		// Act
 		var model = ModelBuilder.Build([resource]);
@@ -550,8 +550,8 @@ public sealed partial class ModelBuilderTests
 		}
 
 		var visibleContainer = CreateContainerResource("azure-redis");
-		var hiddenAzureResource = new AzureManagedRedisResource("azure-redis");
-		var snapshot = new ResourceSnapshotAnnotation(
+		AzureManagedRedisResource hiddenAzureResource = new("azure-redis");
+		ResourceSnapshotAnnotation snapshot = new(
 			new CustomResourceSnapshot
 			{
 				ResourceType = "AzureManagedRedisResource",
@@ -573,7 +573,7 @@ public sealed partial class ModelBuilderTests
 	{
 		// Arrange
 		var resource = CreateProjectResource("api");
-		var callOrder = new List<int>();
+		List<int> callOrder = [];
 
 		string? First(IconResolverContext _)
 		{
@@ -621,7 +621,7 @@ public sealed partial class ModelBuilderTests
 	{
 		// Arrange
 		var api = CreateProjectResource("api");
-		var db = new TestDatabaseResource("db");
+		TestDatabaseResource db = new("db");
 		api.Annotations.Add(new ResourceRelationshipAnnotation(db, "Reference"));
 
 		// Act
@@ -639,7 +639,7 @@ public sealed partial class ModelBuilderTests
 	{
 		// Arrange
 		var api = CreateProjectResource("api");
-		var db = new TestDatabaseResource("db");
+		TestDatabaseResource db = new("db");
 		api.Annotations.Add(new ResourceRelationshipAnnotation(db, "WaitFor"));
 
 		// Act
@@ -654,7 +654,7 @@ public sealed partial class ModelBuilderTests
 	{
 		// Arrange
 		var api = CreateProjectResource("api");
-		var db = new TestDatabaseResource("db");
+		TestDatabaseResource db = new("db");
 		api.Annotations.Add(new ResourceRelationshipAnnotation(db, "Reference"));
 		api.Annotations.Add(new ResourceRelationshipAnnotation(db, "Reference"));
 
@@ -670,7 +670,7 @@ public sealed partial class ModelBuilderTests
 	{
 		// Arrange
 		var api = CreateProjectResource("api");
-		var hidden = new TestSystemResource("infra");
+		TestSystemResource hidden = new("infra");
 		hidden.Annotations.Add(new ExcludeFromLikeC4Annotation());
 		api.Annotations.Add(new ResourceRelationshipAnnotation(hidden, "Reference"));
 
@@ -686,7 +686,7 @@ public sealed partial class ModelBuilderTests
 	{
 		// Arrange
 		var parent = CreateContainerResource("postgres");
-		var child = new TestChildResource("postgres-db", parent);
+		TestChildResource child = new("postgres-db", parent);
 
 		// Act
 		var model = ModelBuilder.Build([parent, child]);
@@ -757,7 +757,7 @@ public sealed partial class ModelBuilderTests
 		// Arrange
 		// The WithLikeC4Reference target name is the hidden Azure resource name;
 		// the effective target is the surrogate container — both share the same name "redis".
-		var hiddenAzureRedis = new TestSystemResource("redis");
+		TestSystemResource hiddenAzureRedis = new("redis");
 		hiddenAzureRedis.Annotations.Add(
 			new ResourceSnapshotAnnotation(
 				new CustomResourceSnapshot
@@ -771,7 +771,7 @@ public sealed partial class ModelBuilderTests
 
 		var visibleContainerRedis = CreateContainerResource("redis");
 
-		var nodeApp = new ExecutableResource("node-app", "node", ".");
+		ExecutableResource nodeApp = new("node-app", "node", ".");
 		nodeApp.Annotations.Add(new ResourceRelationshipAnnotation(hiddenAzureRedis, "Reference"));
 		nodeApp.Annotations.Add(
 			new LikeC4RelationshipDetailsAnnotation("redis")
@@ -810,7 +810,7 @@ public sealed partial class ModelBuilderTests
 	{
 		// Arrange
 		var api = CreateProjectResource("api");
-		var queue = new TestSystemResource("queue");
+		TestSystemResource queue = new("queue");
 		api.Annotations.Add(new ResourceRelationshipAnnotation(queue, "Publishes"));
 
 		// Act
@@ -828,7 +828,7 @@ public sealed partial class ModelBuilderTests
 		// - The original Azure resource is hidden (IsHidden = true)
 		// - A container surrogate with the same name "redis" is visible
 		// - The node-app's WithReference points to the hidden Azure resource
-		var hiddenAzureRedis = new TestSystemResource("redis");
+		TestSystemResource hiddenAzureRedis = new("redis");
 		hiddenAzureRedis.Annotations.Add(
 			new ResourceSnapshotAnnotation(
 				new CustomResourceSnapshot
@@ -842,7 +842,7 @@ public sealed partial class ModelBuilderTests
 
 		var visibleContainerRedis = CreateContainerResource("redis");
 
-		var nodeApp = new ExecutableResource("node-app", "node", ".");
+		ExecutableResource nodeApp = new("node-app", "node", ".");
 		nodeApp.Annotations.Add(new ResourceRelationshipAnnotation(hiddenAzureRedis, "Reference"));
 
 		// Act
@@ -860,7 +860,7 @@ public sealed partial class ModelBuilderTests
 		// Arrange
 		// WaitFor relationships to a hidden Azure resource should still be skipped,
 		// not accidentally resolved and included via the surrogate.
-		var hiddenAzureRedis = new TestSystemResource("redis");
+		TestSystemResource hiddenAzureRedis = new("redis");
 		hiddenAzureRedis.Annotations.Add(
 			new ResourceSnapshotAnnotation(
 				new CustomResourceSnapshot
@@ -873,7 +873,7 @@ public sealed partial class ModelBuilderTests
 		);
 		var visibleContainerRedis = CreateContainerResource("redis");
 
-		var nodeApp = new ExecutableResource("node-app", "node", ".");
+		ExecutableResource nodeApp = new("node-app", "node", ".");
 		nodeApp.Annotations.Add(new ResourceRelationshipAnnotation(hiddenAzureRedis, "WaitFor"));
 
 		// Act
@@ -889,7 +889,7 @@ public sealed partial class ModelBuilderTests
 		// Arrange
 		// If the Azure resource is hidden and there is no visible surrogate with the same
 		// name, the relationship should be dropped entirely (not produce a broken edge).
-		var hiddenResource = new TestSystemResource("orphaned-azure-resource");
+		TestSystemResource hiddenResource = new("orphaned-azure-resource");
 		hiddenResource.Annotations.Add(
 			new ResourceSnapshotAnnotation(
 				new CustomResourceSnapshot
@@ -901,7 +901,7 @@ public sealed partial class ModelBuilderTests
 			)
 		);
 
-		var nodeApp = new ExecutableResource("node-app", "node", ".");
+		ExecutableResource nodeApp = new("node-app", "node", ".");
 		nodeApp.Annotations.Add(new ResourceRelationshipAnnotation(hiddenResource, "Reference"));
 
 		// Act
@@ -917,7 +917,7 @@ public sealed partial class ModelBuilderTests
 		// Arrange
 		// Both a WaitFor (hidden) and a Reference (hidden) to the same Azure resource should
 		// produce exactly one relationship to the surrogate (WaitFor is filtered; Reference resolves).
-		var hiddenAzureRedis = new TestSystemResource("redis");
+		TestSystemResource hiddenAzureRedis = new("redis");
 		hiddenAzureRedis.Annotations.Add(
 			new ResourceSnapshotAnnotation(
 				new CustomResourceSnapshot
@@ -930,7 +930,7 @@ public sealed partial class ModelBuilderTests
 		);
 		var visibleContainerRedis = CreateContainerResource("redis");
 
-		var nodeApp = new ExecutableResource("node-app", "node", ".");
+		ExecutableResource nodeApp = new("node-app", "node", ".");
 		nodeApp.Annotations.Add(new ResourceRelationshipAnnotation(hiddenAzureRedis, "Reference"));
 		nodeApp.Annotations.Add(new ResourceRelationshipAnnotation(hiddenAzureRedis, "WaitFor"));
 
@@ -949,7 +949,7 @@ public sealed partial class ModelBuilderTests
 		// Arrange
 		var api = CreateProjectResource("api");
 		var db = CreateContainerResource("db");
-		var states = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+		Dictionary<string, string?> states = new(StringComparer.OrdinalIgnoreCase)
 		{
 			["api"] = KnownResourceStates.Running,
 			["db"] = KnownResourceStates.FailedToStart,
@@ -984,7 +984,7 @@ public sealed partial class ModelBuilderTests
 		// Arrange
 		var api = CreateProjectResource("api");
 		var db = CreateContainerResource("db");
-		var states = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+		Dictionary<string, string?> states = new(StringComparer.OrdinalIgnoreCase)
 		{
 			["api"] = KnownResourceStates.Starting,
 		};
@@ -1003,7 +1003,7 @@ public sealed partial class ModelBuilderTests
 		// Arrange
 		var visible = CreateProjectResource("api");
 
-		var hidden = new TestSystemResource("infra");
+		TestSystemResource hidden = new("infra");
 		hidden.Annotations.Add(
 			new ResourceSnapshotAnnotation(
 				new CustomResourceSnapshot
@@ -1076,7 +1076,7 @@ public sealed partial class ModelBuilderTests
 	{
 		// Arrange
 		var api = CreateProjectResource("api");
-		var queue = new TestSystemResource("queue");
+		TestSystemResource queue = new("queue");
 		api.Annotations.Add(new ResourceRelationshipAnnotation(queue, "Reference"));
 		api.Annotations.Add(new LikeC4RelationshipDetailsAnnotation("queue").WithKind("async"));
 
@@ -1092,7 +1092,7 @@ public sealed partial class ModelBuilderTests
 	{
 		// Arrange
 		var api = CreateProjectResource("api");
-		var queue = new TestSystemResource("queue");
+		TestSystemResource queue = new("queue");
 		api.Annotations.Add(
 			new LikeC4RelationshipDetailsAnnotation("queue")
 				.WithLabel("Publishes")
@@ -1112,7 +1112,7 @@ public sealed partial class ModelBuilderTests
 	{
 		// Arrange
 		var api = CreateProjectResource("api");
-		var db = new TestDatabaseResource("db");
+		TestDatabaseResource db = new("db");
 		api.Annotations.Add(new ResourceRelationshipAnnotation(db, "Reference"));
 
 		// Act
@@ -1126,7 +1126,7 @@ public sealed partial class ModelBuilderTests
 	public async Task Build_AwsLambdaResource_InfersAwsIcon()
 	{
 		// Arrange
-		var resource = new TestSystemResource("fn");
+		TestSystemResource resource = new("fn");
 		resource.Annotations.Add(
 			new ResourceSnapshotAnnotation(new CustomResourceSnapshot { ResourceType = "AWS.Lambda", Properties = [] })
 		);
@@ -1142,7 +1142,7 @@ public sealed partial class ModelBuilderTests
 	public async Task Build_GcpPubSubResource_InfersGcpIcon()
 	{
 		// Arrange
-		var resource = new TestSystemResource("queue");
+		TestSystemResource resource = new("queue");
 		resource.Annotations.Add(
 			new ResourceSnapshotAnnotation(new CustomResourceSnapshot { ResourceType = "GCP.PubSub", Properties = [] })
 		);

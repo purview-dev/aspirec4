@@ -1,4 +1,4 @@
-﻿namespace Aspire.Hosting;
+namespace Aspire.Hosting.AspireC4;
 
 public static class TestHelpers
 {

@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * combine-svgs.mts
  *
@@ -14,9 +14,9 @@
  * never collide between the two embedded variants.
  *
  * Usage:
- *   node scripts/combine-svgs.mts <light.svg> <dark.svg> [output.svg]
+ *   bun scripts/combine-svgs.mts <light.svg> <dark.svg> [output.svg]
  *
- *   node scripts/combine-svgs.mts --light icon-light.svg \
+ *   bun scripts/combine-svgs.mts --light icon-light.svg \
  *                                  --dark  icon-dark.svg  \
  *                                  --out   icon.svg
  *
@@ -47,8 +47,8 @@ function printHelp(): void {
 	console.log(
 		`
 Usage:
-  node scripts/combine-svgs.mts <light.svg> <dark.svg> [output.svg]
-  node scripts/combine-svgs.mts --light <path> --dark <path> [--out <path>]
+  bun scripts/combine-svgs.mts <light.svg> <dark.svg> [output.svg]
+  bun scripts/combine-svgs.mts --light <path> --dark <path> [--out <path>]
 
 Options:
   --light  Path to the light-theme SVG (default: first positional arg)

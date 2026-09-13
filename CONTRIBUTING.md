@@ -23,7 +23,7 @@ Thank you for contributing! This guide covers the tools, conventions, and proces
 | Tool | Purpose |
 |---|---|
 | [.NET SDK](https://dotnet.microsoft.com/download) (version from `global.json`) | Build and test |
-| [Node.js](https://nodejs.org/) (version from `package.json` → `engines.node`) | Repository scripts and commit hooks |
+| [Bun](https://bun.sh/) (version from `package.json` → `packageManager`) | Repository scripts and commit hooks |
 | [just](https://just.systems/man/en/packages.html) | Task runner |
 | [Lefthook](https://github.com/evilmartians/lefthook) | Git hooks |
 | [Docker](https://www.docker.com/) | Integration tests, local diagram viewer |
@@ -31,7 +31,7 @@ Thank you for contributing! This guide covers the tools, conventions, and proces
 After cloning, install all dependencies:
 
 ```sh
-just init         # Node dependencies, NuGet packages, local tools, and Git hooks
+just init         # JS dependencies (Bun), NuGet packages, local tools, and Git hooks
 ```
 
 See [Git hooks — Lefthook](#git-hooks--lefthook) for hook configuration.
@@ -135,7 +135,7 @@ CSharpier runs automatically on every `git commit` via Lefthook. Commits with fo
 Lefthook installs when you run `just init`. To verify it is active:
 
 ```sh
-npx lefthook install
+bunx lefthook install
 ```
 
 If you need to bypass a hook temporarily (e.g., a work-in-progress commit you will amend):

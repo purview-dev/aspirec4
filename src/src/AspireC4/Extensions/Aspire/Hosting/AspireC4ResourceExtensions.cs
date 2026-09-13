@@ -101,9 +101,7 @@ public static class AspireC4ResourceExtensions
 			.ApplicationBuilder.AddResource(localResource)
 			.WithArgs(context =>
 			{
-				var diagOpts = context.ExecutionContext.ServiceProvider.GetRequiredService<
-					IOptions<AspireC4DiagramOptions>
-				>();
+				var diagOpts = context.ExecutionContext.Services.GetRequiredService<IOptions<AspireC4DiagramOptions>>();
 
 				foreach (var arg in baseArgs)
 					context.Args.Add(arg);

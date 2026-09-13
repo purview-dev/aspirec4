@@ -3,19 +3,20 @@
 		<File Path="../.editorconfig" />
 		<File Path="../Directory.Packages.props" />
 		<File Path="../global.json" />
+		<File Path="../nuget.config" />
 		<File Path="../package.json" />
 		<File Path="Directory.Build.props" />
 		<File Path="Directory.Build.targets" />
 	</Folder>
 	<Folder Name="/src/">
-		<Project Path="src/AspireC4.TestAppHost/AspireC4.TestAppHost.csproj" />
-		<Project Path="src\AspireC4.SourceGenerators\AspireC4.SourceGenerators.csproj" />
-		<Project Path="src\AspireC4\AspireC4.csproj" />
+		<Project Path="src/TestAppHost/TestAppHost.csproj" />
+		<Project Path="src/SourceGenerators/SourceGenerators.csproj" />
+		<Project Path="src/AspireC4/AspireC4.csproj" />
 	</Folder>
 	<Folder Name="/tests/">
-		<Project Path="tests/SharedTestingInfra/SharedTestingInfra.csproj" Id="368cac03-d823-4840-82ff-d4834b4cd908" />
-		<Project Path="tests\AspireC4.IntegrationTests\AspireC4.IntegrationTests.csproj" />
-		<Project Path="tests\AspireC4.SourceGenerators.UnitTests\AspireC4.SourceGenerators.UnitTests.csproj" />
-		<Project Path="tests\AspireC4.UnitTests\AspireC4.UnitTests.csproj" />
+		<Project Path="tests/SharedTestingInfra/SharedTestingInfra.csproj" />
+		<Project Path="tests/AspireC4.IntegrationTests/AspireC4.IntegrationTests.csproj" />
+		<Project Path="tests/AspireC4.UnitTests/AspireC4.UnitTests.csproj" />
+		<Project Path="tests/SourceGenerators.UnitTests/SourceGenerators.UnitTests.csproj" />
 	</Folder>
 </Solution>

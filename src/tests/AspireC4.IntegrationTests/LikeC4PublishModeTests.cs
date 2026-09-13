@@ -1,3 +1,5 @@
+using System.Text.Json;
+using Aspire.Hosting.ApplicationModel;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Aspire.Hosting.AspireC4;
@@ -6,88 +8,58 @@ namespace Aspire.Hosting.AspireC4;
 /// Tests the publish-mode code path: the lifecycle hook should generate the .c4 file
 /// but not start the live server.
 /// </summary>
-public sealed class LikeC4PublishModeTests
+[ClassDataSource<Fixtures.TestAppHostFixture>(Shared = SharedType.PerTestSession)]
+public sealed class LikeC4PublishModeTests(Fixtures.TestAppHostFixture fixture)
 {
+	const string AspireC4ServerResourceName =
+		AspireC4DistributedApplicationBuilderExtensions.AspireC4ResourceName
+		+ AspireC4DistributedApplicationBuilderExtensions.AspireC4ServerResourceSuffix;
+
+	/// <summary>
+	/// Skips the current test when no container runtime is available so the suite
+	/// shows "Skipped" rather than "Failed" on developer machines without Docker.
+	/// </summary>
+	[Before(Test)]
+	public void SkipWhenNoContainerRuntime()
+	{
+		if (fixture.SkipReason is not null)
+			Skip.Test(fixture.SkipReason);
+	}
+
 	[Test]
 	public async Task PublishAsync_InPublishMode_GeneratesC4FileWithoutStartingServer(
 		CancellationToken cancellationToken
 	)
 	{
 		// Arrange
-		var outputDir = Path.Combine(Path.GetTempPath(), "likec4-publish-" + Guid.NewGuid().ToString("N")[..8]);
-		var modelOutputDir = Path.Combine(outputDir, "likec4");
-		var appHostProject = GetTestAppHostProjectPath();
-		var modelPath = Path.Combine(modelOutputDir, "publish-model.c4");
+		// (app built by the shared fixture in publish mode)
 
-		var configBuilder = OptionsNameHelper
-			.CreateOptionsBuilder<AspireC4DiagramOptions>()
-			.WithEnvironmentSeperator()
-			.WithProperty(opts => opts.OutputDirectory, modelOutputDir)
-			.WithProperty(opts => opts.FileName, "publish-model")
-			.WithProperty(opts => opts.Title, "Publish Mode Test");
+		// Act
+		var result = await fixture.PublishAsync(cancellationToken);
 
-		try
-		{
-			Directory.CreateDirectory(outputDir);
+		// Assert
+		await Assert.That(result.IsPublishMode).IsTrue();
+		await Assert.That(File.Exists(result.ModelPath)).IsTrue();
+		await Assert.That(File.Exists(result.ManifestPath)).IsTrue();
 
-			System.Diagnostics.ProcessStartInfo startInfo = new()
-			{
-				FileName = "dotnet",
-				Arguments =
-					$"run --project \"{appHostProject}\" -- publish --publisher manifest --output-path \"{outputDir}\"",
-				RedirectStandardOutput = true,
-				RedirectStandardError = true,
-				UseShellExecute = false,
-				CreateNoWindow = true,
-				WorkingDirectory = Path.GetDirectoryName(appHostProject),
-			};
-			configBuilder.Populate(startInfo.Environment);
+		var content = await File.ReadAllTextAsync(result.ModelPath, cancellationToken);
+		await Assert.That(content).Contains("specification {");
+		await Assert.That(content).Contains("model {");
+		await Assert.That(content).Contains("views {");
 
-			startInfo.Environment["Logging__LogLevel__Default"] = "Debug";
+		var manifest = await File.ReadAllTextAsync(result.ManifestPath, cancellationToken);
+		using var doc = JsonDocument.Parse(manifest);
+		await Assert.That(doc.RootElement.ValueKind).IsEqualTo(JsonValueKind.Object);
 
-			// Act
-			using var process = new System.Diagnostics.Process { StartInfo = startInfo };
-			process.Start();
-
-			var standardOutputTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
-			var standardErrorTask = process.StandardError.ReadToEndAsync(cancellationToken);
-
-			await process.WaitForExitAsync(cancellationToken);
-
-			var standardOutput = await standardOutputTask;
-			var standardError = await standardErrorTask;
-			var combinedOutput = standardOutput + Environment.NewLine + standardError;
-
-			// Assert
-			await Assert.That(process.ExitCode).IsEqualTo(0).Because(standardError);
-			await Assert.That(File.Exists(modelPath)).IsTrue();
-			await Assert.That(File.Exists(Path.Combine(outputDir, "aspire-manifest.json"))).IsTrue();
-			await Assert.That(combinedOutput).Contains("PublishMode");
-			await Assert.That(combinedOutput).Contains("Published manifest to:");
-			await Assert.That(combinedOutput).DoesNotContain("Starting DCP with arguments:");
-			await Assert.That(combinedOutput).DoesNotContain("Distributed application started.");
-		}
-		finally
-		{
-			if (Directory.Exists(outputDir))
-			{
-				Directory.Delete(outputDir, recursive: true);
-			}
-		}
+		// The live LikeC4 server must never start in publish mode — no endpoints are allocated
+		// because DCP is never launched. Assert on the published application's model (not the
+		// running fixture app), which represents the same AppHost built in publish mode.
+		await Assert.That(HasAllocatedEndpoint(result.App, AspireC4ServerResourceName)).IsFalse();
 	}
 
-	static string GetTestAppHostProjectPath() =>
-		Path.GetFullPath(
-			Path.Combine(
-				AppContext.BaseDirectory,
-				"..",
-				"..",
-				"..",
-				"..",
-				"..",
-				"src",
-				"AspireC4.TestAppHost",
-				"AspireC4.TestAppHost.csproj"
-			)
-		);
+	static bool HasAllocatedEndpoint(DistributedApplication app, string resourceName) =>
+		app.Services.GetRequiredService<DistributedApplicationModel>()
+			.Resources.FirstOrDefault(r => string.Equals(r.Name, resourceName, StringComparison.Ordinal))
+			?.Annotations.OfType<EndpointAnnotation>()
+			.Any(e => e.AllocatedEndpoint is not null) == true;
 }

@@ -49,7 +49,7 @@ static partial class IconMatcher
 			return string.Empty;
 		}
 
-		var sb = new System.Text.StringBuilder(value.Length * 2);
+		System.Text.StringBuilder sb = new(value.Length * 2);
 		var previousWasSeparator = true;
 
 		for (var i = 0; i < value.Length; i++)

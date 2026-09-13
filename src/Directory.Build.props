@@ -1,6 +1,6 @@
 <Project>
 	<PropertyGroup>
-		<NamespacePrefix>Aspire.Hosting</NamespacePrefix>
+		<NamespacePrefix>Aspire.Hosting.AspireC4</NamespacePrefix>
 	</PropertyGroup>
 
 	<Import Sdk="Purview.DotNetProjectSdk" Project="Sdk.props" />

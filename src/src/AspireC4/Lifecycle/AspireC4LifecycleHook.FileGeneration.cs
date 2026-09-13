@@ -69,7 +69,7 @@ sealed partial class AspireC4LifecycleHook
 
 		// Copy additional user-provided DSL files into the output directory so LikeC4
 		// picks them up as part of the workspace.
-		var additionalDestPaths = new List<string>();
+		List<string> additionalDestPaths = [];
 		foreach (var sourcePath in opts.AdditionalDSLFiles)
 		{
 			var absoluteSource = Path.GetFullPath(sourcePath);
@@ -126,7 +126,7 @@ sealed partial class AspireC4LifecycleHook
 	/// <see langword="null"/>), falls back to <c>npx</c> since the host still needs a JS runner
 	/// for host-side operations such as format.
 	/// </summary>
-	(string Command, string[] Prefix) BuildCliPrefix() =>
+	(string Command, string[] Prefix) BuildCLIPrefix() =>
 		workspaceOptions.Value.LocalCLIRuntime is { } runtime
 			? AspireC4Builder.BuildLikeC4CLIPrefix(runtime)
 			: ("npx", ["likec4"]);
@@ -141,8 +141,8 @@ sealed partial class AspireC4LifecycleHook
 		try
 		{
 			var opts = options.Value;
-			var (command, prefix) = BuildCliPrefix();
-			var startInfo = new ProcessStartInfo
+			var (command, prefix) = BuildCLIPrefix();
+			ProcessStartInfo startInfo = new()
 			{
 				FileName = command,
 				RedirectStandardOutput = true,

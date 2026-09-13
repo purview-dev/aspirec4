@@ -97,7 +97,7 @@ public sealed class LikeC4ConfigGeneratorTests
 	public async Task Generate_WithImageAliases_EmitsImageAliasesBlock()
 	{
 		// Arrange
-		var aliases = new Dictionary<string, string> { ["@icons"] = "../assets/icons" };
+		Dictionary<string, string> aliases = new() { ["@icons"] = "../assets/icons" };
 
 		// Act
 		var json = LikeC4ConfigGenerator.Generate("proj", "Title", [], aliases, new Dictionary<string, string>());
@@ -112,7 +112,7 @@ public sealed class LikeC4ConfigGeneratorTests
 	public async Task Generate_FullConfig_IsValidJson()
 	{
 		// Arrange
-		var aliases = new Dictionary<string, string> { ["@icons"] = "../icons", ["@logos"] = "../logos" };
+		Dictionary<string, string> aliases = new() { ["@icons"] = "../icons", ["@logos"] = "../logos" };
 		string[] includePaths = ["../ext/abc", "../ext/def"];
 
 		// Act

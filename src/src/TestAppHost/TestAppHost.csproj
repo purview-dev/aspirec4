@@ -1,0 +1,36 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.5.3">
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<AspireUseCliBundle>true</AspireUseCliBundle>
+		<NoWarn>$(NoWarn);CA2234;</NoWarn>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Aspire.Hosting.Azure.PostgreSQL" />
+		<PackageReference Include="Aspire.Hosting.Azure.Redis" />
+		<PackageReference Include="Aspire.Hosting.JavaScript" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Content
+			Include="..\..\..\assets\likec4-extensions\**\*"
+			Link="likec4\extensions\%(RecursiveDir)%(Filename)%(Extension)"
+			CopyToOutputDirectory="PreserveNewest"
+		/>
+		<Content
+			Include="..\..\..\assets\images\**\*"
+			Link="likec4\images\%(RecursiveDir)%(Filename)%(Extension)"
+			CopyToOutputDirectory="PreserveNewest"
+		/>
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\AspireC4\AspireC4.csproj" IsAspireProjectResource="false" />
+		<ProjectReference
+			Include="..\SourceGenerators\SourceGenerators.csproj"
+			OutputItemType="Analyzer"
+			ReferenceOutputAssembly="false"
+			IsAspireProjectResource="false"
+		/>
+	</ItemGroup>
+</Project>

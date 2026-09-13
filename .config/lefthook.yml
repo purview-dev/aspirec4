@@ -3,10 +3,10 @@ pre-commit:
     - name: csharpier format check
       run: just lint-check
 
-    # - name: biome lint check
+    # - name: oxlint check
     #   run: just ts-lint
 
 commit-msg:
   jobs:
     - name: conventional commits
-      run: npx commitlint --edit {1}
+      run: bunx commitlint --edit {1}

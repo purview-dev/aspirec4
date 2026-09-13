@@ -40,6 +40,7 @@ static partial class IconMatcher
 
 	// Tokens that are never meaningful discriminators for icon matching (appear in .NET class
 	// names, Docker image paths, or container tags but not in icon names).
+
 #pragma warning disable IDE0028 // Simplify collection initialization
 	static readonly HashSet<string> QueryStopTokens = new(StringComparer.Ordinal)
 #pragma warning restore IDE0028 // Simplify collection initialization

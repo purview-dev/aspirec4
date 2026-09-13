@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * Fetches the full LikeC4 icon list from the likec4/likec4 GitHub repository and writes
  * a JSON manifest to src/src/AspireC4/BuildResources/likec4-icons.json.
@@ -7,7 +7,7 @@
  * 1,000 files are retrieved in full.
  *
  * Run with:
- *   node scripts/generate-icon-manifest.mts
+ *   bun scripts/generate-icon-manifest.mts
  *
  * Set GITHUB_TOKEN env var to increase the GitHub API rate limit (optional, recommended).
  */

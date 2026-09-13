@@ -5,10 +5,10 @@ static class HMRPortCompatibility
 	// The minimum version of LikeC4 that supports configurable HMR ports is v1.57.
 	static Version ConfigurableHmrPortMinimumVersion => new(1, 57, 0);
 
-	internal static HMRPortMode Resolve(string? loadedVersionTag) =>
+	public static HMRPortMode Resolve(string? loadedVersionTag) =>
 		Resolve(loadedVersionTag, ConfigurableHmrPortMinimumVersion);
 
-	internal static HMRPortMode Resolve(string? loadedVersionTag, Version? configurableHmrPortMinimumVersion)
+	public static HMRPortMode Resolve(string? loadedVersionTag, Version? configurableHmrPortMinimumVersion)
 	{
 		return configurableHmrPortMinimumVersion is null ? HMRPortMode.FixedPort
 			: TryParseVersion(loadedVersionTag, out var loadedVersion)
@@ -17,7 +17,7 @@ static class HMRPortCompatibility
 			: HMRPortMode.FixedPort;
 	}
 
-	internal static bool TryParseVersion(string? loadedVersionTag, out Version loadedVersion)
+	public static bool TryParseVersion(string? loadedVersionTag, out Version loadedVersion)
 	{
 		loadedVersion = default!;
 

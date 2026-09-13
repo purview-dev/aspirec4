@@ -12,9 +12,9 @@ public sealed partial class AspireC4LifecycleHookTests
 	{
 		// Arrange
 		var outputDir = P("project", "apphost", "likec4", "gen");
-		var diagramOptions = new AspireC4DiagramOptions { OutputDirectory = outputDir };
-		var workspaceOptions = new ContainerWorkspaceOptions();
-		var serverResource = new LikeC4ServerResource("test");
+		AspireC4DiagramOptions diagramOptions = new() { OutputDirectory = outputDir };
+		ContainerWorkspaceOptions workspaceOptions = new();
+		LikeC4ServerResource serverResource = new("test");
 		using var sut = CreateLifecycleHookSut(diagramOptions: diagramOptions, workspaceOptions: workspaceOptions);
 
 		// Act
@@ -32,13 +32,13 @@ public sealed partial class AspireC4LifecycleHookTests
 		// extensions/ is a sibling of gen/ — the bind mount must expand to the parent likec4/.
 		var outputDir = P("project", "apphost", "likec4", "gen");
 		var dslFolder = P("project", "apphost", "likec4", "extensions");
-		var diagramOptions = new AspireC4DiagramOptions
+		AspireC4DiagramOptions diagramOptions = new()
 		{
 			OutputDirectory = outputDir,
 			AdditionalDSLFolders = [dslFolder],
 		};
-		var workspaceOptions = new ContainerWorkspaceOptions();
-		var serverResource = new LikeC4ServerResource("test");
+		ContainerWorkspaceOptions workspaceOptions = new();
+		LikeC4ServerResource serverResource = new("test");
 		using var sut = CreateLifecycleHookSut(diagramOptions: diagramOptions, workspaceOptions: workspaceOptions);
 
 		// Act
@@ -57,13 +57,13 @@ public sealed partial class AspireC4LifecycleHookTests
 		// images/ is a sibling of gen/ — the bind mount must expand to the parent likec4/.
 		var outputDir = P("project", "apphost", "likec4", "gen");
 		var imagesFolder = P("project", "apphost", "likec4", "images");
-		var diagramOptions = new AspireC4DiagramOptions
+		AspireC4DiagramOptions diagramOptions = new()
 		{
 			OutputDirectory = outputDir,
 			ImageAliases = new() { ["@"] = imagesFolder },
 		};
-		var workspaceOptions = new ContainerWorkspaceOptions();
-		var serverResource = new LikeC4ServerResource("test");
+		ContainerWorkspaceOptions workspaceOptions = new();
+		LikeC4ServerResource serverResource = new("test");
 		using var sut = CreateLifecycleHookSut(diagramOptions: diagramOptions, workspaceOptions: workspaceOptions);
 
 		// Act
@@ -83,14 +83,14 @@ public sealed partial class AspireC4LifecycleHookTests
 		var outputDir = P("project", "apphost", "likec4", "gen");
 		var dslFolder = P("project", "apphost", "likec4", "extensions");
 		var imagesFolder = P("project", "apphost", "likec4", "images");
-		var diagramOptions = new AspireC4DiagramOptions
+		AspireC4DiagramOptions diagramOptions = new()
 		{
 			OutputDirectory = outputDir,
 			AdditionalDSLFolders = [dslFolder],
 			ImageAliases = new() { ["@"] = imagesFolder },
 		};
-		var workspaceOptions = new ContainerWorkspaceOptions();
-		var serverResource = new LikeC4ServerResource("test");
+		ContainerWorkspaceOptions workspaceOptions = new();
+		LikeC4ServerResource serverResource = new("test");
 		using var sut = CreateLifecycleHookSut(diagramOptions: diagramOptions, workspaceOptions: workspaceOptions);
 
 		// Act
@@ -110,13 +110,13 @@ public sealed partial class AspireC4LifecycleHookTests
 		// /data/gen (relative path from likec4/ to gen/ inside the container workspace).
 		var outputDir = P("project", "apphost", "likec4", "gen");
 		var dslFolder = P("project", "apphost", "likec4", "extensions");
-		var diagramOptions = new AspireC4DiagramOptions
+		AspireC4DiagramOptions diagramOptions = new()
 		{
 			OutputDirectory = outputDir,
 			AdditionalDSLFolders = [dslFolder],
 		};
-		var workspaceOptions = new ContainerWorkspaceOptions();
-		var serverResource = new LikeC4ServerResource("test");
+		ContainerWorkspaceOptions workspaceOptions = new();
+		LikeC4ServerResource serverResource = new("test");
 		using var sut = CreateLifecycleHookSut(diagramOptions: diagramOptions, workspaceOptions: workspaceOptions);
 
 		// Act

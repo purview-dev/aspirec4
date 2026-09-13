@@ -40,8 +40,7 @@ await builder
 	.configureServer(async (resource) => {
 		resource.withLikeC4Details({
 			configure: async (opts) => {
-				opts
-					.withLabel("AspireC4")
+				opts.withLabel("AspireC4")
 					.withSummary(
 						"Describe your Aspire orchestration as a live LikeC4 system architecture diagram - auto generated",
 					)
@@ -68,9 +67,7 @@ const azureManagerRedis = await builder
 				configureContainer: async (commanderContainer) => {
 					await commanderContainer.withLikeC4Details({
 						configure: async (opts) => {
-							opts
-								.withLabel("Redis Commander")
-								.withSummary("Local Redis Web Interface");
+							opts.withLabel("Redis Commander").withSummary("Local Redis Web Interface");
 						},
 					});
 				},
@@ -80,8 +77,7 @@ const azureManagerRedis = await builder
 	// Add LikeC4 details to the component for better visualization in the C4 model.
 	.withLikeC4Details({
 		configure: async (opts) => {
-			opts
-				.withLabel("Azure Redis")
+			opts.withLabel("Azure Redis")
 				.withTechnology("Azure Redis")
 				.withDescription(`A **Managed Azure** Redis instance allowing fast access to previously cached data and values.
 
@@ -95,10 +91,9 @@ const azureManagerRedis = await builder
 				- Populate with a TTL (Time To Live) to prevent stale data
 				- Ensure keys follow the pattern: \`{service}:{key}\``)
 				.withSummary("Short term caching, used for cross-instance caching")
-				.withLinkNode(
-					"https://learn.microsoft.com/azure/azure-cache-for-redis/cache-overview",
-					{ title: "Learn more about Azure Redis" },
-				)
+				.withLinkNode("https://learn.microsoft.com/azure/azure-cache-for-redis/cache-overview", {
+					title: "Learn more about Azure Redis",
+				})
 				.withLinkNode("https://azure.com/", { title: "Learn more about Azure" })
 				.withLinkNode("https://redis.io/", { title: "Learn more about Redis" });
 		},
@@ -113,9 +108,7 @@ const azurePostgres = await builder
 				configureContainer: async (pgWebContainer) => {
 					await pgWebContainer.withLikeC4Details({
 						configure: async (opts) => {
-							opts
-								.withLabel("PgWeb")
-								.withSummary("Local Postgres Web Interface");
+							opts.withLabel("PgWeb").withSummary("Local Postgres Web Interface");
 						},
 					});
 				},
@@ -125,14 +118,12 @@ const azurePostgres = await builder
 	// Add LikeC4 details to the component for better visualization in the C4 model.
 	.withLikeC4Details({
 		configure: async (opts) => {
-			opts
-				.withLabel("Azure Postgres")
+			opts.withLabel("Azure Postgres")
 				.withDescription(`An **Azure Managed** Postgres instance for testing`)
 				.withSummary("Azure Managed Postgres Flexible Server")
-				.withLinkNode(
-					"https://learn.microsoft.com/azure/postgresql/flexible-server/overview",
-					{ title: "Learn more about Azure Postgres Flexible Server" },
-				)
+				.withLinkNode("https://learn.microsoft.com/azure/postgresql/flexible-server/overview", {
+					title: "Learn more about Azure Postgres Flexible Server",
+				})
 				.withLinkNode("https://www.postgresql.org/", {
 					title: "Learn more about Postgres",
 				})
@@ -148,8 +139,7 @@ const localRedis = await builder
 	.addRedis("local-redis")
 	.withLikeC4Details({
 		configure: async (opts) => {
-			opts
-				.withDescription(`For testing **locally**, uses Redis as a container.
+			opts.withDescription(`For testing **locally**, uses Redis as a container.
 
 			When using Azure Managed Redis with \`.RunAsContainer()\`, the application will differentiate between that and a real Redis resource using \`.AddRedis(...)\` and pick the correct icon/ technology.`)
 				.withSummary("Local redis for development")
@@ -163,8 +153,7 @@ const localPostgres = await builder
 	.addPostgres("local-postgres")
 	.withLikeC4Details({
 		configure: async (opts) => {
-			opts
-				.withDescription(`For testing Azure Postgres vs. local Postgres`)
+			opts.withDescription(`For testing Azure Postgres vs. local Postgres`)
 				.withSummary("Local Postgres for development")
 				.withLinkNode("https://www.postgresql.org/", {
 					title: "Learn more about Postgres",
@@ -180,14 +169,12 @@ const _nodeApp = await builder
 	// Add LikeC4 details to the component for better visualization in the C4 model.
 	.withLikeC4Details({
 		configure: async (opts) => {
-			opts
-				.withLabel("Sample Node App")
-				.withDescription(
-					"A sample Node.js application that connects to Azure Redis and Azure Postgres",
-				);
+			opts.withLabel("Sample Node App").withDescription(
+				"A sample Node.js application that connects to Azure Redis and Azure Postgres",
+			);
 		},
 	})
-	.withNpm({ install: true })
+	.withBun({ install: true })
 	.withHttpEndpoint({ env: "PORT" })
 	.withUrlForEndpoint("http", async (url) => {
 		url.url = "/health";
@@ -195,55 +182,37 @@ const _nodeApp = await builder
 	// These references will be used to generate the connections in the C4 model and also ensure that the application waits for these dependencies to be ready before starting.
 	.withLikeC4ReferenceWithEnvironmentResource(azureManagerRedis, {
 		configure: async (opts) => {
-			await opts
-				.withLabel("Caches sessions")
-				.withTechnology("Redis Protocol")
-				.withKind("RESP");
+			await opts.withLabel("Caches sessions").withTechnology("Redis Protocol").withKind("RESP");
 		},
 	})
 	.waitFor(azureManagerRedis)
 	.withLikeC4ReferenceWithEnvironmentResource(localRedis, {
 		configure: async (opts) => {
-			await opts
-				.withLabel("Caches  sessions (local)")
-				.withTechnology("Redis Protocol")
-				.withKind("RESP");
+			await opts.withLabel("Caches  sessions (local)").withTechnology("Redis Protocol").withKind("RESP");
 		},
 	})
 	.waitFor(localRedis)
 	.withLikeC4ReferenceWithEnvironmentResource(azurePostgres, {
 		configure: async (opts) => {
-			await opts
-				.withLabel("Persists data")
-				.withTechnology("PostgreSQL / JDBC")
-				.withKind("tcp-ip");
+			await opts.withLabel("Persists data").withTechnology("PostgreSQL / JDBC").withKind("tcp-ip");
 		},
 	})
 	.waitFor(azurePostgres)
 	.withLikeC4ReferenceWithEnvironmentResource(localPostgres, {
 		configure: async (opts) => {
-			await opts
-				.withLabel("Persists data (local)")
-				.withTechnology("PostgreSQL / JDBC")
-				.withKind("tcp-ip");
+			await opts.withLabel("Persists data (local)").withTechnology("PostgreSQL / JDBC").withKind("tcp-ip");
 		},
 	})
 	.waitFor(localPostgres);
 
 await localPostgres.withLikeC4ReferenceWithEnvironmentResource(azurePostgres, {
 	configure: async (opts) => {
-		await opts
-			.withLabel("syncs with")
-			.withTechnology("PostgreSQL / JDBC")
-			.withKind("tcp-ip");
+		await opts.withLabel("syncs with").withTechnology("PostgreSQL / JDBC").withKind("tcp-ip");
 	},
 });
 await localRedis.withLikeC4ReferenceWithEnvironmentResource(azureManagerRedis, {
 	configure: async (opts) => {
-		await opts
-			.withLabel("syncs with")
-			.withTechnology("Redis Protocol")
-			.withKind("RESP");
+		await opts.withLabel("syncs with").withTechnology("Redis Protocol").withKind("RESP");
 	},
 });
 

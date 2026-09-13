@@ -5,7 +5,7 @@
 ## Prerequisites
 
 - **.NET 8 or later**.
-- **Aspire 13.4.3 or later**. Aspire AppHost projects must reference both the AppHost SDK and
+- **Aspire 13.5.3 or later**. Aspire AppHost projects must reference both the AppHost SDK and
   `Aspire.Hosting.AppHost`.
 - **Docker** is used by default to run the LikeC4 sidecar container.
 - Optional: a local Node.js CLI runtime (`npx`, `pnpm`, `yarn`, `bun`, or `deno`) if you call `.WithLocalCLI()`.
@@ -19,10 +19,10 @@ dotnet add package AspireC4.Hosting
 dotnet add package Aspire.Hosting.AppHost
 ```
 
-An Aspire 13.4 AppHost project should contain the equivalent of:
+An Aspire 13.5 AppHost project should contain the equivalent of:
 
 ```xml
-<Project Sdk="Aspire.AppHost.Sdk/13.4.3">
+<Project Sdk="Aspire.AppHost.Sdk/13.5.3">
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.AppHost" />
     <PackageReference Include="AspireC4.Hosting" />
@@ -47,7 +47,7 @@ This writes `./likec4/gen/model.gen.c4`, starts the LikeC4 server, and refreshes
 Configure the diagram through `AspireC4DiagramOptions`:
 
 | Property | Default | Description |
-|---|---|---|
+| --- | --- | --- |
 | `Title` | `null` | Title shown in the LikeC4 app |
 | `ViewTitle` | `"Architecture"` | Title shown in the generated view |
 | `ViewDescription` | `null` | Optional view description |
@@ -141,11 +141,11 @@ Declare the integration and its Aspire dependencies in `aspire.config.json`:
     "language": "typescript/nodejs"
   },
   "sdk": {
-    "version": "13.4.3"
+    "version": "13.5.3"
   },
   "packages": {
-    "Aspire.Hosting.JavaScript": "13.4.3",
-    "AspireC4.Hosting": "13.3.3"
+    "Aspire.Hosting.JavaScript": "13.5.3",
+    "AspireC4.Hosting": "13.5.3"
   }
 }
 ```
@@ -164,12 +164,12 @@ The sample at [`samples/typescript-app-host`](samples/typescript-app-host) demon
 - LikeC4 labels, descriptions, links, icons, metadata, tags, groups, and relationships.
 - Additional LikeC4 DSL and image folders from this repository's `assets` directory.
 
-Prerequisites are Docker, the Aspire CLI, and a supported Node.js release (`20.19+`, `22.13+`, or `24+`). From the
+Prerequisites are Docker, the Aspire CLI, and Bun. From the
 repository root:
 
 ```bash
 cd samples/typescript-app-host
-npm ci
+bun install
 aspire restore
 aspire start
 ```
@@ -179,10 +179,10 @@ aspire start
 architecture-diagram link. The sample also exposes the `node-app` `/health`, `/ping/redis`, and `/ping/postgres`
 endpoints through Aspire-assigned URLs.
 
-For an interactive foreground session, the sample's npm script is equivalent to `aspire run`:
+For an interactive foreground session, the sample's Bun script is equivalent to `aspire run`:
 
 ```bash
-npm run dev
+bun run dev
 ```
 
 Stop a background session with:
@@ -258,7 +258,7 @@ internal static class ArchitectureRegistry
 Supported nested-class names are:
 
 | Registry type | Accepted class names |
-|---|---|
+| --- | --- |
 | Tag | `Tag`, `Tags` |
 | Element kind | `ElementKind`, `ElementKinds`, `Element`, `Elements` |
 | Relationship kind | `RelationshipKind`, `RelationshipKinds`, `Relationship`, `Relationships` |
@@ -331,7 +331,7 @@ The project-wide setting can be placed in the AppHost project or `Directory.Buil
 Accepted `AspireC4Strict` values are:
 
 | Value | Behavior |
-|---|---|
+| --- | --- |
 | `off` or an unset/unknown value | Disables DSL-file strict validation |
 | `suggestion` | Reports undeclared DSL values as suggestions |
 | `warning` | Reports undeclared DSL values as warnings |
@@ -369,7 +369,7 @@ Tags, element kinds, and relationship kinds in `specification` blocks are merged
 ### Diagnostics
 
 | ID | Meaning |
-|---|---|
+| --- | --- |
 | `ASPIREC4001` | A tag passed to `.WithTag()` is undeclared |
 | `ASPIREC4002` | An element or relationship kind passed to `.WithKind()` is undeclared |
 | `ASPIREC4003` | More than one class in the assembly has `[LikeC4Registry]` |
@@ -382,7 +382,7 @@ Tags, element kinds, and relationship kinds in `specification` blocks are merged
 The source generator now uses the current `Purview.SourceGeneratorFramework` incremental APIs. Existing applications
 should review the following changes when upgrading:
 
-- **Aspire AppHost dependency is explicit.** Aspire 13.4 AppHosts must reference `Aspire.Hosting.AppHost`; relying on the
+- **Aspire AppHost dependency is explicit.** Aspire 13.5 AppHosts must reference `Aspire.Hosting.AppHost`; relying on the
   AppHost SDK alone produces `ASPIRE002`.
 - **Only one registry class is supported per assembly.** Merge multiple `[LikeC4Registry]` classes into one class.
 - **Registry declaration styles cannot be mixed per type.** For example, choose either a `Tags` nested class or

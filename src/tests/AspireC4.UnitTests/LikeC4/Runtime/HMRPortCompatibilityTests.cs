@@ -20,7 +20,7 @@ public sealed class HMRPortCompatibilityTests
 	{
 		// Arrange
 		const string version = "1.55.0";
-		var minimumVersion = new Version(1, 56, 0);
+		Version minimumVersion = new(1, 56, 0);
 
 		// Act
 		var mode = HMRPortCompatibility.Resolve(version, minimumVersion);
@@ -41,7 +41,7 @@ public sealed class HMRPortCompatibilityTests
 	{
 		// Arrange
 		var version = $"{versionPrefix}{major}.{minor}.{build}{prereleaseSuffix}";
-		var minimumVersion = new Version(1, 57, 0);
+		Version minimumVersion = new(1, 57, 0);
 
 		// Act
 		var mode = HMRPortCompatibility.Resolve(version, minimumVersion);
@@ -62,7 +62,7 @@ public sealed class HMRPortCompatibilityTests
 	{
 		// Arrange
 		var version = $"{versionPrefix}{major}.{minor}.{build}{prereleaseSuffix}";
-		var minimumVersion = new Version(1, 57, 0);
+		Version minimumVersion = new(1, 57, 0);
 
 		// Act
 		var mode = HMRPortCompatibility.Resolve(version, minimumVersion);

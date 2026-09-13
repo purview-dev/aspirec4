@@ -14,7 +14,7 @@ static class LatestVersionResolver
 	/// this method splits on <c>'/'</c> and <c>' '</c> and returns the first token that
 	/// <see cref="HMRPortCompatibility.TryParseVersion"/> accepts (e.g. <c>"1.57.0"</c>).
 	/// </summary>
-	internal static bool TryExtractVersion(string cliOutput, out string versionToken)
+	public static bool TryExtractVersion(string cliOutput, out string versionToken)
 	{
 		var parts = cliOutput.Split(['/', ' '], StringSplitOptions.RemoveEmptyEntries);
 		foreach (var part in parts)
@@ -41,7 +41,7 @@ static class LatestVersionResolver
 		"CA1031:Do not catch general exception types",
 		Justification = "Version detection is best-effort; failures are reported via telemetry and the caller falls back gracefully"
 	)]
-	internal static async Task<string?> TryResolveFromLocalCLIAsync(
+	public static async Task<string?> TryResolveFromLocalCLIAsync(
 		string command,
 		IReadOnlyList<string> prefixArgs,
 		int timeoutSeconds,
@@ -50,7 +50,7 @@ static class LatestVersionResolver
 	{
 		try
 		{
-			var startInfo = new ProcessStartInfo
+			ProcessStartInfo startInfo = new()
 			{
 				FileName = command,
 				RedirectStandardOutput = true,
