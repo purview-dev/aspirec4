@@ -18,7 +18,7 @@ await builder
 
 		- [Aspire](https://aspire.dev/)
 		- [LikeC4](https://likec4.dev/)
-		- [AspireC4](https://kjl.dev/projects/aspirec4/)`);
+		- [AspireC4](https://purview.dev/projects/aspirec4/)`);
 
 			const assetsPath = path.join(process.cwd(), "../../assets/");
 			const imagesPath = path.join(assetsPath, "images/");
@@ -45,10 +45,10 @@ await builder
 						"Describe your Aspire orchestration as a live LikeC4 system architecture diagram - auto generated",
 					)
 					.withIcon("@/likec4/likec4-logo.svg")
-					.withLinkNode("https://kjl.dev/projects/aspirec4", {
+					.withLinkNode("https://purview-dev/projects/aspirec4", {
 						title: "Learn more about AspireC4",
 					})
-					.withLinkNode("https://github.com/kjldev/aspirec4/", {
+					.withLinkNode("https://github.com/purview-dev/aspirec4/", {
 						title: "AspireC4 on GitHub",
 					})
 					.withLinkNode("https://github.com/kieronlanning", {

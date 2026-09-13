@@ -11,12 +11,12 @@
 	<ItemGroup>
 		<Content
 			Include="..\..\..\assets\likec4-extensions\**\*"
-			Link="likec4\extensions\%(RecursiveDir)%(Filename)%(Extension)"
+			Link="Resources\likec4\extensions\%(RecursiveDir)%(Filename)%(Extension)"
 			CopyToOutputDirectory="PreserveNewest"
 		/>
 		<Content
 			Include="..\..\..\assets\images\**\*"
-			Link="likec4\images\%(RecursiveDir)%(Filename)%(Extension)"
+			Link="Resources\likec4\images\%(RecursiveDir)%(Filename)%(Extension)"
 			CopyToOutputDirectory="PreserveNewest"
 		/>
 	</ItemGroup>
