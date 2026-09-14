@@ -41,7 +41,7 @@ See [Git hooks — Lefthook](#git-hooks--lefthook) for hook configuration.
 ## Getting started
 
 ```sh
-just build        # Build the solution (Release by default)
+just build        # Build the solution (Debug by default; pass Release to build Release)
 just test         # Run all tests (unit + integration)
 just lint-check   # Check formatting
 ```
@@ -74,7 +74,7 @@ Two distinct brands exist in this repository. Use them consistently:
 | Recipe | Description |
 |---|---|
 | `just restore` | Restore NuGet packages and local .NET tools |
-| `just build [Debug\|Release]` | Build the solution (default: `Release`) |
+| `just build [Debug\|Release]` | Build the solution (default: `Debug`) |
 | `just clean` | Clean build outputs |
 | `just test` | **Run all tests** (unit + integration) |
 | `just test-unit` | Run unit tests only |
@@ -89,6 +89,8 @@ Two distinct brands exist in this repository. Use them consistently:
 |---|---|
 | `just test-e2e-docker` | Integration tests against the host Docker daemon |
 | `just test-e2e` | Docker + all local CLI runtimes (npm, pnpm, yarn, bun, deno) |
+| `just test-e2e-cli` | All local CLI runtimes only (npm, pnpm, yarn, bun, deno) |
+| `just test-e2e-npm` | Single CLI runtime (also `-pnpm`, `-yarn`, `-bun`, `-deno`) |
 
 ### Diagrams
 
@@ -119,7 +121,7 @@ just lint-fix     # Auto-fix formatting violations
 
 CSharpier runs automatically on every `git commit` via Lefthook. Commits with formatting violations are rejected. Always run `just lint-fix` before committing if you have unsaved format changes, or configure your editor to format on save using the CSharpier extension.
 
-**Do not pin a specific CSharpier version in `.csproj` files.** The version lives exclusively in `.config/dotnet-tools.json` and `Directory.Packages.props`.
+**Do not pin a specific CSharpier version in `.csproj` files.** The version lives exclusively in `.config/dotnet-tools.json`.
 
 ---
 
@@ -129,7 +131,7 @@ CSharpier runs automatically on every `git commit` via Lefthook. Commits with fo
 
 | Hook | What it does |
 |---|---|
-| `pre-commit` | Runs `csharpier check` across the entire `src/` tree. Rejects the commit if any file is mis-formatted. |
+| `pre-commit` | Runs `just lint-check` (CSharpier over the repo root). Rejects the commit if any file is mis-formatted. |
 | `commit-msg` | Runs `commitlint` to enforce [conventional commit](#commit-messages) format. |
 
 Lefthook installs when you run `just init`. To verify it is active:
@@ -198,7 +200,7 @@ Fix: Correct HMR port fallback on Windows.
 
 ## Tests
 
-All tests in this repository **must use [TUnit](https://github.com/thomhurst/TUnit)**. Do not use xUnit, NUnit, or MSTest. TUnit is already configured as a global import in all test projects via `Directory.Build.props`.
+All tests in this repository **must use [TUnit](https://github.com/thomhurst/TUnit)**. Do not use xUnit, NUnit, or MSTest. Test projects declare just `<Project Sdk="Microsoft.NET.Sdk" />`; the SDK (Purview.DotNetProjectSdk) wires TUnit, TUnit.Mocks, and Bogus into them automatically.
 
 ### Key patterns
 
@@ -229,11 +231,12 @@ public static async Task ClassTearDownAsync(CancellationToken cancellationToken)
 
 ### Mocking
 
-Use [NSubstitute](https://nsubstitute.github.io/) for mocking. Also globally imported.
+Use [TUnit.Mocks](https://github.com/thomhurst/TUnit) for mocking. Also wired in automatically by the SDK. Mock an
+interface or type via its `.Mock()` extension and configure members with `.Returns(...)`:
 
 ```csharp
-var myService = Substitute.For<IMyService>();
-myService.DoThing().Returns("value");
+var config = IConfiguration.Mock();
+config.Item("AppHost:BrowserToken").Returns("value");
 ```
 
 ### Project structure
@@ -247,35 +250,44 @@ Integration tests require Docker to be running. They pull `ghcr.io/likec4/likec4
 
 ### CI behaviour
 
-- **Unit + integration tests run on every PR** against the Docker runtime.
-- The **CI Gate** is a required status check — all jobs must pass before a PR can merge.
+- Pull requests run the `PR` workflow (`.github/workflows/pr.yml`), which delegates to the `purview-dev/build`
+  reusable `purview-build.yml` to build and test the solution.
+- A push to `main` triggers the release workflow — see [Release guide](#release-guide).
 
 ---
 
 ## Release guide
 
-The version in `package.json` is maintained manually and is the sole version used by the CD workflow. Versions must use valid SemVer, including an optional prerelease suffix when required.
+The version in `package.json` is maintained manually and is the sole version source used by the release pipeline. Versions must use valid SemVer, including an optional prerelease suffix when required.
 
 ### Preparing a release
 
 1. Choose an unused version and update `package.json`.
 2. Use conventional commit subjects for noteworthy changes:
    - `feat:` for features
-   - `fix:` or `bug:` for bug fixes
-   - `perf:`, `security:`, `refactor:`, or `revert:` for other noteworthy changes
+   - `fix:` for bug fixes
+   - `perf:`, `refactor:`, or `revert:` for other noteworthy changes
 3. Commit the version update and merge or push it to `main`.
 
-Commits beginning with `chore:`, `build:`, `ci:`, `test:`, `docs:`, or `style:` are intentionally omitted from release notes. When no noteworthy commits exist, the release notes contain “Improvements ongoing.”
+Commits beginning with `chore:`, `build:`, `ci:`, `test:`, `docs:`, or `style:` are intentionally omitted from release notes. When no noteworthy commits exist, the release notes contain "Improvements ongoing."
 
-### CD pipeline
+### Running the release pipeline
 
-A push to `main` triggers `.github/workflows/cd.yml`, which:
+The pipeline is driven by the `Purview.Build` tool through `just`:
+
+```sh
+just pipeline-release        # restore, build, lint, tests, pack, publish, GitHub release
+just pipeline-local-release  # Same but to a local NuGet feed (use forward slashes in paths)
+```
+
+### CI release workflow
+
+A push to `main` triggers `.github/workflows/release.yml`, which delegates to the `purview-dev/build` reusable `purview-release.yml` with `release-mode: NuGet`. It:
 
 1. Reads and validates the version from `package.json`.
-2. Skips the release when the corresponding Git tag or GitHub Release already exists.
-3. Builds the solution and runs unit and integration tests.
-4. Packs the NuGet package using the exact manual version.
-5. Builds release notes from noteworthy commits since the previous tag.
-6. Creates a GitHub Release with the `.nupkg` and `.snupkg` files attached.
+2. Builds the solution and runs unit and integration tests.
+3. Packs the NuGet package using the exact manual version.
+4. Builds release notes from noteworthy commits since the previous release.
+5. Creates a GitHub Release with the `.nupkg` and `.snupkg` files attached.
 
 The workflow does not publish to NuGet. Download the package from GitHub Releases and push it to the desired feed manually.

@@ -1,8 +1,8 @@
 # AGENTS.md
 
-This file is the **primary instruction set** for AI agents and humans working in this repository. It supersedes
-`.github/copilot-instructions.md` (which is stale) and takes precedence where anything conflicts. Public API usage
-docs live in [`README.md`](README.md); the contribution guide lives in [`CONTRIBUTING.md`](CONTRIBUTING.md).
+This file is the **primary instruction set** for AI agents and humans working in this repository. It takes
+precedence where anything conflicts. Public API usage docs live in [`README.md`](README.md); the contribution
+guide lives in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Repository overview
 
@@ -38,7 +38,7 @@ generates live [LikeC4](https://likec4.dev) architecture diagrams from the Aspir
 | Bun | JS scripts, commit hooks, TS sample | `package.json` → `packageManager` |
 | just | Task runner (single entry point) | system install |
 | Docker | Integration tests, local diagram viewer | system install |
-| Lefthook | Git hooks | `bun install` |
+| Lefthook | Git hooks | global install; not pinned in-repo |
 | commitlint | Conventional-commit enforcement | `commitlint.config.mts` |
 
 The repository uses `Purview.DotNetProjectSdk` (pinned in `global.json` under `msbuild-sdks`) through

@@ -3,7 +3,7 @@
 		"Solution": "src/AspireC4.slnx",
 		"TestRoot": "src/tests",
 		"TestPatterns": "*Tests.csproj",
-		"TestFilter": "/*/*/*/*[Category=Unit]/"
+		"TestFilter": "/*/*/*/*[Category=Unit]"
 	},
 	"PackValidation": {
 		"RequireSymbolPackage": true,
@@ -17,7 +17,8 @@
 				"analyzers/dotnet/cs/Aspire.Hosting.AspireC4.SourceGenerators.dll",
 				"build/Aspire.Hosting.AspireC4.props",
 				"README.md",
-				"LICENSE.md"
+				"LICENSE.md",
+				"purview-logo.png"
 			]
 		},
 		"ForbiddenContent": {}

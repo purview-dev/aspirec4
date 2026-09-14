@@ -57,7 +57,7 @@ Configure the diagram through `AspireC4DiagramOptions`:
 | `OutputDirectory` | `"./likec4/gen/"` | Directory where the generated `.c4` file is written |
 | `FileName` | `"model.gen"` | Generated file name without extension |
 | `DisableHMR` | `false` | Disable Hot Module Replacement |
-| `HMRPort` | `24678` | HMR port used by the LikeC4 server and browser |
+| `HMRPort` | `null` (dynamically allocated) | HMR port used by the LikeC4 server and browser when it supports configurable HMR ports; set a fixed port when needed |
 | `ContainerImageTag` | `null` (`latest`) | Pin the `ghcr.io/likec4/likec4` image tag |
 | `AutoIconsEnabled` | `true` | Infer LikeC4 icons from resource type and name |
 | `HideFromDashboard` | `false` | Hide the LikeC4 sidecar from the Aspire dashboard |
@@ -75,7 +75,7 @@ builder.AddAspireC4().WithLocalCLI();
 ### Hide from the dashboard
 
 ```csharp
-builder.AddAspireC4().WithHideFromDashboard();
+builder.AddAspireC4(options => options.WithHideFromDashboard());
 ```
 
 ### Disable HMR
@@ -86,7 +86,7 @@ builder.AddAspireC4(options => options.WithHMRDisabled());
 
 ### Exclude the sidecar from the diagram
 
-The LikeC4 sidecar is excluded automatically. Use `WithIncludeAspireC4InternalResource(true)` if you want to inspect it.
+The LikeC4 sidecar is excluded automatically. Set `WithIncludeAspireC4InternalResource(true)` in the options callback if you want to inspect it.
 
 ## Aspire TypeScript AppHost support
 
@@ -272,10 +272,13 @@ Use the constants at call sites to make refactoring safe:
 
 ```csharp
 builder.AddProject<Projects.Api>("api")
-    .WithTag(ArchitectureRegistry.Tags.External)
-    .WithKind(ArchitectureRegistry.ElementKinds.Service)
-    .WithLikeC4Group(ArchitectureRegistry.Groups.Platform)
-    .WithMetadata(ArchitectureRegistry.MetadataKeys.AzureSku, "Standard_LRS");
+    .WithLikeC4Details(details =>
+        details
+            .WithTag(ArchitectureRegistry.Tags.External)
+            .WithKind(ArchitectureRegistry.ElementKinds.Service)
+            .WithMetadata(ArchitectureRegistry.MetadataKeys.AzureSku, "Standard_LRS")
+    )
+    .WithLikeC4Group(ArchitectureRegistry.Groups.Platform);
 ```
 
 ### Individual registry fields
@@ -379,6 +382,7 @@ Tags, element kinds, and relationship kinds in `specification` blocks are merged
 | `ASPIREC4004` | A group passed to `.WithLikeC4Group()` is undeclared |
 | `ASPIREC4005` | A registry type uses both a nested class and `[KnownType]` fields |
 | `ASPIREC4006` | A metadata key passed to `.WithMetadata()` is undeclared |
+| `ASPIREC4007` | A nested class in the registry uses a name that is not a recognized registry type |
 
 ## Breaking changes in the Source Generator Framework migration
 
