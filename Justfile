@@ -1,13 +1,21 @@
 set quiet
 
+export TESTINGPLATFORM_EXITCODE_IGNORE := "8"
+export DOTNET_CLI_TELEMETRY_OPTOUT := "1"
+export DOTNET_SKIP_FIRST_TIME_EXPERIENCE := "1"
+export DO_NOT_TRACK := "1"
+
 _root := "./"
 _solution := "src/AspireC4.slnx"
 _typescriptAppHost := "samples/typescript-app-host/"
 
 config_default := "Debug"
+default_test_filter := "/*/*/*/*"
 
 pipeline_feed := "https://api.nuget.org/v3/index.json"
 pipeline_tool := ".tools/purview-build/purview-build"
+
+current_version := `bun -p "require('./package.json').version"`
 
 # List available recipes
 [private]
@@ -102,13 +110,13 @@ clean configuration=config_default *args:
 
 # Run all tests (unit + integration)
 [group('.NET')]
-test configuration=config_default *args:
-    dotnet test --solution {{ _solution }} --configuration {{ configuration }} {{ args }}
+test filter=default_test_filter *args:
+    dotnet test {{ _solution }} -c {{ config_default }} --treenode-filter "{{ filter }}" {{ args }}
 
 # Run unit tests only
 [group('.NET')]
-test-unit configuration=config_default *args:
-    dotnet test --project src/tests/AspireC4.UnitTests --configuration {{ configuration }} {{ args }}
+test-unit *args:
+    just test "/*/*/*/*[Category=Unit]" {{ args }}
 
 # Run integration tests only
 [group('.NET')]
@@ -128,7 +136,12 @@ lint-fix:
 # Build and produce NuGet packages into artifacts/nuget (version read from package.json)
 [group('.NET')]
 pack configuration=config_default *args: (build configuration)
-    dotnet pack {{ _solution }} --configuration {{ configuration }} --output artifacts/nuget "-p:Version=$(bun -p "require('./package.json').version")" {{ args }}
+    dotnet pack {{ _solution }} --configuration {{ configuration }} --output artifacts/nuget {{ args }}
+
+# Display the current version of the project
+[group('.NET')]
+version:
+    echo "Current version: {{ GREEN }}{{ current_version }}{{ NORMAL }}"
 
 # ── TypeScript AppHost --------------------------------------------------------
 

@@ -2,8 +2,8 @@
 	"Build": {
 		"Solution": "src/AspireC4.slnx",
 		"TestRoot": "src/tests",
-		"TestPatterns": "*UnitTests.csproj",
-		"TestFilter": "/*/*/*/*/"
+		"TestPatterns": "*Tests.csproj",
+		"TestFilter": "/*/*/*/*[Category=Unit]/"
 	},
 	"PackValidation": {
 		"RequireSymbolPackage": true,
@@ -15,7 +15,9 @@
 				"analyzers/dotnet/cs/Purview.SourceGeneratorFramework.dll",
 				"analyzers/dotnet/cs/Purview.SourceGeneratorFramework.Shared.dll",
 				"analyzers/dotnet/cs/Aspire.Hosting.AspireC4.SourceGenerators.dll",
-				"build/Aspire.Hosting.AspireC4.props"
+				"build/Aspire.Hosting.AspireC4.props",
+				"README.md",
+				"LICENSE.md"
 			]
 		},
 		"ForbiddenContent": {}

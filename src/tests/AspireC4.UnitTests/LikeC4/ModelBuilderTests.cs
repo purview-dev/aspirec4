@@ -1181,7 +1181,7 @@ public sealed partial class ModelBuilderTests
 	}
 
 	[Test]
-	public async Task Build_ResourceWithDslIdAnnotation_UsesAnnotationIdAsElementName()
+	public async Task Build_ResourceWithDSLIdAnnotation_UsesAnnotationIdAsElementName()
 	{
 		// Arrange
 		var resource = CreateContainerResource("aspirec4-server");
@@ -1195,7 +1195,7 @@ public sealed partial class ModelBuilderTests
 	}
 
 	[Test]
-	public async Task Build_ResourceWithDslIdAnnotation_UsesAnnotationIdInRelationshipSourceName()
+	public async Task Build_ResourceWithDSLIdAnnotation_UsesAnnotationIdInRelationshipSourceName()
 	{
 		// Arrange
 		var server = CreateContainerResource("aspirec4-server");
@@ -1214,7 +1214,7 @@ public sealed partial class ModelBuilderTests
 	}
 
 	[Test]
-	public async Task Build_ResourceWithDslIdAnnotation_UsesAnnotationIdInRelationshipTargetName()
+	public async Task Build_ResourceWithDSLIdAnnotation_UsesAnnotationIdInRelationshipTargetName()
 	{
 		// Arrange
 		var server = CreateContainerResource("aspirec4-server");
@@ -1233,7 +1233,7 @@ public sealed partial class ModelBuilderTests
 	}
 
 	[Test]
-	public async Task Build_ResourceWithoutDslIdAnnotation_UsesResourceNameAsElementName()
+	public async Task Build_ResourceWithoutDSLIdAnnotation_UsesResourceNameAsElementName()
 	{
 		// Arrange
 		var resource = CreateContainerResource("myservice");

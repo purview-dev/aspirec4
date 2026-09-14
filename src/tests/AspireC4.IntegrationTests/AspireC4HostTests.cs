@@ -47,7 +47,7 @@ public sealed class AspireC4HostTests(Fixtures.TestAppHostFixture fixture)
 	}
 
 	[Test]
-	public async Task StartAsync_WhenAppStarts_C4FileContainsDslStructure(CancellationToken cancellationToken)
+	public async Task StartAsync_WhenAppStarts_C4FileContainsDSLStructure(CancellationToken cancellationToken)
 	{
 		// Arrange
 		// (app started by the shared fixture)
@@ -185,7 +185,7 @@ public sealed class AspireC4HostTests(Fixtures.TestAppHostFixture fixture)
 	}
 
 	[Test]
-	public async Task StartAsync_WhenAppStarts_GeneratedDslPassesValidation(CancellationToken cancellationToken)
+	public async Task StartAsync_WhenAppStarts_GeneratedDSLPassesValidation(CancellationToken cancellationToken)
 	{
 		// Arrange
 		// (app started by the shared fixture)

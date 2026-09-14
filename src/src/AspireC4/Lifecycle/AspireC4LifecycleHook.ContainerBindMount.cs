@@ -50,6 +50,21 @@ sealed partial class AspireC4LifecycleHook
 		var servePath = $"{LikeC4ServerResource.WorkspacePath}/{relOutputDir}";
 		// ContainerServePath is read by the WithArgs callback registered at configure time in AddAspireC4.
 		workspaceOptions.Value.ContainerServePath = servePath;
+
+		// The LikeC4 container image sets WORKDIR to /data and LikeC4 resolves relative paths in
+		// likec4.config.json (imageAliases, include.paths) against the process working directory.
+		// The host-side invocations (format, validate) run with the output directory as cwd, so the
+		// container must run `likec4 start` with that same directory as its working directory too —
+		// otherwise those relative paths climb above the bind-mount root (/data) and fail with
+		// ENOENT (e.g. "/assets/images/..."). Override the image WORKDIR via --workdir so the
+		// container cwd matches the output directory, mirroring the host.
+		serverResource.Annotations.Add(
+			new ContainerRuntimeArgsCallbackAnnotation(args =>
+			{
+				args.Add("--workdir");
+				args.Add(servePath);
+			})
+		);
 	}
 
 	/// <summary>

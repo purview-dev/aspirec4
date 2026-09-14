@@ -4,7 +4,7 @@
 		<RoslynCompilerVersion>5.9.0</RoslynCompilerVersion>
 		<RoslynAnalyzersVersion>5.9.0</RoslynAnalyzersVersion>
 		<TUnitVersion>1.67.0</TUnitVersion>
-		<PurviewSourceGenVersion>1.0.0-prerelease.40</PurviewSourceGenVersion>
+		<PurviewSourceGenVersion>1.0.0-prerelease.41</PurviewSourceGenVersion>
 		<AspireVersion>13.5.3</AspireVersion>
 	</PropertyGroup>
 	<ItemGroup>

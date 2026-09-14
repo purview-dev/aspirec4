@@ -5,24 +5,27 @@
 	"type": "module",
 	"packageManager": "bun@1.4.2",
 	"engines": {
-		"bun": ">=1.2"
+		"bun": ">=1.2",
+		"node": "^20.19.0 || ^22.13.0 || >=24"
 	},
 	"scripts": {
-		"dev": "aspire run",
-		"format": "oxfmt --check apphost.mts",
-		"format:fix": "oxfmt --write apphost.mts",
-		"lint": "oxlint apphost.mts"
+		"aspire:lint": "oxfmt --check apphost.mts",
+		"aspire:lint:fix": "oxfmt --write apphost.mts",
+		"aspire:start": "aspire run",
+		"aspire:build": "tsc -p tsconfig.apphost.json",
+		"aspire:dev": "bun --watch run apphost.mts",
+		"lint": "bun run aspire:lint",
+		"dev": "bun run aspire:start",
+		"build": "bun run aspire:build",
+		"watch": "bun run aspire:dev"
 	},
 	"dependencies": {
-		"vscode-jsonrpc": "^9.0.2"
+		"vscode-jsonrpc": "^8.2.0"
 	},
 	"devDependencies": {
 		"@types/node": "^26.5.1",
 		"oxfmt": "0.67.0",
 		"oxlint": "1.82.0",
 		"typescript": "^7.0.2"
-	},
-	"allowScripts": {
-		"esbuild@0.28.0": true
 	}
 }

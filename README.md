@@ -1,5 +1,8 @@
 # AspireC4.Hosting
 
+[![NuGet version](https://img.shields.io/nuget/v/AspireC4.Hosting.svg)](https://www.nuget.org/packages/AspireC4.Hosting)
+[![Release](https://github.com/purview-dev/aspirec4/actions/workflows/release.yml/badge.svg)](https://github.com/purview-dev/aspirec4/actions/workflows/release.yml)
+
 **AspireC4.Hosting** is an [Aspire](https://learn.microsoft.com/en-us/dotnet/aspire/) extension library that generates live [LikeC4](https://likec4.dev) diagrams from the Aspire resource graph.
 
 ## Prerequisites

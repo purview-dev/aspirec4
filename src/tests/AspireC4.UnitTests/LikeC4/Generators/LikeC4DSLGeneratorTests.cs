@@ -14,7 +14,7 @@ public sealed partial class LikeC4DSLGeneratorTests
 	};
 
 	[Test]
-	public async Task Generate_EmptyModel_ProducesMinimalValidDsl()
+	public async Task Generate_EmptyModel_ProducesMinimalValidDSL()
 	{
 		// Arrange
 
