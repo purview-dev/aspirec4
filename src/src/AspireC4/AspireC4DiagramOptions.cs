@@ -51,7 +51,7 @@ public sealed class AspireC4DiagramOptions
 
 	/// <summary>
 	/// Directory where the generated <c>.c4</c> file is written.
-	/// Defaults to <c>./likec4</c> relative to the AppHost working directory.
+	/// Defaults to <c>./likec4/gen/</c> relative to the AppHost working directory.
 	/// </summary>
 	public string OutputDirectory { get; set; } = "./likec4/gen/";
 

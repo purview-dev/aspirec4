@@ -29,7 +29,7 @@ public static class AspireC4DistributedApplicationBuilderExtensions
 	/// sidecar that renders an interactive, hot-reloading diagram in the browser.
 	/// <para>
 	/// <b>Prerequisite:</b> Docker must be available (standard Aspire requirement). To use a
-	/// local Node.js CLI instead, call <c>.WithLocalCli()</c> on the returned builder.
+	/// local Node.js CLI instead, call <c>.WithLocalCLI()</c> on the returned builder.
 	/// </para>
 	/// </remarks>
 	/// <param name="builder">The Aspire distributed application builder.</param>

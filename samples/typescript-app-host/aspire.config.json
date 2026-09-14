@@ -19,6 +19,6 @@
     "Aspire.Hosting.Azure.PostgreSQL": "13.5.3",
     "Aspire.Hosting.Azure.Redis": "13.5.3",
     "Aspire.Hosting.JavaScript": "13.5.3",
-    "AspireC4.Hosting": "13.5.3"
+    "AspireC4.Hosting": "../../src/src/AspireC4/AspireC4.csproj"
   }
 }

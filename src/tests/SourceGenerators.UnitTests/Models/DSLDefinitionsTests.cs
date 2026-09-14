@@ -3,7 +3,7 @@ namespace Aspire.Hosting.AspireC4.SourceGenerators.Models;
 public sealed class DSLDefinitionsTests
 {
 	[Test]
-	public async Task DslDefinitions_Empty_HasAnyIsFalse()
+	public async Task DSLDefinitions_Empty_HasAnyIsFalse()
 	{
 		// Arrange / Act
 		var empty = DSLDefinitions.Empty;
@@ -13,7 +13,7 @@ public sealed class DSLDefinitionsTests
 	}
 
 	[Test]
-	public async Task DslDefinitions_WithTags_HasAnyIsTrue()
+	public async Task DSLDefinitions_WithTags_HasAnyIsTrue()
 	{
 		// Arrange / Act
 		DSLDefinitions defs = new(["my-tag"], [], []);

@@ -100,7 +100,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 	}
 
 	[Test]
-	public async Task RunGenerator_WithStrictModeAndNoDslFiles_EmitsNoDiagnostic(CancellationToken cancellationToken)
+	public async Task RunGenerator_WithStrictModeAndNoDSLFiles_EmitsNoDiagnostic(CancellationToken cancellationToken)
 	{
 		// Arrange — strict mode is on but no DSL additional files are provided
 		var source = BuildSourceWithCallSites(".WithTag(\"any-value\")");
