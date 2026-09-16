@@ -15,4 +15,10 @@
 	<PropertyGroup Condition="'$(IsTestProject)' == 'true'">
 		<NoWarn>$(NoWarn);CA1034;CA2234;</NoWarn>
 	</PropertyGroup>
+
+	<PropertyGroup Label="Purview site URL metadata">
+		<PurviewHomepage>https://purview.dev/</PurviewHomepage>
+		<PurviewProjectUrl>$(PurviewHomepage)projects/aspirec4/</PurviewProjectUrl>
+		<PurviewDocsUrl>$(PurviewHomepage)docs/aspirec4/</PurviewDocsUrl>
+	</PropertyGroup>
 </Project>
