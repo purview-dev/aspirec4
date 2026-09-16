@@ -6,6 +6,14 @@
 		"name": "Kieron Lanning",
 		"url": "https://kieronlanning.dev/"
 	},
+	"homepage": "https://purview.dev/projects/aspirec4/",
+	"bugs": {
+		"url": "https://github.com/purview-dev/aspirec4/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/purview-dev/aspirec4.git"
+	},
 	"private": true,
 	"type": "module",
 	"packageManager": "bun@1.4.2",
