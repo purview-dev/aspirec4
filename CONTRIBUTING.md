@@ -200,7 +200,7 @@ Fix: Correct HMR port fallback on Windows.
 
 ## Tests
 
-All tests in this repository **must use [TUnit](https://github.com/thomhurst/TUnit)**. Do not use xUnit, NUnit, or MSTest. Test projects declare just `<Project Sdk="Microsoft.NET.Sdk" />`; the SDK (Purview.DotNetProjectSdk) wires TUnit, TUnit.Mocks, and Bogus into them automatically.
+All tests in this repository **must use [TUnit](https://github.com/thomhurst/TUnit)**. Do not use xUnit, NUnit, or MSTest. Test projects declare just `<Project Sdk="Microsoft.NET.Sdk" />`; the SDK (Purview.BuildSdk) wires TUnit, TUnit.Mocks, and Bogus into them automatically.
 
 ### Key patterns
 

@@ -41,7 +41,7 @@ generates live [LikeC4](https://likec4.dev) architecture diagrams from the Aspir
 | Lefthook | Git hooks | global install; not pinned in-repo |
 | commitlint | Conventional-commit enforcement | `commitlint.config.mts` |
 
-The repository uses `Purview.DotNetProjectSdk` (pinned in `global.json` under `msbuild-sdks`) through
+The repository uses `Purview.BuildSdk` (pinned in `global.json` under `msbuild-sdks`) through
 `src/Directory.Build.props` / `src/Directory.Build.targets`. The SDK classifies projects, adds references,
 sets testing/telemetry defaults, and copies the bundled `.agents/**` skills into this repo. Use the
 `project-placement-defaults` and `sdk-project-behavior-and-detection` skills when reasoning about its behaviour.
@@ -232,7 +232,7 @@ Relevant bundled skills in `.agents/skills/`:
 
 - `likec4-dsl` — LikeC4 DSL/CLI work.
 - `project-placement-defaults`, `sdk-configuration-reference`, `sdk-project-behavior-and-detection` —
-  Purview.DotNetProjectSdk behaviour and configuration.
+  Purview.BuildSdk behaviour and configuration.
 - `source-generator-codewriter-modernization`, `source-generator-testing`, `tunit-test-authoring` —
   Roslyn generator work and tests.
 - `telemetry-sourcegenerator-*` — Purview.Telemetry.SourceGenerator usage (library telemetry).
