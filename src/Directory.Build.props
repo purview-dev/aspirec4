@@ -3,7 +3,7 @@
 		<NamespacePrefix>Aspire.Hosting.AspireC4</NamespacePrefix>
 	</PropertyGroup>
 
-	<Import Sdk="Purview.DotNetProjectSdk" Project="Sdk.props" />
+	<Import Sdk="Purview.BuildSdk" Project="Sdk.props" />
 
 	<PropertyGroup>
 		<!-- Matching the Aspire.* minimum framework -->
