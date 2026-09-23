@@ -1,6 +1,7 @@
 {
 	"name": "aspirec4",
-	"version": "13.5.3.2",
+	"version": "13.5.3.3",
+	"license": "MIT",
 	"description": "Aspire LikeC4 Visualization - version manifest for CD pipeline",
 	"author": {
 		"name": "Kieron Lanning",

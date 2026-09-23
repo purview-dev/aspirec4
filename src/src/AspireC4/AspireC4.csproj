@@ -9,7 +9,7 @@
 		<Authors>Purview Contributors</Authors>
 		<Copyright>Purview-Dev., $(COPYRIGHT_YEAR) | All rights reserved.</Copyright>
 		<PackageIcon>likec4-logo.png</PackageIcon>
-		<PackageLicenseFile>LICENSE.md</PackageLicenseFile>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<RepositoryUrl>https://github.com/purview-dev/aspirec4</RepositoryUrl>
 		<PackageProjectUrl>$(PurviewProjectUrl)</PackageProjectUrl>
@@ -33,7 +33,6 @@
 			Include="$(MSBuildThisFileDirectory)..\..\..\assets\images\likec4\likec4-logo.png"
 			Link="Sdk/likec4-logo.png"
 		/>
-		<None Include="$(MSBuildThisFileDirectory)..\..\..\LICENSE.md" Link="Sdk/LICENSE.md" />
 		<None Include="$(MSBuildThisFileDirectory)..\..\..\README.md" Link="Sdk/README.md" />
 	</ItemGroup>
 

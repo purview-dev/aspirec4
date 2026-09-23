@@ -9,16 +9,13 @@
 		"RequireSymbolPackage": true,
 		"RequireSymbolFiles": true,
 		"RequiredContent": {
-			"aspire.hosting.aspirec4": [
-				"lib/net8.0/Aspire.Hosting.AspireC4.dll",
-				"lib/net8.0/Aspire.Hosting.AspireC4.xml",
-				"analyzers/dotnet/cs/Purview.SourceGeneratorFramework.dll",
-				"analyzers/dotnet/cs/Purview.SourceGeneratorFramework.Shared.dll",
+			"aspirec4.hosting": [
 				"analyzers/dotnet/cs/Aspire.Hosting.AspireC4.SourceGenerators.dll",
 				"build/Aspire.Hosting.AspireC4.props",
-				"README.md",
-				"LICENSE.md",
-				"likec4-logo.png"
+				"lib/$(TFM)/Aspire.Hosting.AspireC4.dll",
+				"lib/$(TFM)/Aspire.Hosting.AspireC4.xml",
+				"likec4-logo.png",
+				"README.md"
 			]
 		},
 		"ForbiddenContent": {}
