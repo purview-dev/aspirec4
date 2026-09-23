@@ -4,8 +4,8 @@
 		<RoslynCompilerVersion>5.9.0</RoslynCompilerVersion>
 		<RoslynAnalyzersVersion>5.9.0</RoslynAnalyzersVersion>
 		<TUnitVersion>1.67.0</TUnitVersion>
-		<PurviewSourceGenVersion>1.0.0-prerelease.48</PurviewSourceGenVersion>
-		<PurviewTelemetryVersion>5.0.0-prerelease.13</PurviewTelemetryVersion>
+		<PurviewSourceGenVersion>1.0.0-prerelease.49</PurviewSourceGenVersion>
+		<PurviewTelemetryVersion>5.0.0-prerelease.14</PurviewTelemetryVersion>
 		<AspireVersion>13.5.3</AspireVersion>
 	</PropertyGroup>
 	<ItemGroup>
