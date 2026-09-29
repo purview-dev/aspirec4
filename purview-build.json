@@ -12,8 +12,8 @@
 			"aspirec4.hosting": [
 				"analyzers/dotnet/cs/Aspire.Hosting.AspireC4.SourceGenerators.dll",
 				"build/AspireC4.Hosting.props",
-				"lib/$(TFM)/Aspire.Hosting.AspireC4.dll",
-				"lib/$(TFM)/Aspire.Hosting.AspireC4.xml",
+				"lib/net8.0/Aspire.Hosting.AspireC4.dll",
+				"lib/net8.0/Aspire.Hosting.AspireC4.xml",
 				"likec4-logo.png",
 				"README.md"
 			]
