@@ -34,6 +34,39 @@ A push to `main` triggers `.github/workflows/release.yml`, which delegates to th
 
 The workflow does not publish to NuGet. Download the package from GitHub Releases and push it to the desired feed manually.
 
+## Analyzer release tracking
+
+The source generator ships Roslyn diagnostics (`ASPIREC4001`–`ASPIREC4007`). Their release history is tracked with
+the standard `Microsoft.CodeAnalysis.Analyzers` release-tracking files:
+
+- `src/src/SourceGenerators/AnalyzerReleases.Shipped.md` — rules that have already shipped, grouped under a
+  `## Release <version>` heading.
+- `src/src/SourceGenerators/AnalyzerReleases.Unshipped.md` — rules added, changed, or removed since the last release.
+  This file starts empty at the beginning of every release.
+
+Use these exact file names, at the `SourceGenerators` project root. `Microsoft.CodeAnalysis.Analyzers` only
+auto-includes files called `AnalyzerReleases.Shipped.md` / `AnalyzerReleases.Unshipped.md` as compiler
+`AdditionalFiles`; any other name (for example `Analysis.Shipped.md`) is silently ignored and no tracking occurs.
+
+### During a release
+
+1. Add any new, changed, or removed diagnostics to `AnalyzerReleases.Unshipped.md` as they are introduced.
+2. When the release is cut, move every row from `AnalyzerReleases.Unshipped.md` into a new
+   `## Release <version>` section in `AnalyzerReleases.Shipped.md` and leave the unshipped file empty again.
+3. If the release adds, removes, or changes no diagnostics, do not add a shipped section — the unshipped file
+   simply stays empty.
+
+Only three descriptor attributes count as a "change": category, default severity, and enabled-by-default status.
+Message text and descriptions can change without a tracking entry.
+
+Build the generator project to verify the tracking files remain valid and complete:
+
+```sh
+dotnet build src/src/SourceGenerators/SourceGenerators.csproj -c Release
+```
+
+The build must produce no `RS2000`–`RS2008` diagnostics.
+
 ## See also
 
 - [Contributing](Contributing.md)

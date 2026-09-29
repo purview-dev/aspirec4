@@ -222,9 +222,12 @@ When writing or validating `.c4`/`.likec4` files, load `.agents/skills/likec4-ds
   (`.github/workflows/release.yml`, delegating to the `purview-dev/build` reusable `purview-release.yml` with
   `release-mode: NuGet`) reads and validates it, builds, tests, packs, builds release notes from conventional
   commits, and creates a GitHub Release with the `.nupkg`/`.snupkg`. It does **not** push to nuget.org.
-- Note: `.github/skills/release/SKILL.md` is **out of date** — it references `just release`,
-  `scripts/release.mts`, a changeset flow, and `.github/workflows/cd.yml`, none of which exist in this repo.
-  Prefer `just pipeline-release` / `pipeline-local-release`.
+- `.github/skills/release/SKILL.md` reflects the current pipeline correctly — keep it in sync when the release
+  process changes. Prefer `just pipeline-release` / `pipeline-local-release`.
+- Roslyn diagnostics (`ASPIREC4001`–`ASPIREC4007`) are tracked in
+  `src/src/SourceGenerators/AnalyzerReleases.Shipped.md` / `AnalyzerReleases.Unshipped.md`. Move unshipped rows into
+  a new `## Release <version>` shipped section when cutting a release that adds, removes, or changes a rule. See
+  [Release Flow](docs/wiki/Release-Flow.md) for details.
 
 ## Skills
 

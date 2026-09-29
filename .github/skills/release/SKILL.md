@@ -53,6 +53,28 @@ A push to `main` triggers `.github/workflows/release.yml`, which delegates to th
 The workflow does **not** push to nuget.org. Download the package from GitHub Releases and push it to the desired
 feed manually.
 
+### Analyzer release tracking
+
+The source generator's diagnostics (`ASPIREC4001`–`ASPIREC4007`) are tracked with the standard
+`Microsoft.CodeAnalysis.Analyzers` release-tracking files:
+
+- `src/src/SourceGenerators/AnalyzerReleases.Shipped.md`
+- `src/src/SourceGenerators/AnalyzerReleases.Unshipped.md`
+
+Use these exact names at the `SourceGenerators` project root; the package only auto-includes files with these names
+as `AdditionalFiles` (a file named `Analysis.*.md` is ignored).
+
+When cutting a release that adds, removes, or changes a diagnostic, move every row from the unshipped file into a
+new `## Release <version>` section in the shipped file, then leave the unshipped file empty. Only category, default
+severity, and enabled-by-default count as a change. If a release changes no diagnostics, leave the unshipped file
+empty and add no shipped section. Verify with:
+
+```sh
+dotnet build src/src/SourceGenerators/SourceGenerators.csproj -c Release
+```
+
+No `RS2000`–`RS2008` diagnostics should be reported.
+
 ### Troubleshooting
 
 - `just pipeline-*` requires the pipeline tool; `ensure-pipeline-tool` installs it automatically.
