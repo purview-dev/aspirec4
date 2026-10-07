@@ -14,11 +14,14 @@ Help a consuming repository adopt or troubleshoot `Purview.BuildSdk` correctly, 
    variables, `.git` root, or a nearby `package.json`. `UsePackageJsonVersion=Strict` fails fast instead of
    silently skipping resolution.
 4. If the bundled `.agents/**` content isn't appearing in the repo root, check `EnableAgentFolderInPackage`
-   (default `true`) and `AgentPackDestinationFolder` (default `.agents`) — the copy runs before build via
+   (default `true`) and `AgentPackDestinationFolder` (default `.agents`) - the copy runs before build via
    `EnsureAgentFolderInPackageTarget`.
 5. For test-framework or project-shape questions, confirm the project follows repo naming and placement
    conventions the SDK expects, rather than introducing bespoke structure.
-6. Re-run `dotnet build` (or the repo's canonical build command) after each configuration change to confirm
+6. For naming, layout, and test readability questions, start from the engineering principles: naming and
+   placement are configuration, short project names are preferred, the detected test type becomes the baseline
+   category, and subject-based tests should be named for the subject they own.
+7. Re-run `dotnet build` (or the repo's canonical build command) after each configuration change to confirm
    the fix.
 
 ## Constraints
@@ -32,3 +35,4 @@ Help a consuming repository adopt or troubleshoot `Purview.BuildSdk` correctly, 
 ## Related skill
 
 See `../skills/sdk-configuration-reference/SKILL.md` for the full property reference.
+See `../skills/sdk-engineering-principles/SKILL.md` for the higher-level repository conventions.

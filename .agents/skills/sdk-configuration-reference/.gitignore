@@ -4,5 +4,5 @@
 # Don't ignore directories, so Git can traverse them
 !*/
 
-# Keep this file
-!.gitignore
+# This file is mirrored from a NuGet package, so ignore it too
+/.gitignore
