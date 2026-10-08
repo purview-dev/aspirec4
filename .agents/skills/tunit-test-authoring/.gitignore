@@ -1,8 +1,0 @@
-# Ignore all files
-*
-
-# Don't ignore directories, so Git can traverse them
-!*/
-
-# This file is mirrored from a NuGet package, so ignore it too
-/.gitignore
