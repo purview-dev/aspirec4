@@ -4,10 +4,10 @@
   "title": "AspireC4 Test App",
   "include": {
     "paths": [
-      "../../bin/Debug/net8.0/likec4/extensions"
+      "../../bin/Debug/net10.0/likec4/extensions"
     ]
   },
   "imageAliases": {
-    "@": "../../bin/Debug/net8.0/likec4/images"
+    "@": "../../bin/Debug/net10.0/likec4/images"
   }
 }

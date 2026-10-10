@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<IsPackable>false</IsPackable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!--
+			The DbContexts live in these libraries rather than in this executable, which is the normal
+			layout for a real service. The descriptors the generator emits therefore land in the
+			library assemblies, and the AppHost finds them by scanning this project's output directory.
+		-->
+		<ProjectReference
+			Include="..\TestAppHost.SimpleData\TestAppHost.SimpleData.csproj"
+			IsAspireProjectResource="false"
+		/>
+		<ProjectReference
+			Include="..\TestAppHost.ComplexData\TestAppHost.ComplexData.csproj"
+			IsAspireProjectResource="false"
+		/>
+	</ItemGroup>
+</Project>

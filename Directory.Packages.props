@@ -20,6 +20,12 @@
 		<PackageVersion Include="Purview.SourceGeneratorFramework" Version="$(PurviewSourceGenVersion)" />
 		<PackageVersion Include="Purview.SourceGeneratorFramework.Testing.TUnit" Version="$(PurviewSourceGenVersion)" />
 		<PackageVersion Include="Purview.Telemetry.SourceGenerator" Version="$(PurviewTelemetryVersion)" />
+		<!--
+			Sample EF Core data projects only. Relational carries the fluent API the generator
+			interprets (ToTable, HasDefaultSchema, HasColumnName, HasColumnType).
+		-->
+		<PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.12" />
+		<PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.12" />
 		<PackageVersion Include="Bogus" Version="35.6.5" />
 		<PackageVersion Include="TUnit" Version="$(TUnitVersion)" />
 		<PackageVersion Include="TUnit.Aspire" Version="$(TUnitVersion)" />

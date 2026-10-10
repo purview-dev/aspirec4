@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<IsPackable>true</IsPackable>
+		<AssemblyTitle>AspireC4 Hosting Entity Framework Core</AssemblyTitle>
+		<Description>Aspire hosting extension for AspireC4, generating a live d2lang ER diagram from Entity Framework Core DbContext types.</Description>
+		<COPYRIGHT_YEAR>2026</COPYRIGHT_YEAR>
+		<PackageId>AspireC4.Hosting.EntityFrameworkCore</PackageId>
+		<Title>AspireC4.Hosting.EntityFrameworkCore - Aspire d2lang ER Visualisation</Title>
+		<Authors>Purview Contributors</Authors>
+		<Copyright>Purview-Dev., $(COPYRIGHT_YEAR) | All rights reserved.</Copyright>
+		<PackageIcon>likec4-logo.png</PackageIcon>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<RepositoryUrl>https://github.com/purview-dev/aspirec4</RepositoryUrl>
+		<PackageProjectUrl>$(PurviewProjectUrl)</PackageProjectUrl>
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<PackageTags>aspire;dotnet;aspnetcore;d2;d2lang;entityframework;efcore;erd;diagram;visualisation;visualization;</PackageTags>
+		<IncludeSymbols>true</IncludeSymbols>
+		<EnableAspireIntegrationAnalyzers>true</EnableAspireIntegrationAnalyzers>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None
+			Include="$(MSBuildThisFileDirectory)..\..\..\assets\images\likec4\likec4-logo.png"
+			Link="Sdk/likec4-logo.png"
+		/>
+		<None Include="$(MSBuildThisFileDirectory)..\..\..\README.md" Link="Sdk/README.md" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Aspire.Hosting" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\AspireC4\AspireC4.csproj" IsAspireProjectResource="false" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Using Include="Aspire.Hosting.ApplicationModel" />
+	</ItemGroup>
+</Project>

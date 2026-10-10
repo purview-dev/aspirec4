@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<IsRoslynComponent>true</IsRoslynComponent>
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+	</PropertyGroup>
+
+	<!--
+		Packed as an analyzer-only package referenced by the *service* project (the one that owns the
+		DbContext), not by the AppHost. It has no runtime surface: the descriptor attribute is emitted
+		into the consuming assembly by the generator itself.
+	-->
+	<PropertyGroup>
+		<IsPackable>true</IsPackable>
+		<PackageId>AspireC4.EntityFrameworkCore</PackageId>
+		<AssemblyTitle>AspireC4 Entity Framework Core Analyzer</AssemblyTitle>
+		<Title>AspireC4.EntityFrameworkCore - EF Core model descriptor generator</Title>
+		<Description>Roslyn source generator that records a project's Entity Framework Core model so AspireC4 can draw a d2 ER diagram from it.</Description>
+		<COPYRIGHT_YEAR>2026</COPYRIGHT_YEAR>
+		<Authors>Purview Contributors</Authors>
+		<Copyright>Purview-Dev., $(COPYRIGHT_YEAR) | All rights reserved.</Copyright>
+		<PackageIcon>likec4-logo.png</PackageIcon>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<RepositoryUrl>https://github.com/purview-dev/aspirec4</RepositoryUrl>
+		<PackageProjectUrl>$(PurviewProjectUrl)</PackageProjectUrl>
+		<RepositoryType>git</RepositoryType>
+		<PackageTags>aspire;dotnet;d2;d2lang;entityframework;efcore;erd;diagram;roslyn;analyzer;</PackageTags>
+		<DevelopmentDependency>true</DevelopmentDependency>
+		<IncludeBuildOutput>false</IncludeBuildOutput>
+		<SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None
+			Include="$(MSBuildThisFileDirectory)..\..\..\assets\images\likec4\likec4-logo.png"
+			Link="Sdk/likec4-logo.png"
+		/>
+		<None Include="$(MSBuildThisFileDirectory)..\..\..\README.md" Link="Sdk/README.md" />
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
+		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
+		<PackageReference Include="Purview.SourceGeneratorFramework" PrivateAssets="all" />
+	</ItemGroup>
+</Project>

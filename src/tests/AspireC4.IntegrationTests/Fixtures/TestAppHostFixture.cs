@@ -42,6 +42,12 @@ public sealed class TestAppHostFixture : TUnit.Aspire.AspireFixture<Projects.Tes
 	/// <summary>Path of the generated LikeC4 config file (<c>likec4.config.json</c>).</summary>
 	public string ConfigPath => Path.Combine(OutputDirectory, "likec4.config.json");
 
+	/// <summary>
+	/// Path of the generated d2 ER diagram, routed into <see cref="OutputDirectory"/> so the test run
+	/// does not write into the sample AppHost's source tree.
+	/// </summary>
+	public string ErDiagramPath => Path.Combine(OutputDirectory, "schema.gen.d2");
+
 	/// <summary>Directory containing the copied image aliases (svg/png assets).</summary>
 	public string ImagesDirectory => Path.Combine(AppContext.BaseDirectory, "likec4", "images");
 
@@ -140,6 +146,15 @@ public sealed class TestAppHostFixture : TUnit.Aspire.AspireFixture<Projects.Tes
 			.Build();
 
 		builder.Configuration.AddInMemoryCollection(configOptions);
+
+		var erOptions = OptionsNameHelper
+			.CreateOptionsBuilder<EntityFrameworkCore.AspireC4EfDiagramOptions>()
+			.WithConfigurationSeperator()
+			.WithProperty(opts => opts.OutputDirectory, OutputDirectory)
+			.WithProperty(opts => opts.FileName, "schema.gen")
+			.Build();
+
+		builder.Configuration.AddInMemoryCollection(erOptions);
 
 		// PostConfigure wins over all Configure callbacks, including the default FormatGeneratedFile=true.
 		// The format step invokes `npx likec4 …` which traverses up the directory tree and scans the entire

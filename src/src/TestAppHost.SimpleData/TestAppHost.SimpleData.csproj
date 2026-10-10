@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<IsPackable>false</IsPackable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.EntityFrameworkCore" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!--
+			Referenced the way a consuming service project would reference the published
+			AspireC4.EntityFrameworkCore package: analyzer only, no runtime dependency.
+		-->
+		<ProjectReference
+			Include="..\EntityFrameworkCore.Analyzers\EntityFrameworkCore.Analyzers.csproj"
+			OutputItemType="Analyzer"
+			ReferenceOutputAssembly="false"
+			IsAspireProjectResource="false"
+		/>
+	</ItemGroup>
+</Project>

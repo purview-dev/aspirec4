@@ -88,6 +88,96 @@ builder.AddAspireC4(options => options.WithHMRDisabled());
 
 The LikeC4 sidecar is excluded automatically. Set `WithIncludeAspireC4InternalResource(true)` in the options callback if you want to inspect it.
 
+## Entity Framework Core ER diagrams (d2)
+
+`AspireC4.Hosting.EntityFrameworkCore` adds a second, complementary diagram: a live
+[d2](https://d2lang.com) `sql_table` ER diagram generated from your Entity Framework Core `DbContext`
+types, hosted alongside the architecture diagram and linked from it.
+
+Two packages are involved, because the model is read from source at compile time:
+
+```bash
+# AppHost project
+dotnet add package AspireC4.Hosting.EntityFrameworkCore
+
+# Each service project that owns a DbContext
+dotnet add package AspireC4.EntityFrameworkCore
+```
+
+```csharp
+var builder = DistributedApplication.CreateBuilder(args);
+
+builder.AddAspireC4()
+       .WithEntityFrameworkDiagram(configure: options => options
+           .LayoutEngine = D2LayoutEngine.Elk);
+
+builder.AddProject<Projects.Api>("api")
+       .WithEntityFrameworkModel();   // contribute this project's DbContexts
+
+builder.Build().Run();
+```
+
+This writes `./d2/gen/schema.gen.d2`, starts a `d2lang/d2` sidecar running `d2 --watch`, and adds
+an **ER Diagram** link to each contributing project in the dashboard and on its element in the
+architecture diagram.
+
+### Configuration
+
+| Property | Default | Description |
+| --- | --- | --- |
+| `Title` | `null` | Title shown in the generated diagram |
+| `OutputDirectory` | `"./d2/gen/"` | Directory the generated `.d2` file is written to |
+| `FileName` | `"schema.gen"` | Generated file name without extension |
+| `LayoutEngine` | `Elk` | `Dagre`, `Elk` or `Tala`. **dagre cannot target `sql_table` rows** |
+| `ShowNullability` | `true` | Render nullable columns with a trailing `?` |
+| `GroupBySchema` | `true` | Group tables into d2 containers by database schema |
+| `GroupByContext` | `true` | Group by `DbContext` when more than one is discovered |
+| `ContainerImageTag` | `null` (`v0.9.0`) | Pin the [`d2lang/d2`](https://hub.docker.com/r/d2lang/d2/) image tag |
+| `HideFromDashboard` | `false` | Hide the d2 sidecar from the Aspire dashboard |
+| `DashboardLinkDisplayName` | `"ER Diagram"` | Name used for the diagram link |
+
+### How the model is read
+
+The `AspireC4.EntityFrameworkCore` package is an **analyzer-only** package. At compile time it reads
+your `DbContext` types and emits the discovered model into the assembly as an attribute; the AppHost
+reads that attribute straight out of the built assembly's metadata, without loading or executing it.
+
+Because the model is recovered **statically**, it is a close approximation rather than a guaranteed
+match for the migrated schema. Understood today:
+
+- `DbSet<T>` properties, and entity types reachable through navigation properties.
+- `[Key]`, `[Required]`, `[MaxLength]`, `[StringLength]`, `[Table]`, `[Column]`, `[ForeignKey]`,
+  `[NotMapped]`, `[Index(IsUnique = true)]`.
+- EF naming conventions for primary keys (`Id` / `<Type>Id`) and foreign keys (`<Nav>Id` /
+  `<PrincipalType>Id`).
+- Fluent configuration in `OnModelCreating`: `HasDefaultSchema`, `ToTable`, `HasKey`, `Ignore`,
+  `HasIndex(...).IsUnique()`, and `Property(...)` with `HasColumnName`, `HasColumnType`,
+  `HasMaxLength`, `IsRequired`.
+
+Configuration applied indirectly — most notably `ApplyConfigurationsFromAssembly` — cannot be seen by
+static analysis and is reported as `ASPIREC4010`. Store types are generic (`int`, `varchar`, `guid`, …)
+rather than provider-specific, since the provider is not knowable at compile time; an explicit
+`[Column(TypeName = "...")]` or `HasColumnType("...")` always wins.
+
+### Local CLI instead of a container
+
+```csharp
+builder.AddAspireC4()
+       .WithEntityFrameworkDiagram()
+       .WithLocalD2CLI();          // after WithEntityFrameworkDiagram
+```
+
+d2 ships as a Go binary. Unlike the LikeC4 sidecar, there is **no npm CLI fallback** — the
+`@d2lang/d2` npm package is a WASM library with no executable. Install d2 (scoop, Homebrew,
+`install.sh`, or `go install`) so it is on `PATH`, or pass an explicit path:
+`WithLocalD2CLI("/opt/d2/bin/d2")`.
+
+### Overriding the output directory
+
+Prefer the `configure` callback over configuration for `OutputDirectory`. The sidecar's bind mount is
+fixed when the AppHost builder runs, so a value supplied through configuration changes where the file
+is written but **not** what the container serves. The callback is applied in time for both.
+
 ## Aspire TypeScript AppHost support
 
 AspireC4 supports both C# and TypeScript Aspire AppHosts. In a TypeScript AppHost, the Aspire integration exports the

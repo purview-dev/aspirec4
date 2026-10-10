@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<ItemGroup>
+		<!--
+			Referenced so the sample assemblies land in the test output and can be read back with
+			EfModelReader. This exercises the generator against the real EF Core API rather than the
+			stub types the generator's own tests use.
+		-->
+		<ProjectReference
+			Include="..\..\src\TestAppHost.SimpleData\TestAppHost.SimpleData.csproj"
+			IsAspireProjectResource="false"
+		/>
+		<ProjectReference
+			Include="..\..\src\TestAppHost.ComplexData\TestAppHost.ComplexData.csproj"
+			IsAspireProjectResource="false"
+		/>
+	</ItemGroup>
+</Project>

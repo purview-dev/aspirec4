@@ -20,10 +20,16 @@ generates live [LikeC4](https://likec4.dev) architecture diagrams from the Aspir
 |---|---|
 | `src/src/AspireC4/` | Aspire integration library (`Aspire.Hosting.AspireC4`): lifecycle hook, Docker/CLI server resources, model builder, DSL generator, dashboard integration |
 | `src/src/SourceGenerators/` | Roslyn `netstandard2.0` incremental source generator (registry + DSL strict validation) |
+| `src/src/EntityFrameworkCore/` | AppHost-side EF Core → d2 ER diagram library (`AspireC4.Hosting.EntityFrameworkCore`): descriptor reader, d2 model builder, d2 DSL generator, sidecar resources, lifecycle hook |
+| `src/src/EntityFrameworkCore.Analyzers/` | Roslyn `netstandard2.0` generator packed as the analyzer-only `AspireC4.EntityFrameworkCore` package, referenced by *service* projects |
 | `src/src/TestAppHost/` | C# sample AppHost used by integration tests and manual runs |
+| `src/src/TestAppHost.SimpleData/` | Sample EF Core model: one `DbContext`, convention-only configuration |
+| `src/src/TestAppHost.ComplexData/` | Sample EF Core model: three `DbContext` types, schemas, composite keys, self-references, attribute + fluent configuration |
 | `src/tests/AspireC4.UnitTests/` | Unit tests (model builder, DSL generator, options, lifecycle — no Docker) |
 | `src/tests/AspireC4.IntegrationTests/` | Aspire lifecycle tests (requires Docker, pulls `ghcr.io/likec4/likec4`) |
 | `src/tests/SourceGenerators.UnitTests/` | Source-generator tests (TUnit + `Purview.SourceGeneratorFramework.Testing.TUnit`) |
+| `src/tests/EntityFrameworkCore.UnitTests/` | d2 model builder, d2 DSL generator and descriptor loader tests (no Docker) |
+| `src/tests/EntityFrameworkCore.Analyzers.UnitTests/` | EF model generator tests, plus the generator→assembly→AppHost round-trip test |
 | `src/tests/SharedTestingInfra/` | Shared test helpers for the test projects |
 | `samples/typescript-app-host/` | TypeScript AppHost sample (`apphost.mts`, generated `.aspire/modules/`) |
 | `assets/likec4-extensions/` | Extra LikeC4 DSL used by the samples |
@@ -35,6 +41,7 @@ generates live [LikeC4](https://likec4.dev) architecture diagrams from the Aspir
 | Tool | Purpose | Version source |
 |---|---|---|
 | .NET SDK | Build/test | `global.json` |
+| Target framework | **net10.0** for all shipping and test projects (`src/Directory.Build.props`); Roslyn components override to `netstandard2.0` | `src/Directory.Build.props` |
 | Bun | JS scripts, commit hooks, TS sample | `package.json` → `packageManager` |
 | just | Task runner (single entry point) | system install |
 | Docker | Integration tests, local diagram viewer | system install |
@@ -200,10 +207,23 @@ The generator in `src/src/SourceGenerators/` is built on `Purview.SourceGenerato
 - `.agents/prompts/refactor-source-generator-to-codewriter.prompt.md` and
   `.agents/prompts/modernize-test-to-codequery-tunit.prompt.md` — prompt templates.
 
-Diagnostic IDs (`ASPIREC4001`–`ASPIREC4007`) are declared in
-`src/src/SourceGenerators/Helpers/DiagnosticLibrary.cs` and tracked in
-`src/src/SourceGenerators/AnalyzerReleases.Shipped.md` / `AnalyzerReleases.Unshipped.md`. When adding a
-diagnostic, update those release-tracking files.
+Diagnostic IDs are allocated across two generators and must stay unique:
+
+| Range | Generator | Declared in | Tracked in |
+|---|---|---|---|
+| `ASPIREC4001`–`ASPIREC4007` | Registry/DSL strict validator | `src/src/SourceGenerators/Helpers/DiagnosticLibrary.cs` | `src/src/SourceGenerators/AnalyzerReleases.*.md` |
+| `ASPIREC4008`–`ASPIREC4010` | EF Core model generator | `src/src/EntityFrameworkCore.Analyzers/Helpers/DiagnosticLibrary.cs` | `src/src/EntityFrameworkCore.Analyzers/AnalyzerReleases.*.md` |
+
+When adding a diagnostic, update the owning generator's release-tracking files.
+
+### EF Core model generator
+
+`src/src/EntityFrameworkCore.Analyzers/` runs in the **service** project (where the `DbContext` lives),
+not the AppHost — `OnModelCreating` is a method body and is absent from assembly metadata, so the model
+cannot be recovered from a referenced assembly. It emits the discovered model as
+`[assembly: AspireC4EfModel("<json>")]`; the AppHost reads it back with `System.Reflection.Metadata`
+(metadata-only, never loading or executing the assembly). The generator must stay pure — `AddSource`
+only, never writing files, or compiler determinism and caching break.
 
 ## LikeC4 DSL work
 
