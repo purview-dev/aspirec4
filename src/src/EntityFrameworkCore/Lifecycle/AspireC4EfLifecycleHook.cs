@@ -51,6 +51,7 @@ sealed partial class AspireC4EfLifecycleHook(
 				// very first run after a clean. Regenerating once projects start makes that self-healing.
 				_ = Task.Run(() => WatchProjectsAsync(evt.Model, resource, ct), ct);
 				_ = Task.Run(() => CrossLinkAsync(evt.Model, resource, ct), ct);
+				_ = Task.Run(() => PublishViewerAccessAsync(resource, ct), ct);
 			}
 		);
 
@@ -89,6 +90,12 @@ sealed partial class AspireC4EfLifecycleHook(
 			var path = Path.Combine(directory, file.FileName);
 
 			await File.WriteAllTextAsync(path, file.Content, cancellationToken).ConfigureAwait(false);
+
+			// Remembered so the dashboard command knows what to open.
+			if (file.FileName.Equals("index.html", StringComparison.OrdinalIgnoreCase))
+			{
+				_viewerPath = path;
+			}
 
 			ErdLog.Wrote(logger, path);
 		}

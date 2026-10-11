@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Aspire.Hosting.AspireC4.EntityFrameworkCore.Annotations;
 using Aspire.Hosting.AspireC4.EntityFrameworkCore.ApplicationModel;
 using Aspire.Hosting.AspireC4.LikeC4.Annotations;
@@ -10,6 +11,88 @@ namespace Aspire.Hosting.AspireC4.EntityFrameworkCore.Lifecycle;
 sealed partial class AspireC4EfLifecycleHook
 {
 	const string ErDiagramUrlName = "er-diagram";
+
+	/// <summary>The viewer written beside the diagram, once it exists.</summary>
+	string? _viewerPath;
+
+	/// <summary>
+	/// Makes the diagram reachable from the dashboard.
+	/// </summary>
+	/// <remarks>
+	/// The d2 renderer has a sidecar with a real endpoint, so its URLs are forwarded onto the wrapper
+	/// exactly as the LikeC4 integration does. The other renderers write a viewer to disk with no
+	/// server behind it: a <c>file://</c> URL would not be clickable from the dashboard's own origin,
+	/// so a command is published instead and the AppHost opens the file itself.
+	/// </remarks>
+	async Task PublishViewerAccessAsync(AspireC4EfResource resource, CancellationToken cancellationToken)
+	{
+		if (resource.InnerResource is null)
+		{
+			AddOpenViewerCommand(resource);
+
+			return;
+		}
+
+		try
+		{
+			await foreach (var evt in resourceNotificationService.WatchAsync(cancellationToken).ConfigureAwait(false))
+			{
+				if (evt.Resource.Name != resource.InnerResource.Name || evt.Snapshot.Urls.Length == 0)
+				{
+					continue;
+				}
+
+				await resourceNotificationService
+					.PublishUpdateAsync(resource, snapshot => snapshot with { Urls = evt.Snapshot.Urls })
+					.ConfigureAwait(false);
+			}
+		}
+		catch (OperationCanceledException)
+		{
+			// Shutdown.
+		}
+	}
+
+	void AddOpenViewerCommand(AspireC4EfResource resource)
+	{
+		if (resource.Annotations.OfType<ResourceCommandAnnotation>().Any(a => a.Name == OpenViewerCommand))
+		{
+			return;
+		}
+
+		resource.Annotations.Add(
+			new ResourceCommandAnnotation(
+				name: OpenViewerCommand,
+				displayName: _options.DashboardLinkDisplayName,
+				updateState: _ =>
+					_viewerPath is not null ? ResourceCommandState.Enabled : ResourceCommandState.Disabled,
+				executeCommand: _ =>
+				{
+					var path = _viewerPath;
+
+					if (path is null || !File.Exists(path))
+					{
+						return Task.FromResult(
+							CommandResults.Failure($"The viewer has not been generated yet ({path ?? "no path"}).")
+						);
+					}
+
+					// UseShellExecute hands the file to the OS, which opens it in the default browser.
+					Process.Start(new ProcessStartInfo(path) { UseShellExecute = true })?.Dispose();
+
+					return Task.FromResult(CommandResults.Success());
+				},
+				displayDescription: "Opens the generated ER diagram in your default browser.",
+				parameter: null,
+				confirmationMessage: null,
+				iconName: "Database",
+				iconVariant: IconVariant.Filled,
+				isHighlighted: true
+			)
+		);
+	}
+
+	const string OpenViewerCommand = "aspirec4-open-er-diagram";
 
 	/// <summary>
 	/// Waits for the d2 sidecar to publish its URL, then surfaces that URL on every contributing

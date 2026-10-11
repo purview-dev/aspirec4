@@ -53,6 +53,12 @@ public sealed class TestAppHostFixture : TUnit.Aspire.AspireFixture<Projects.Tes
 
 	DistributedApplication? _app;
 
+	/// <summary>Finds a resource in the running application model, so tests can inspect annotations.</summary>
+	public IResource? GetResource(string resourceName) =>
+		_app
+			?.Services.GetRequiredService<DistributedApplicationModel>()
+			.Resources.FirstOrDefault(r => r.Name.Equals(resourceName, StringComparison.OrdinalIgnoreCase));
+
 	/// <summary>
 	/// Reads a resource's current dashboard state, so tests can assert what the dashboard would show.
 	/// </summary>

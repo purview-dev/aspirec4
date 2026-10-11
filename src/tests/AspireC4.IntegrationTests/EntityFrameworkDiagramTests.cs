@@ -87,6 +87,23 @@ public sealed class EntityFrameworkDiagramTests(Fixtures.TestAppHostFixture fixt
 	}
 
 	[Test]
+	public async Task StartAsync_WhenAppStarts_PublishesACommandToOpenTheViewer()
+	{
+		// The default renderer writes a viewer to disk with no server behind it, so a file:// URL
+		// would not be clickable from the dashboard's own origin. A command is published instead.
+		// Act
+		var resource = fixture.GetResource("aspirec4-er");
+		var command = resource
+			?.Annotations.OfType<ResourceCommandAnnotation>()
+			.FirstOrDefault(a => a.Name == "aspirec4-open-er-diagram");
+
+		// Assert
+		await Assert.That(resource).IsNotNull();
+		await Assert.That(command).IsNotNull();
+		await Assert.That(command!.UpdateState(null!)).IsEqualTo(ResourceCommandState.Enabled);
+	}
+
+	[Test]
 	public async Task StartAsync_WhenAppStarts_ViewerPointsAtTheGeneratedModel(CancellationToken cancellationToken)
 	{
 		// Act
