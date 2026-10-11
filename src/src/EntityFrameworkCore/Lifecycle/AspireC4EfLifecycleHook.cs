@@ -109,16 +109,17 @@ sealed partial class AspireC4EfLifecycleHook(
 			ErdLog.NoModelsFound(logger);
 		}
 
-		// The viewer loads its JavaScript from vendor/ rather than a CDN, and that directory is
-		// populated by a separate step. Without it the page loads and renders nothing, which is a
-		// confusing failure to debug from the browser alone.
+		// The viewer loads its JavaScript from vendor/ rather than a CDN, so the dependencies ship
+		// with the package and are written out here. Without this the page loads and renders nothing.
 		if (_viewerPath is not null)
 		{
-			var vendor = Path.Combine(directory, "vendor");
+			var written = await InteractiveViewer
+				.WriteVendorAssetsAsync(directory, _options.Renderer, cancellationToken)
+				.ConfigureAwait(false);
 
-			if (!File.Exists(Path.Combine(vendor, "bundle.js")))
+			if (written > 0)
 			{
-				ErdLog.ViewerDependenciesMissing(logger, vendor, directory);
+				ErdLog.ViewerDependenciesWritten(logger, written);
 			}
 		}
 

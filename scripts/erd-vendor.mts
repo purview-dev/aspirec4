@@ -1,30 +1,59 @@
-// Bundles the interactive ER viewer's JavaScript dependencies into <output>/vendor/.
+// Bundles the ER viewer's JavaScript dependencies.
 //
-// The viewer loads these from disk rather than a CDN so a generated diagram keeps working offline and
-// without a server. They are genuinely bundled — an earlier attempt fetched esm.sh modules directly,
-// which returned re-export stubs pointing at absolute CDN paths and so only appeared to work.
-import { mkdir, copyFile, rm, writeFile } from "node:fs/promises";
+// Two modes:
+//   bun scripts/erd-vendor.mts <output-directory>   write plain files into <dir>/vendor
+//   bun scripts/erd-vendor.mts --embed              write gzipped files into the library's assets,
+//                                                   where they are embedded into the package
+//
+// The embedded copies are what make a generated diagram work with no setup step. Re-run --embed to
+// pick up a dependency bump; the result is committed alongside the code that loads it.
+//
+// They are genuinely bundled rather than fetched: requesting ESM modules from a CDN returns
+// re-export stubs pointing at absolute CDN paths, which only appear to work.
+import { gzipSync } from "node:zlib";
+import { mkdir, copyFile, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-const target = process.argv[2];
+const embed = process.argv[2] === "--embed";
+const target = embed
+	? join(import.meta.dir, "..", "src", "src", "EntityFrameworkCore", "Assets", "viewer", "vendor")
+	: process.argv[2]
+		? join(process.argv[2], "vendor")
+		: null;
 
 if (!target) {
-	console.error("usage: bun scripts/erd-vendor.mts <output-directory>");
+	console.error("usage: bun scripts/erd-vendor.mts <output-directory>|--embed");
 	process.exit(1);
 }
 
-const vendor = join(target, "vendor");
-await mkdir(vendor, { recursive: true });
+await mkdir(target, { recursive: true });
 
-// A single entry re-exporting everything the viewer needs, so React is shared by React Flow rather
-// than duplicated into a second copy (which would break hooks).
-//
-// Written inside the repository rather than the output directory: bun resolves bare imports against
-// the nearest node_modules, and the output directory has none.
-const entry = join(import.meta.dir, ".erd-entry.ts");
+/** Bundles an entry module, sharing React so React Flow does not get a second copy of it. */
+async function bundle(name: string, source: string): Promise<Uint8Array> {
+	const entry = join(import.meta.dir, `.erd-${name}-entry.ts`);
 
-await writeFile(
-	entry,
+	await writeFile(entry, source, "utf8");
+
+	const result = await Bun.build({
+		entrypoints: [entry],
+		target: "browser",
+		format: "esm",
+		minify: true,
+		define: { "process.env.NODE_ENV": '"production"' },
+	});
+
+	await rm(entry, { force: true });
+
+	if (!result.success) {
+		for (const log of result.logs) console.error(log);
+		process.exit(1);
+	}
+
+	return new Uint8Array(await result.outputs[0].arrayBuffer());
+}
+
+const viewer = await bundle(
+	"viewer",
 	`export { default as React, useCallback, useEffect, useMemo, useState } from "react";
 export { createRoot } from "react-dom/client";
 export {
@@ -40,53 +69,26 @@ export {
 } from "@xyflow/react";
 export { default as ELK } from "elkjs/lib/elk.bundled.js";
 `,
-	"utf8",
 );
 
-const result = await Bun.build({
-	entrypoints: [entry],
-	target: "browser",
-	format: "esm",
-	minify: true,
-	define: { "process.env.NODE_ENV": '"production"' },
-});
+// Mermaid is bundled separately: only the Mermaid preview needs it, and it is roughly three times
+// the size of the viewer bundle.
+const mermaid = await bundle("mermaid", `export { default } from "mermaid";\n`);
 
-await rm(entry, { force: true });
+const css = await readFile(join(import.meta.dir, "..", "node_modules", "@xyflow", "react", "dist", "style.css"));
 
-if (!result.success) {
-	for (const log of result.logs) console.error(log);
-	process.exit(1);
+const files: [string, Uint8Array][] = [
+	["bundle.js", viewer],
+	["mermaid.js", mermaid],
+	["reactflow.css", new Uint8Array(css)],
+];
+
+for (const [name, content] of files) {
+	const payload = embed ? gzipSync(content, { level: 9 }) : content;
+
+	await writeFile(join(target, embed ? `${name}.gz` : name), payload);
+
+	console.log(`${name}${embed ? ".gz" : ""}  ${Math.round(payload.length / 1024)} KB`);
 }
 
-const [output] = result.outputs;
-await writeFile(join(vendor, "bundle.js"), await output.text(), "utf8");
-
-// Mermaid is bundled separately: only the Mermaid preview needs it, and it is large enough that
-// folding it into the interactive viewer's bundle would make every diagram pay for it.
-const mermaidEntry = join(import.meta.dir, ".erd-mermaid-entry.ts");
-await writeFile(mermaidEntry, `export { default } from "mermaid";\n`, "utf8");
-
-const mermaidResult = await Bun.build({
-	entrypoints: [mermaidEntry],
-	target: "browser",
-	format: "esm",
-	minify: true,
-	define: { "process.env.NODE_ENV": '"production"' },
-});
-
-await rm(mermaidEntry, { force: true });
-
-if (!mermaidResult.success) {
-	for (const log of mermaidResult.logs) console.error(log);
-	process.exit(1);
-}
-
-await writeFile(join(vendor, "mermaid.js"), await mermaidResult.outputs[0].text(), "utf8");
-
-await copyFile(
-	join(import.meta.dir, "..", "node_modules", "@xyflow", "react", "dist", "style.css"),
-	join(vendor, "reactflow.css"),
-);
-
-const kb = Math.round((await output.text()).length / 1024);
-console.log(`Vendored bundle.js (${kb} KB), mermaid.js and reactflow.css into ${vendor}`);
+console.log(`\nWrote ${files.length} files into ${target}`);

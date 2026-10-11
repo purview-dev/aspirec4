@@ -43,13 +43,18 @@ public sealed class TestAppHostFixture : TUnit.Aspire.AspireFixture<Projects.Tes
 	public string ConfigPath => Path.Combine(OutputDirectory, "likec4.config.json");
 
 	/// <summary>
-	/// Path of the generated ER model, routed into <see cref="OutputDirectory"/> so the test run does
-	/// not write into the sample AppHost's source tree. The default renderer emits JSON.
+	/// Where the ER diagram was written, read back off the resource rather than configured, so it
+	/// always matches what the viewer server is serving.
 	/// </summary>
-	public string ErDiagramPath => Path.Combine(OutputDirectory, "schema.gen.json");
+	public string ErOutputDirectory =>
+		(GetResource("aspirec4-er") as EntityFrameworkCore.ApplicationModel.AspireC4EfResource)?.OutputDirectory
+		?? OutputDirectory;
+
+	/// <summary>Path of the generated ER model. The default renderer emits JSON.</summary>
+	public string ErDiagramPath => Path.Combine(ErOutputDirectory, "schema.gen.json");
 
 	/// <summary>Path of the interactive viewer emitted beside the model.</summary>
-	public string ErViewerPath => Path.Combine(OutputDirectory, "index.html");
+	public string ErViewerPath => Path.Combine(ErOutputDirectory, "index.html");
 
 	DistributedApplication? _app;
 
@@ -232,14 +237,10 @@ public sealed class TestAppHostFixture : TUnit.Aspire.AspireFixture<Projects.Tes
 
 		builder.Configuration.AddInMemoryCollection(configOptions);
 
-		var erOptions = OptionsNameHelper
-			.CreateOptionsBuilder<EntityFrameworkCore.AspireC4EfDiagramOptions>()
-			.WithConfigurationSeperator()
-			.WithProperty(opts => opts.OutputDirectory, OutputDirectory)
-			.WithProperty(opts => opts.FileName, "schema.gen")
-			.Build();
-
-		builder.Configuration.AddInMemoryCollection(erOptions);
+		// The ER diagram's output directory is deliberately not overridden. Its viewer server binds a
+		// mount when the builder runs, which cannot follow a configuration change applied afterwards —
+		// overriding it here would leave the server serving a directory the diagram is not written to.
+		// Tests read the directory back off the resource instead.
 
 		// PostConfigure wins over all Configure callbacks, including the default FormatGeneratedFile=true.
 		// The format step invokes `npx likec4 …` which traverses up the directory tree and scans the entire

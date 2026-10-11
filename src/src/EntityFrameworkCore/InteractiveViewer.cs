@@ -31,6 +31,67 @@ public static class InteractiveViewer
 			.Replace("__MODEL__", fileName, StringComparison.Ordinal)
 			.Replace("__TITLE__", string.IsNullOrWhiteSpace(title) ? "ER Diagram" : title, StringComparison.Ordinal);
 
+	/// <summary>
+	/// The viewer's JavaScript dependencies, keyed by the file name written to <c>vendor/</c>.
+	/// </summary>
+	/// <remarks>
+	/// Shipped with the package and gzipped, so a generated diagram works with no setup step. Loading
+	/// them from a CDN instead would break offline use, and leaving them to a manual step meant the
+	/// viewer rendered a blank page until someone ran it.
+	/// </remarks>
+	/// <remarks>
+	/// Only what the chosen renderer needs is written: the Mermaid bundle is roughly three times the
+	/// size of the interactive one, and neither renderer uses the other's.
+	/// </remarks>
+	static string[] VendorAssetsFor(ErdRenderer renderer) =>
+		renderer == ErdRenderer.Mermaid ? ["mermaid.js"] : ["bundle.js", "reactflow.css"];
+
+	/// <summary>
+	/// Writes the viewer's dependencies into <c>&lt;directory&gt;/vendor</c>, skipping any already
+	/// present so a locally rebuilt bundle is not overwritten.
+	/// </summary>
+	/// <returns>The number of files written.</returns>
+	public static async Task<int> WriteVendorAssetsAsync(
+		string directory,
+		ErdRenderer renderer,
+		CancellationToken cancellationToken
+	)
+	{
+		ArgumentNullException.ThrowIfNull(directory);
+
+		var vendor = Path.Combine(directory, "vendor");
+
+		Directory.CreateDirectory(vendor);
+
+		var written = 0;
+
+		foreach (var name in VendorAssetsFor(renderer))
+		{
+			var path = Path.Combine(vendor, name);
+
+			if (File.Exists(path))
+			{
+				continue;
+			}
+
+			using var compressed =
+				typeof(InteractiveViewer).Assembly.GetManifestResourceStream($"{Prefix}viewer.vendor.{name}.gz")
+				?? throw new InvalidOperationException($"Embedded viewer dependency '{name}.gz' was not found.");
+
+			using System.IO.Compression.GZipStream decompressed = new(
+				compressed,
+				System.IO.Compression.CompressionMode.Decompress
+			);
+			using FileStream file = new(path, FileMode.Create, FileAccess.Write);
+
+			await decompressed.CopyToAsync(file, cancellationToken).ConfigureAwait(false);
+
+			written++;
+		}
+
+		return written;
+	}
+
 	static string Read(string name)
 	{
 		using var stream =

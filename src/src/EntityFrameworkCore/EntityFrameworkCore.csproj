@@ -34,6 +34,13 @@
 		<EmbeddedResource Include="Assets\viewer\app.js" />
 		<EmbeddedResource Include="Assets\mermaid\index.html" />
 		<EmbeddedResource Include="Assets\mermaid\mermaid-app.js" />
+		<!--
+			Gzipped so the package carries roughly 2 MB rather than 7 MB. Regenerate after a
+			dependency bump by running the erd-vendor script in embed mode.
+		-->
+		<EmbeddedResource Include="Assets\viewer\vendor\bundle.js.gz" />
+		<EmbeddedResource Include="Assets\viewer\vendor\mermaid.js.gz" />
+		<EmbeddedResource Include="Assets\viewer\vendor\reactflow.css.gz" />
 	</ItemGroup>
 
 	<ItemGroup>

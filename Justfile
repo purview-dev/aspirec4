@@ -276,11 +276,11 @@ _try-bun path=justfile_dir():
 
 # ── ER diagrams ───────────────────────────────────────────────────────────────
 
-# Fetch the interactive viewer's JavaScript dependencies into an output directory's vendor/ folder.
-# Run once per output directory; the viewer loads these locally rather than from a CDN.
+# Rebuild the viewer's bundled JavaScript. Pass --embed to refresh the copies shipped with the
+# package (after a dependency bump); pass a directory to write plain files into <dir>/vendor.
 [group('Diagrams')]
-erd-vendor dir:
-    bun scripts/erd-vendor.mts "{{ dir }}"
+erd-vendor target="--embed":
+    bun scripts/erd-vendor.mts "{{ target }}"
 
 # Drive the interactive viewer in a real browser and assert it renders, lays out, searches and
 # animates. Takes a generated model JSON. Requires: bunx playwright install chromium

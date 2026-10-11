@@ -115,6 +115,24 @@ public sealed class EntityFrameworkDiagramTests(Fixtures.TestAppHostFixture fixt
 	}
 
 	[Test]
+	public async Task StartAsync_WhenAppStarts_ServesTheViewerDependencies(CancellationToken cancellationToken)
+	{
+		// The dependencies ship with the package and are written out on generation. When they were a
+		// manual step the viewer served fine and rendered a blank page.
+		// Act
+		var urls = await fixture.GetResourceUrlsAsync("aspirec4-er", cancellationToken);
+		using HttpClient client = new() { Timeout = TimeSpan.FromSeconds(30) };
+
+		var bundle = await client.GetAsync(new Uri($"{urls[0].TrimEnd('/')}/vendor/bundle.js"), cancellationToken);
+		var css = await client.GetAsync(new Uri($"{urls[0].TrimEnd('/')}/vendor/reactflow.css"), cancellationToken);
+
+		// Assert
+		await Assert.That(bundle.IsSuccessStatusCode).IsTrue();
+		await Assert.That(css.IsSuccessStatusCode).IsTrue();
+		await Assert.That(bundle.Content.Headers.ContentLength ?? 0).IsGreaterThan(100_000);
+	}
+
+	[Test]
 	public async Task StartAsync_WhenAppStarts_ServesTheGeneratedModelAlongsideTheViewer(
 		CancellationToken cancellationToken
 	)

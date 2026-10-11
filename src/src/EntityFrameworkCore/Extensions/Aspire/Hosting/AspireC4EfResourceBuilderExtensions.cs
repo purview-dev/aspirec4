@@ -6,6 +6,7 @@ using Aspire.Hosting.AspireC4.EntityFrameworkCore.ApplicationModel;
 using Aspire.Hosting.AspireC4.EntityFrameworkCore.D2;
 using Aspire.Hosting.AspireC4.EntityFrameworkCore.Lifecycle;
 using Aspire.Hosting.Lifecycle;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -41,6 +42,15 @@ public static class AspireC4EfResourceBuilderExtensions
 
 		AspireC4EfDiagramOptions snapshot = new();
 		configure?.Invoke(snapshot);
+
+		// Configuration is also bound here, not just into the options framework, so the builder-time
+		// snapshot agrees with what the lifecycle hook resolves at runtime. The viewer server's bind
+		// mount is fixed when the builder runs and cannot follow a later change, so a divergence
+		// would leave it serving a directory the diagram is not written to.
+		ConfigurationBinder.Bind(
+			builder.ApplicationBuilder.Configuration.GetSection(AspireC4EfDiagramOptions.SectionName),
+			snapshot
+		);
 
 		// Registered through the options framework rather than Options.Create so later Configure
 		// callbacks are not suppressed — the same constraint the LikeC4 side documents.

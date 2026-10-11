@@ -33,10 +33,6 @@ static partial class ErdLog
 	)]
 	public static partial void NoModelsFound(ILogger logger);
 
-	[LoggerMessage(
-		Level = LogLevel.Warning,
-		Message = "The viewer's dependencies are missing from {Vendor}, so it will not render. "
-			+ "Run: just erd-vendor \"{Output}\""
-	)]
-	public static partial void ViewerDependenciesMissing(ILogger logger, string vendor, string output);
+	[LoggerMessage(Level = LogLevel.Information, Message = "Wrote {Count} viewer dependency file(s).")]
+	public static partial void ViewerDependenciesWritten(ILogger logger, int count);
 }
