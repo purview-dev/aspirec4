@@ -51,6 +51,43 @@ public sealed class TestAppHostFixture : TUnit.Aspire.AspireFixture<Projects.Tes
 	/// <summary>Path of the interactive viewer emitted beside the model.</summary>
 	public string ErViewerPath => Path.Combine(OutputDirectory, "index.html");
 
+	DistributedApplication? _app;
+
+	/// <summary>
+	/// Reads a resource's current dashboard state, so tests can assert what the dashboard would show.
+	/// </summary>
+	/// <returns>The state text, or <see langword="null"/> if the resource never reported one.</returns>
+	public async Task<string?> GetResourceStateAsync(string resourceName, CancellationToken cancellationToken)
+	{
+		if (_app is null)
+			return null;
+
+		var notifications = _app.Services.GetRequiredService<ResourceNotificationService>();
+
+		using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+		cts.CancelAfter(TimeSpan.FromSeconds(30));
+
+		try
+		{
+			await foreach (var evt in notifications.WatchAsync(cts.Token))
+			{
+				if (
+					evt.Resource.Name.Equals(resourceName, StringComparison.OrdinalIgnoreCase)
+					&& evt.Snapshot.State?.Text is { } state
+				)
+				{
+					return state;
+				}
+			}
+		}
+		catch (OperationCanceledException)
+		{
+			// Fall through: the resource never reported a state.
+		}
+
+		return null;
+	}
+
 	/// <summary>Directory containing the copied image aliases (svg/png assets).</summary>
 	public string ImagesDirectory => Path.Combine(AppContext.BaseDirectory, "likec4", "images");
 
@@ -80,6 +117,8 @@ public sealed class TestAppHostFixture : TUnit.Aspire.AspireFixture<Projects.Tes
 	/// </summary>
 	protected override async Task WaitForResourcesAsync(DistributedApplication app, CancellationToken cancellationToken)
 	{
+		_app = app;
+
 		const string aspireC4ResourceName = AspireC4DistributedApplicationBuilderExtensions.AspireC4ResourceName;
 
 		var notificationService = app.Services.GetRequiredService<ResourceNotificationService>();

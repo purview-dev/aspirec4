@@ -17,7 +17,8 @@ namespace Aspire.Hosting.AspireC4.EntityFrameworkCore.Lifecycle;
 /// </remarks>
 sealed partial class AspireC4EfLifecycleHook(
 	IOptions<AspireC4EfDiagramOptions> options,
-	ResourceNotificationService resourceNotificationService
+	ResourceNotificationService resourceNotificationService,
+	ResourceLoggerService resourceLoggerService
 ) : IDistributedApplicationEventingSubscriber
 {
 	readonly AspireC4EfDiagramOptions _options = options.Value;
@@ -62,7 +63,9 @@ sealed partial class AspireC4EfLifecycleHook(
 		CancellationToken cancellationToken
 	)
 	{
-		var files = ErdOutput.Create(LoadModel(model), _options);
+		var logger = resourceLoggerService.GetLogger(resource);
+		var efModel = LoadModel(model);
+		var files = ErdOutput.Create(efModel, _options);
 
 		// The first file is the diagram itself; its header carries a timestamp, so comparing the
 		// stripped body keeps the file off the git diff when nothing has actually changed.
@@ -70,6 +73,8 @@ sealed partial class AspireC4EfLifecycleHook(
 
 		if (string.Equals(body, _lastRawBody, StringComparison.Ordinal))
 		{
+			ErdLog.Unchanged(logger);
+
 			return;
 		}
 
@@ -81,9 +86,41 @@ sealed partial class AspireC4EfLifecycleHook(
 
 		foreach (var file in files)
 		{
-			await File.WriteAllTextAsync(Path.Combine(directory, file.FileName), file.Content, cancellationToken)
-				.ConfigureAwait(false);
+			var path = Path.Combine(directory, file.FileName);
+
+			await File.WriteAllTextAsync(path, file.Content, cancellationToken).ConfigureAwait(false);
+
+			ErdLog.Wrote(logger, path);
 		}
+
+		var tables = efModel.Contexts.Sum(c => c.Tables.Count);
+
+		ErdLog.Generated(logger, _options.Renderer, efModel.Contexts.Count, tables);
+
+		if (efModel.Contexts.Count == 0)
+		{
+			ErdLog.NoModelsFound(logger);
+		}
+
+		// This resource runs no process of its own, so it has to publish its own state or the
+		// dashboard leaves it Unknown with no logs.
+		await resourceNotificationService
+			.PublishUpdateAsync(
+				resource,
+				snapshot =>
+					snapshot with
+					{
+						State = KnownResourceStates.Running,
+						Properties =
+						[
+							new ResourcePropertySnapshot("Renderer", _options.Renderer.ToString()),
+							new ResourcePropertySnapshot("Output", directory),
+							new ResourcePropertySnapshot("Contexts", efModel.Contexts.Count),
+							new ResourcePropertySnapshot("Tables", tables),
+						],
+					}
+			)
+			.ConfigureAwait(false);
 	}
 
 	/// <summary>

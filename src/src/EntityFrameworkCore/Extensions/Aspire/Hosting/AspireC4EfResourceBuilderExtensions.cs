@@ -76,7 +76,19 @@ public static class AspireC4EfResourceBuilderExtensions
 				}
 			)
 			.ExcludeFromLikeC4()
-			.ExcludeFromManifest();
+			.ExcludeFromManifest()
+			// Without an initial state the dashboard shows the resource as Unknown forever: it runs no
+			// process of its own, so nothing else would ever publish one. The lifecycle hook moves it
+			// to Running once the diagram has been written.
+			.WithInitialState(
+				new CustomResourceSnapshot
+				{
+					ResourceType = "ERDiagram",
+					IsHidden = false,
+					State = KnownResourceStates.Starting,
+					Properties = [],
+				}
+			);
 
 		return builder;
 	}

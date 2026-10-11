@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Aspire.Hosting.ApplicationModel;
 
 namespace Aspire.Hosting.AspireC4;
 
@@ -71,6 +72,18 @@ public sealed class EntityFrameworkDiagramTests(Fixtures.TestAppHostFixture fixt
 		// Assert — [NotMapped] and the fluent Ignore call.
 		await Assert.That(json).DoesNotContain("Initials");
 		await Assert.That(json).DoesNotContain("CachedDisplayName");
+	}
+
+	[Test]
+	public async Task StartAsync_WhenAppStarts_ErDiagramResourceReportsAState(CancellationToken cancellationToken)
+	{
+		// The resource runs no process of its own, so without publishing its own state the dashboard
+		// leaves it Unknown with no logs — which is exactly how this shipped the first time.
+		// Act
+		var state = await fixture.GetResourceStateAsync("aspirec4-er", cancellationToken);
+
+		// Assert
+		await Assert.That(state).IsEqualTo(KnownResourceStates.Running);
 	}
 
 	[Test]
