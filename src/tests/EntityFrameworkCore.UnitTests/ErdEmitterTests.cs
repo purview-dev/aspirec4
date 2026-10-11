@@ -199,6 +199,70 @@ public sealed class ErdEmitterTests
 	}
 
 	[Test]
+	public async Task Generate_ColumnComment_IsEmittedAsAMermaidAttributeComment()
+	{
+		// Arrange
+		EfModel model = new()
+		{
+			Contexts =
+			[
+				new EfContext
+				{
+					Name = "C",
+					TypeName = "N.C",
+					Tables =
+					[
+						new EfTable
+						{
+							Name = "T",
+							ClrTypeName = "N.T",
+							Columns = [CreateColumn("Status") with { Comment = "Order lifecycle state" }],
+						},
+					],
+				},
+			],
+		};
+
+		// Act
+		var body = Body(MermaidGenerator.Generate(model, CreateOptions()));
+
+		// Assert
+		await Assert.That(body).Contains("int Status \"Order lifecycle state\"");
+	}
+
+	[Test]
+	public async Task Generate_ColumnComment_IsEmittedAsADbmlNote()
+	{
+		// Arrange
+		EfModel model = new()
+		{
+			Contexts =
+			[
+				new EfContext
+				{
+					Name = "C",
+					TypeName = "N.C",
+					Tables =
+					[
+						new EfTable
+						{
+							Name = "T",
+							ClrTypeName = "N.T",
+							Columns = [CreateColumn("Status") with { Comment = "Order lifecycle state" }],
+						},
+					],
+				},
+			],
+		};
+
+		// Act
+		var body = Body(DbmlGenerator.Generate(model, CreateOptions(ErdRenderer.Dbml)));
+
+		// Assert
+		await Assert.That(body).Contains("""Status int [not null, note: "Order lifecycle state"]""");
+	}
+
+	[Test]
 	public async Task Generate_WithSubgraphsDisabled_EmitsFlatOutput()
 	{
 		// Arrange

@@ -26,4 +26,10 @@ public sealed record EfColumn
 
 	/// <summary>The configured maximum length, when one was found.</summary>
 	public int? MaxLength { get; init; }
+
+	/// <summary>
+	/// The column comment from <c>[Comment]</c> or <c>HasComment</c>, when present.
+	/// </summary>
+	/// <remarks>Mermaid renders attribute comments natively; DBML carries them as a column note.</remarks>
+	public string? Comment { get; init; }
 }

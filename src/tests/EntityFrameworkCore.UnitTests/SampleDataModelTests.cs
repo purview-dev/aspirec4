@@ -243,6 +243,41 @@ public sealed class SampleDataModelTests
 	}
 
 	[Test]
+	public async Task ComplexSample_ReadsColumnCommentsFromAttributeAndFluentApi()
+	{
+		// Act
+		var model = LoadComplex();
+
+		// Assert
+		await Assert.That(Column(Table(model, "products"), "unit_price").Comment).IsEqualTo("Price excluding tax");
+		await Assert.That(Column(Table(model, "Orders"), "Status").Comment).IsEqualTo("Order lifecycle state");
+	}
+
+	[Test]
+	public async Task ComplexSample_FlagsJoinEntities()
+	{
+		// UserRoles is a pure join: both key columns are foreign keys. Orders is not.
+		// Act
+		var model = LoadComplex();
+
+		// Assert
+		await Assert.That(Table(model, "UserRoles").IsJoinEntity).IsTrue();
+		await Assert.That(Table(model, "Orders").IsJoinEntity).IsFalse();
+	}
+
+	[Test]
+	public async Task ComplexSample_DerivesRelationshipCardinality()
+	{
+		// Act
+		var orders = Table(LoadComplex(), "Orders");
+		var customer = orders.ForeignKeys.Single(fk => fk.PrincipalTable == "Customers");
+
+		// Assert — a non-nullable, non-unique foreign key is a mandatory one-to-many.
+		await Assert.That(customer.IsRequired).IsTrue();
+		await Assert.That(customer.IsUnique).IsFalse();
+	}
+
+	[Test]
 	public async Task ComplexSample_DoesNotInventForeignKeysAcrossContexts()
 	{
 		// AuditEntry.ActorUserId references the identity context's Users by id but has no navigation,

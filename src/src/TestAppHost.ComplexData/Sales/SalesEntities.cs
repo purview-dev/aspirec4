@@ -64,6 +64,7 @@ public sealed class Product
 	public string Name { get; set; } = string.Empty;
 
 	[Column("unit_price", TypeName = "decimal(18,4)")]
+	[Comment("Price excluding tax")]
 	public decimal UnitPrice { get; set; }
 
 	public int CategoryId { get; set; }

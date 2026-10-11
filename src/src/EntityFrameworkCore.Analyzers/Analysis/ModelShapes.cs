@@ -12,6 +12,8 @@ sealed class TableShape
 	public List<ColumnShape> Columns { get; } = [];
 
 	public List<ForeignKeyShape> ForeignKeys { get; } = [];
+
+	public bool IsJoinEntity { get; set; }
 }
 
 /// <summary>A column under construction during analysis.</summary>
@@ -35,6 +37,8 @@ sealed class ColumnShape
 	public bool IsForeignKey { get; set; }
 
 	public int? MaxLength { get; set; }
+
+	public string? Comment { get; set; }
 }
 
 /// <summary>A foreign key under construction during analysis.</summary>

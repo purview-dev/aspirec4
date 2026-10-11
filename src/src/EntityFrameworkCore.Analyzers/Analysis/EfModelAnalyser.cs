@@ -184,6 +184,12 @@ static class EfModelAnalyser
 			diagnostics.Add((DiagnosticLibrary.NoPrimaryKeyDiscovered, entity.Name));
 		}
 
+		// A join table carries no data of its own: every key column is also a foreign key, and a
+		// single-column key cannot be joining two things.
+		var keyColumns = table.Columns.Where(c => c.IsPrimaryKey).ToList();
+
+		table.IsJoinEntity = keyColumns.Count > 1 && keyColumns.TrueForAll(c => c.IsForeignKey);
+
 		return table;
 	}
 
@@ -226,6 +232,7 @@ static class EfModelAnalyser
 			IsUnique =
 				uniqueFromIndexes.Contains(property.Name) || config?.UniqueProperties.Contains(property.Name) == true,
 			MaxLength = maxLength,
+			Comment = fluentProperty?.Comment ?? GetAttributeString(property, EfTypes.Attributes.Comment, 0),
 		};
 	}
 

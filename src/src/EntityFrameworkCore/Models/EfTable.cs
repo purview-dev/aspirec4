@@ -20,4 +20,14 @@ public sealed record EfTable
 
 	/// <summary>The indexes declared on this table.</summary>
 	public IReadOnlyList<EfIndex> Indexes { get; init; } = [];
+
+	/// <summary>
+	/// Whether this table exists only to join two others — every primary key column is also a foreign
+	/// key, and there is more than one of them.
+	/// </summary>
+	/// <remarks>
+	/// Derived from the key shape rather than from EF, which models a join entity no differently from
+	/// any other. Renderers use it to de-emphasise tables that carry no data of their own.
+	/// </remarks>
+	public bool IsJoinEntity { get; init; }
 }

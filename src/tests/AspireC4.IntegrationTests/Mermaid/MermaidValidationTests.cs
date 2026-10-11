@@ -81,7 +81,10 @@ public sealed class MermaidValidationTests
 							Columns =
 							[
 								CreateColumn("Id", isPrimaryKey: true),
-								CreateColumn("Total", "decimal(18,2)"),
+								CreateColumn("Total", "decimal(18,2)") with
+								{
+									Comment = "Gross, including tax",
+								},
 								CreateColumn("ShippedAt", "datetimeoffset", isNullable: true),
 							],
 						},

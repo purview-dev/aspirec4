@@ -208,7 +208,17 @@ match for the migrated schema. Understood today:
   `<PrincipalType>Id`).
 - Fluent configuration in `OnModelCreating`: `HasDefaultSchema`, `ToTable`, `HasKey`, `Ignore`,
   `HasIndex(...).IsUnique()`, and `Property(...)` with `HasColumnName`, `HasColumnType`,
-  `HasMaxLength`, `IsRequired`.
+  `HasMaxLength`, `IsRequired`, `HasComment`.
+- Column comments, from `[Comment]` or `HasComment`.
+- Relationship cardinality and join tables, both **derived** rather than read from EF: a foreign key
+  is unique when its columns are the key or carry a unique index, required when they are non-nullable,
+  and a table is a join table when every key column is also a foreign key and there is more than one.
+
+**Not captured.** These need either runtime model-building or analysis beyond what is sensible
+statically, and are silently absent rather than guessed at: owned types, TPH/TPT/TPC inheritance
+mapping, delete behaviour, sequences, check constraints, and value conversions. Relationships that
+cross a `DbContext` boundary are deliberately not drawn — EF models a relationship inside one context,
+so an edge across that boundary would be invented rather than observed.
 
 Configuration applied indirectly — most notably `ApplyConfigurationsFromAssembly` — cannot be seen by
 static analysis and is reported as `ASPIREC4010`. Store types are generic (`int`, `varchar`, `guid`, …)

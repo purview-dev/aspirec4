@@ -132,6 +132,12 @@ public static class MermaidGenerator
 			sb.Append(' ').Append(string.Join(", ", keys));
 		}
 
+		// Mermaid renders a quoted trailing string as the attribute's comment.
+		if (!string.IsNullOrWhiteSpace(column.Comment))
+		{
+			sb.Append(' ').Append(Quote(column.Comment));
+		}
+
 		sb.AppendLine();
 	}
 

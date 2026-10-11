@@ -98,6 +98,11 @@ public static class DbmlGenerator
 			settings.Add("not null");
 		}
 
+		if (!string.IsNullOrWhiteSpace(column.Comment))
+		{
+			settings.Add($"note: {Quote(column.Comment)}");
+		}
+
 		if (settings.Count > 0)
 		{
 			sb.Append(" [").Append(string.Join(", ", settings)).Append(']');

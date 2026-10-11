@@ -34,6 +34,7 @@ static class EfTypes
 		public const string ForeignKey = "ForeignKey";
 		public const string NotMapped = "NotMapped";
 		public const string Index = "Index";
+		public const string Comment = "Comment";
 	}
 
 	/// <summary>Fluent builder members the analyser interprets.</summary>
@@ -49,6 +50,7 @@ static class EfTypes
 		public const string HasColumnType = "HasColumnType";
 		public const string HasMaxLength = "HasMaxLength";
 		public const string IsRequired = "IsRequired";
+		public const string HasComment = "HasComment";
 		public const string HasIndex = "HasIndex";
 		public const string IsUnique = "IsUnique";
 		public const string ApplyConfiguration = "ApplyConfiguration";

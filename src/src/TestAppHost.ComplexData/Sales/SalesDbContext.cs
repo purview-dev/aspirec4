@@ -35,6 +35,8 @@ public sealed class SalesDbContext(DbContextOptions<SalesDbContext> options) : D
 
 		modelBuilder.Entity<Order>().Property(e => e.Total).HasColumnType("decimal(18,2)");
 
+		modelBuilder.Entity<Order>().Property(e => e.Status).HasComment("Order lifecycle state");
+
 		modelBuilder.Entity<Order>().HasIndex(e => e.PlacedAt);
 
 		// A composite primary key across the two foreign keys.

@@ -19,7 +19,8 @@
               "isPrimaryKey": true,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             },
             {
               "name": "entity",
@@ -29,7 +30,8 @@
               "isPrimaryKey": false,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": 128
+              "maxLength": 128,
+              "comment": null
             },
             {
               "name": "Action",
@@ -39,7 +41,8 @@
               "isPrimaryKey": false,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": 64
+              "maxLength": 64,
+              "comment": null
             },
             {
               "name": "ActorUserId",
@@ -49,7 +52,8 @@
               "isPrimaryKey": false,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             },
             {
               "name": "OccurredAt",
@@ -59,11 +63,13 @@
               "isPrimaryKey": false,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             }
           ],
           "foreignKeys": [],
-          "indexes": []
+          "indexes": [],
+          "isJoinEntity": false
         },
         {
           "name": "AuditEntryChanges",
@@ -78,7 +84,8 @@
               "isPrimaryKey": true,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             },
             {
               "name": "AuditEntryId",
@@ -88,7 +95,8 @@
               "isPrimaryKey": false,
               "isUnique": false,
               "isForeignKey": true,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             },
             {
               "name": "PropertyName",
@@ -98,7 +106,8 @@
               "isPrimaryKey": false,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": 128
+              "maxLength": 128,
+              "comment": null
             },
             {
               "name": "OldValue",
@@ -108,7 +117,8 @@
               "isPrimaryKey": false,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             },
             {
               "name": "NewValue",
@@ -118,7 +128,8 @@
               "isPrimaryKey": false,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             }
           ],
           "foreignKeys": [
@@ -135,7 +146,8 @@
               "isRequired": true
             }
           ],
-          "indexes": []
+          "indexes": [],
+          "isJoinEntity": false
         }
       ]
     },
@@ -157,7 +169,8 @@
               "isPrimaryKey": true,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             },
             {
               "name": "UserName",
@@ -167,7 +180,8 @@
               "isPrimaryKey": false,
               "isUnique": true,
               "isForeignKey": false,
-              "maxLength": 64
+              "maxLength": 64,
+              "comment": null
             },
             {
               "name": "Email",
@@ -177,7 +191,8 @@
               "isPrimaryKey": false,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": 256
+              "maxLength": 256,
+              "comment": null
             },
             {
               "name": "IsLockedOut",
@@ -187,7 +202,8 @@
               "isPrimaryKey": false,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             },
             {
               "name": "LastSignInAt",
@@ -197,11 +213,13 @@
               "isPrimaryKey": false,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             }
           ],
           "foreignKeys": [],
-          "indexes": []
+          "indexes": [],
+          "isJoinEntity": false
         },
         {
           "name": "Roles",
@@ -216,7 +234,8 @@
               "isPrimaryKey": true,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             },
             {
               "name": "Name",
@@ -226,11 +245,13 @@
               "isPrimaryKey": false,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": 64
+              "maxLength": 64,
+              "comment": null
             }
           ],
           "foreignKeys": [],
-          "indexes": []
+          "indexes": [],
+          "isJoinEntity": false
         },
         {
           "name": "UserRoles",
@@ -245,7 +266,8 @@
               "isPrimaryKey": true,
               "isUnique": false,
               "isForeignKey": true,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             },
             {
               "name": "RoleId",
@@ -255,7 +277,8 @@
               "isPrimaryKey": true,
               "isUnique": false,
               "isForeignKey": true,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             },
             {
               "name": "GrantedAt",
@@ -265,7 +288,8 @@
               "isPrimaryKey": false,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             }
           ],
           "foreignKeys": [
@@ -294,7 +318,8 @@
               "isRequired": true
             }
           ],
-          "indexes": []
+          "indexes": [],
+          "isJoinEntity": true
         }
       ]
     },
@@ -316,7 +341,8 @@
               "isPrimaryKey": true,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             },
             {
               "name": "email_address",
@@ -326,7 +352,8 @@
               "isPrimaryKey": false,
               "isUnique": true,
               "isForeignKey": false,
-              "maxLength": 200
+              "maxLength": 200,
+              "comment": null
             },
             {
               "name": "DisplayName",
@@ -336,7 +363,8 @@
               "isPrimaryKey": false,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": 120
+              "maxLength": 120,
+              "comment": null
             },
             {
               "name": "CreatedAt",
@@ -346,11 +374,13 @@
               "isPrimaryKey": false,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             }
           ],
           "foreignKeys": [],
-          "indexes": []
+          "indexes": [],
+          "isJoinEntity": false
         },
         {
           "name": "categories",
@@ -365,7 +395,8 @@
               "isPrimaryKey": true,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             },
             {
               "name": "Name",
@@ -375,7 +406,8 @@
               "isPrimaryKey": false,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": 100
+              "maxLength": 100,
+              "comment": null
             },
             {
               "name": "ParentCategoryId",
@@ -385,7 +417,8 @@
               "isPrimaryKey": false,
               "isUnique": false,
               "isForeignKey": true,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             }
           ],
           "foreignKeys": [
@@ -402,7 +435,8 @@
               "isRequired": false
             }
           ],
-          "indexes": []
+          "indexes": [],
+          "isJoinEntity": false
         },
         {
           "name": "products",
@@ -417,7 +451,8 @@
               "isPrimaryKey": true,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             },
             {
               "name": "product_name",
@@ -427,7 +462,8 @@
               "isPrimaryKey": false,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": 200
+              "maxLength": 200,
+              "comment": null
             },
             {
               "name": "unit_price",
@@ -437,7 +473,8 @@
               "isPrimaryKey": false,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": null
+              "maxLength": null,
+              "comment": "Price excluding tax"
             },
             {
               "name": "CategoryId",
@@ -447,7 +484,8 @@
               "isPrimaryKey": false,
               "isUnique": false,
               "isForeignKey": true,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             }
           ],
           "foreignKeys": [
@@ -464,7 +502,8 @@
               "isRequired": true
             }
           ],
-          "indexes": []
+          "indexes": [],
+          "isJoinEntity": false
         },
         {
           "name": "Orders",
@@ -479,7 +518,8 @@
               "isPrimaryKey": true,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             },
             {
               "name": "CustomerId",
@@ -489,7 +529,8 @@
               "isPrimaryKey": false,
               "isUnique": false,
               "isForeignKey": true,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             },
             {
               "name": "Status",
@@ -499,7 +540,8 @@
               "isPrimaryKey": false,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": null
+              "maxLength": null,
+              "comment": "Order lifecycle state"
             },
             {
               "name": "Total",
@@ -509,7 +551,8 @@
               "isPrimaryKey": false,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             },
             {
               "name": "PlacedAt",
@@ -519,7 +562,8 @@
               "isPrimaryKey": false,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             },
             {
               "name": "ShippedAt",
@@ -529,7 +573,8 @@
               "isPrimaryKey": false,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             }
           ],
           "foreignKeys": [
@@ -546,7 +591,8 @@
               "isRequired": true
             }
           ],
-          "indexes": []
+          "indexes": [],
+          "isJoinEntity": false
         },
         {
           "name": "OrderLines",
@@ -561,7 +607,8 @@
               "isPrimaryKey": true,
               "isUnique": false,
               "isForeignKey": true,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             },
             {
               "name": "ProductId",
@@ -571,7 +618,8 @@
               "isPrimaryKey": true,
               "isUnique": false,
               "isForeignKey": true,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             },
             {
               "name": "Quantity",
@@ -581,7 +629,8 @@
               "isPrimaryKey": false,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             },
             {
               "name": "UnitPrice",
@@ -591,7 +640,8 @@
               "isPrimaryKey": false,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             }
           ],
           "foreignKeys": [
@@ -620,7 +670,8 @@
               "isRequired": true
             }
           ],
-          "indexes": []
+          "indexes": [],
+          "isJoinEntity": true
         }
       ]
     },
@@ -642,7 +693,8 @@
               "isPrimaryKey": true,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             },
             {
               "name": "Name",
@@ -652,7 +704,8 @@
               "isPrimaryKey": false,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             },
             {
               "name": "Description",
@@ -662,7 +715,8 @@
               "isPrimaryKey": false,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             },
             {
               "name": "CreatedAt",
@@ -672,11 +726,13 @@
               "isPrimaryKey": false,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             }
           ],
           "foreignKeys": [],
-          "indexes": []
+          "indexes": [],
+          "isJoinEntity": false
         },
         {
           "name": "Posts",
@@ -691,7 +747,8 @@
               "isPrimaryKey": true,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             },
             {
               "name": "Title",
@@ -701,7 +758,8 @@
               "isPrimaryKey": false,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             },
             {
               "name": "Body",
@@ -711,7 +769,8 @@
               "isPrimaryKey": false,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             },
             {
               "name": "IsPublished",
@@ -721,7 +780,8 @@
               "isPrimaryKey": false,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             },
             {
               "name": "PublishedAt",
@@ -731,7 +791,8 @@
               "isPrimaryKey": false,
               "isUnique": false,
               "isForeignKey": false,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             },
             {
               "name": "BlogId",
@@ -741,7 +802,8 @@
               "isPrimaryKey": false,
               "isUnique": false,
               "isForeignKey": true,
-              "maxLength": null
+              "maxLength": null,
+              "comment": null
             }
           ],
           "foreignKeys": [
@@ -758,7 +820,8 @@
               "isRequired": true
             }
           ],
-          "indexes": []
+          "indexes": [],
+          "isJoinEntity": false
         }
       ]
     }

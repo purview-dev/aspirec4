@@ -99,6 +99,7 @@ sealed class FluentConfiguration
 				case EfTypes.Fluent.HasColumnType:
 				case EfTypes.Fluent.HasMaxLength:
 				case EfTypes.Fluent.IsRequired:
+				case EfTypes.Fluent.HasComment:
 					ApplyPropertyConfiguration(entity, invocation, name);
 					break;
 
@@ -153,6 +154,10 @@ sealed class FluentConfiguration
 			case EfTypes.Fluent.IsRequired:
 				// IsRequired() defaults to true; IsRequired(false) makes the column optional.
 				property.IsRequired = GetBoolArgument(invocation, 0) ?? true;
+				break;
+
+			case EfTypes.Fluent.HasComment:
+				property.Comment = GetStringArgument(invocation, 0) ?? property.Comment;
 				break;
 
 			default:
@@ -335,4 +340,6 @@ sealed class PropertyConfiguration
 	public int? MaxLength { get; set; }
 
 	public bool? IsRequired { get; set; }
+
+	public string? Comment { get; set; }
 }
