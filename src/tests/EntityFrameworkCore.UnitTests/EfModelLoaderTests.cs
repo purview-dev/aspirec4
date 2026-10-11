@@ -10,7 +10,8 @@ public sealed class EfModelLoaderTests
 	/// generator and the AppHost, so it is asserted literally rather than round-tripped through a
 	/// serialiser that would hide a naming mismatch.
 	/// </summary>
-	const string GeneratorDescriptor = """
+	const string GeneratorDescriptor = /*lang=json,strict*/
+		"""
 		{"schemaVersion":1,"contexts":[{"name":"AppDbContext","typeName":"Sample.AppDbContext",
 		"defaultSchema":"app","tables":[
 		{"name":"Users","clrTypeName":"Sample.User","columns":[

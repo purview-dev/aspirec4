@@ -26,8 +26,8 @@ public static class D2ModelBuilder
 
 		List<D2Table> tables = [];
 		// Maps a table name to its fully-qualified d2 path, so foreign keys can resolve their target.
-		Dictionary<string, string> pathsByTableName = new(StringComparer.OrdinalIgnoreCase);
-		HashSet<string> usedPaths = new(StringComparer.Ordinal);
+		Dictionary<string, string> pathsByTableName = [with(StringComparer.OrdinalIgnoreCase)];
+		HashSet<string> usedPaths = [with(StringComparer.Ordinal)];
 
 		foreach (var context in model.Contexts)
 		{
@@ -128,7 +128,7 @@ public static class D2ModelBuilder
 	static List<D2Edge> BuildEdges(EfModel model, Dictionary<string, string> pathsByTableName)
 	{
 		List<D2Edge> edges = [];
-		HashSet<string> seen = new(StringComparer.Ordinal);
+		HashSet<string> seen = [with(StringComparer.Ordinal)];
 
 		foreach (var context in model.Contexts)
 		{

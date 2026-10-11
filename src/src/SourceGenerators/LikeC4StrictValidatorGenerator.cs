@@ -283,13 +283,7 @@ public sealed partial class LikeC4StrictValidatorGenerator : IIncrementalGenerat
 
 	static HashSet<string> BuildAllowedSet(IEnumerable<string> primary, IEnumerable<string> secondary)
 	{
-		HashSet<string> set = new(StringComparer.OrdinalIgnoreCase);
-
-		foreach (var v in primary)
-			set.Add(v);
-
-		foreach (var v in secondary)
-			set.Add(v);
+		HashSet<string> set = [with(StringComparer.OrdinalIgnoreCase), .. primary, .. secondary];
 
 		return set;
 	}

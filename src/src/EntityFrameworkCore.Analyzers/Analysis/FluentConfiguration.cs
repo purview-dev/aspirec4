@@ -14,7 +14,7 @@ namespace Aspire.Hosting.AspireC4.EntityFrameworkCore.Analyzers.Analysis;
 sealed class FluentConfiguration
 {
 	/// <summary>A per-entity bag of interpreted configuration, keyed by entity display name.</summary>
-	public Dictionary<string, EntityConfiguration> Entities { get; } = new(StringComparer.Ordinal);
+	public Dictionary<string, EntityConfiguration> Entities { get; } = [with(StringComparer.Ordinal)];
 
 	/// <summary>The schema set via <c>HasDefaultSchema</c>, when found.</summary>
 	public string? DefaultSchema { get; private set; }
@@ -304,13 +304,13 @@ sealed class EntityConfiguration
 
 	public string? Schema { get; set; }
 
-	public HashSet<string> KeyProperties { get; } = new(StringComparer.Ordinal);
+	public HashSet<string> KeyProperties { get; } = [with(StringComparer.Ordinal)];
 
-	public HashSet<string> IgnoredProperties { get; } = new(StringComparer.Ordinal);
+	public HashSet<string> IgnoredProperties { get; } = [with(StringComparer.Ordinal)];
 
-	public HashSet<string> UniqueProperties { get; } = new(StringComparer.Ordinal);
+	public HashSet<string> UniqueProperties { get; } = [with(StringComparer.Ordinal)];
 
-	public Dictionary<string, PropertyConfiguration> Properties { get; } = new(StringComparer.Ordinal);
+	public Dictionary<string, PropertyConfiguration> Properties { get; } = [with(StringComparer.Ordinal)];
 
 	/// <summary>Gets, creating if needed, the configuration bag for a property.</summary>
 	public PropertyConfiguration GetOrAddProperty(string name)

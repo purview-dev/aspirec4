@@ -77,11 +77,9 @@ public sealed class AspireC4EfModelGenerator : IIncrementalGenerator
 
 		return new ContextDescriptor(
 			WriteContextJson(result),
-			new EquatableArray<EfDiagnosticInfo>(
-				result
-					.Diagnostics.Select(d => new EfDiagnosticInfo(d.Descriptor.Id, d.Argument, null, 0, 0))
-					.ToImmutableArray()
-			)
+			new EquatableArray<EfDiagnosticInfo>([
+				.. result.Diagnostics.Select(d => new EfDiagnosticInfo(d.Descriptor.Id, d.Argument, null, 0, 0)),
+			])
 		);
 	}
 

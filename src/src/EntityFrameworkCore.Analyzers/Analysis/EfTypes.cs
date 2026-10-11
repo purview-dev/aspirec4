@@ -59,8 +59,9 @@ static class EfTypes
 	/// Arity-qualified metadata names of the collection types that mark a navigation as a many-side.
 	/// Matched alongside <see cref="CollectionsNamespace"/>.
 	/// </summary>
-	public static readonly HashSet<string> CollectionMetadataNames = new(StringComparer.Ordinal)
-	{
+	public static readonly HashSet<string> CollectionMetadataNames =
+	[
+		with(StringComparer.Ordinal),
 		"ICollection`1",
 		"IEnumerable`1",
 		"IList`1",
@@ -69,7 +70,7 @@ static class EfTypes
 		"ISet`1",
 		"List`1",
 		"HashSet`1",
-	};
+	];
 
 	/// <summary>The namespace the supported collection types live in.</summary>
 	public const string CollectionsNamespace = "System.Collections.Generic";

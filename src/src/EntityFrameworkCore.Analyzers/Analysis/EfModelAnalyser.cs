@@ -27,7 +27,7 @@ static class EfModelAnalyser
 		var fluent = ReadFluentConfiguration(context, semanticModel, diagnostics);
 
 		// Entity -> the name the table takes before attributes and fluent config are applied.
-		Dictionary<INamedTypeSymbol, string> entities = new(SymbolEqualityComparer.Default);
+		Dictionary<INamedTypeSymbol, string> entities = [with(SymbolEqualityComparer.Default)];
 
 		foreach (var property in context.GetMembers().OfType<IPropertySymbol>())
 		{
@@ -339,7 +339,7 @@ static class EfModelAnalyser
 	/// <summary>Reads <c>[Index(nameof(X), IsUnique = true)]</c> declarations from the entity type.</summary>
 	static HashSet<string> ReadUniqueIndexProperties(INamedTypeSymbol entity)
 	{
-		HashSet<string> unique = new(StringComparer.Ordinal);
+		HashSet<string> unique = [with(StringComparer.Ordinal)];
 
 		foreach (var attribute in entity.GetAttributes())
 		{

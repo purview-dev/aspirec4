@@ -14,8 +14,9 @@ public static class D2DSLGenerator
 	/// d2 keywords that would be reinterpreted as configuration if they appeared as a bare row key
 	/// inside a <c>sql_table</c> block. A column with one of these names is quoted.
 	/// </summary>
-	static readonly HashSet<string> ReservedKeywords = new(StringComparer.OrdinalIgnoreCase)
-	{
+	static readonly HashSet<string> ReservedKeywords =
+	[
+		with(StringComparer.OrdinalIgnoreCase),
 		"shape",
 		"label",
 		"icon",
@@ -40,7 +41,7 @@ public static class D2DSLGenerator
 		"horizontal-gap",
 		"source-arrowhead",
 		"target-arrowhead",
-	};
+	];
 
 	/// <summary>Generates a d2 DSL string from the given model and options.</summary>
 	public static string Generate(D2Model model, AspireC4EfDiagramOptions options)

@@ -74,6 +74,7 @@ public static class EfModelReader
 	{
 		matched = attribute;
 
+#pragma warning disable IDE0072 // Add missing cases
 		var typeName = attribute.Constructor.Kind switch
 		{
 			HandleKind.MemberReference => GetTypeName(
@@ -89,10 +90,12 @@ public static class EfModelReader
 			),
 			_ => null,
 		};
+#pragma warning restore IDE0072 // Add missing cases
 
 		return typeName == AttributeName;
 	}
 
+#pragma warning disable IDE0072 // Add missing cases
 	static string? GetTypeName(MetadataReader reader, EntityHandle handle) =>
 		handle.Kind switch
 		{
@@ -100,6 +103,7 @@ public static class EfModelReader
 			HandleKind.TypeDefinition => reader.GetString(reader.GetTypeDefinition((TypeDefinitionHandle)handle).Name),
 			_ => null,
 		};
+#pragma warning restore IDE0072 // Add missing cases
 
 	/// <summary>
 	/// Decodes the single string constructor argument from a custom attribute blob: a two-byte prolog
@@ -114,6 +118,7 @@ public static class EfModelReader
 			return null;
 		}
 
+		// The blob is a length-prefixed UTF-8 string, which the reader decodes into a .NET string.
 		return blob.ReadSerializedString();
 	}
 }

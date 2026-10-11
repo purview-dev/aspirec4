@@ -31,6 +31,7 @@ static class StoreTypeMap
 			return array.ElementType.SpecialType == SpecialType.System_Byte ? "blob" : Unknown;
 		}
 
+#pragma warning disable IDE0072 // Add missing cases
 		var special = unwrapped.SpecialType switch
 		{
 			SpecialType.System_Boolean => "bool",
@@ -46,6 +47,7 @@ static class StoreTypeMap
 			SpecialType.System_DateTime => "datetime",
 			_ => null,
 		};
+#pragma warning restore IDE0072 // Add missing cases
 
 		return special
 			?? unwrapped.ToDisplayString() switch
@@ -69,6 +71,7 @@ static class StoreTypeMap
 			return true;
 		}
 
+		// Arrays of bytes are mapped to a blob column, but other arrays are not supported.
 		return unwrapped is IArrayTypeSymbol array
 			? array.ElementType.SpecialType == SpecialType.System_Byte
 			: Resolve(unwrapped) != Unknown;

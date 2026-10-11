@@ -12,6 +12,7 @@
 			netstandard2.0, which is required for analyzers and is unaffected by the support window.
 		-->
 		<TargetFramework>net10.0</TargetFramework>
+		<LangVersion>preview</LangVersion>
 		<NoWarn>$(NoWarn);ASPIREATS001</NoWarn>
 		<ExcludeMSTelemetryExtension>true</ExcludeMSTelemetryExtension>
 		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>

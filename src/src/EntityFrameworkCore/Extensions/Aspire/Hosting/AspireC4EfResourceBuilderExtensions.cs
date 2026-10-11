@@ -1,8 +1,6 @@
 using System.ComponentModel;
 using System.Globalization;
-using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AspireC4.ApplicationModel;
-using Aspire.Hosting.AspireC4.EntityFrameworkCore;
 using Aspire.Hosting.AspireC4.EntityFrameworkCore.Annotations;
 using Aspire.Hosting.AspireC4.EntityFrameworkCore.ApplicationModel;
 using Aspire.Hosting.AspireC4.EntityFrameworkCore.D2;
@@ -214,7 +212,7 @@ public static class AspireC4EfResourceBuilderExtensions
 				"--host",
 				"0.0.0.0",
 				"--port",
-				D2ServerResource.DefaultPort.ToString(System.Globalization.CultureInfo.InvariantCulture),
+				D2ServerResource.DefaultPort.ToString(CultureInfo.InvariantCulture),
 				// d2 opens a browser by default, which has nothing to open in a container.
 				"--browser",
 				"0",
@@ -232,6 +230,7 @@ public static class AspireC4EfResourceBuilderExtensions
 			.ExcludeFromManifest();
 	}
 
+#pragma warning disable IDE0072 // Add missing cases
 	static string ToEngineName(D2LayoutEngine engine) =>
 		engine switch
 		{
@@ -239,6 +238,7 @@ public static class AspireC4EfResourceBuilderExtensions
 			D2LayoutEngine.Tala => "tala",
 			_ => "elk",
 		};
+#pragma warning restore IDE0072 // Add missing cases
 
 	static string ResolveOutputDirectory(string appHostDirectory, string outputDirectory) =>
 		Path.IsPathRooted(outputDirectory)
