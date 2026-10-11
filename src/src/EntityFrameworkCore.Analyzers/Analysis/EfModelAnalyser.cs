@@ -285,6 +285,11 @@ static class EfModelAnalyser
 		Dictionary<INamedTypeSymbol, string> entities
 	)
 	{
+		// Only a single-column primary key constrains its own column to one row. A column that is
+		// merely part of a composite key — the usual shape of a join table — does not, so treating it
+		// as unique would render every join as one-to-one.
+		var isSingleColumnKey = table.Columns.Count(c => c.IsPrimaryKey) == 1;
+
 		foreach (var navigation in navigations)
 		{
 			var target = GetNavigationTarget(navigation.Type);
@@ -314,9 +319,9 @@ static class EfModelAnalyser
 			{
 				PrincipalEntity = target.ToDisplayString(),
 				NavigationName = navigation.Name,
-				// A foreign key that is also the key, or is uniquely indexed, can only match one
+				// A foreign key that is also the whole key, or is uniquely indexed, can only match one
 				// principal row — that is what makes a relationship one-to-one rather than one-to-many.
-				IsUnique = column.IsPrimaryKey || column.IsUnique,
+				IsUnique = (column.IsPrimaryKey && isSingleColumnKey) || column.IsUnique,
 				IsRequired = !column.IsNullable,
 			};
 

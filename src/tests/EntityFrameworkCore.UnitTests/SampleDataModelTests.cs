@@ -254,6 +254,19 @@ public sealed class SampleDataModelTests
 	}
 
 	[Test]
+	public async Task ComplexSample_CompositeKeyForeignKeys_AreNotTreatedAsUnique()
+	{
+		// A column that is only part of a composite key does not constrain itself to one row, so a
+		// join table must render as one-to-many on both sides rather than one-to-one.
+		// Act
+		var lines = Table(LoadComplex(), "OrderLines");
+
+		// Assert
+		await Assert.That(lines.ForeignKeys).IsNotEmpty();
+		await Assert.That(lines.ForeignKeys.Any(fk => fk.IsUnique)).IsFalse();
+	}
+
+	[Test]
 	public async Task ComplexSample_FlagsJoinEntities()
 	{
 		// UserRoles is a pure join: both key columns are foreign keys. Orders is not.

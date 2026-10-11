@@ -302,7 +302,7 @@
                 "Id"
               ],
               "navigationName": "User",
-              "isUnique": true,
+              "isUnique": false,
               "isRequired": true
             },
             {
@@ -314,7 +314,7 @@
                 "Id"
               ],
               "navigationName": "Role",
-              "isUnique": true,
+              "isUnique": false,
               "isRequired": true
             }
           ],
@@ -654,7 +654,7 @@
                 "Id"
               ],
               "navigationName": "Order",
-              "isUnique": true,
+              "isUnique": false,
               "isRequired": true
             },
             {
@@ -666,7 +666,7 @@
                 "product_id"
               ],
               "navigationName": "Product",
-              "isUnique": true,
+              "isUnique": false,
               "isRequired": true
             }
           ],
