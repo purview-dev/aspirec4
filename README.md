@@ -157,8 +157,8 @@ Known limitations, by renderer:
   because Mermaid's job here is publishing, not being the primary experience. It cannot attach an edge
   to a column, so the participating columns are carried in the edge label instead. Its attribute-type grammar permits parentheses but **not commas**, so `decimal(18,2)`
   is emitted as `decimal(18_2)` — the precision is kept rather than dropped. Grouping is one flat
-  `subgraph` level, so the schema tier is lost; set `UseSubgraphs = false` for renderers pinned to a
-  Mermaid older than 11.17.
+  `subgraph` level, so the schema tier is lost. GitHub was confirmed to render the subgraph output in
+  October 2026; set `UseSubgraphs = false` for a renderer pinned to a Mermaid older than 11.17.
 - **DBML** renders nowhere on its own — it is an interchange format for tools such as dbdiagram.io.
 - **D2** needs the container (or a local `d2` binary) and renders nowhere else.
 - **Interactive** needs its JavaScript dependencies vendored once per output directory — see below.

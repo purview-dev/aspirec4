@@ -29,9 +29,9 @@ public sealed class AspireC4EfDiagramOptions
 	/// Whether the Mermaid renderer groups entities into one <c>subgraph</c> per <c>DbContext</c>.
 	/// </summary>
 	/// <remarks>
-	/// <c>subgraph</c> inside <c>erDiagram</c> requires Mermaid 11.17+. Set this to <see langword="false"/>
-	/// to emit flat output for renderers pinned to an older Mermaid — GitHub in particular has lagged
-	/// the current release.
+	/// <c>subgraph</c> inside <c>erDiagram</c> requires Mermaid 11.17+. GitHub was confirmed to render
+	/// it in October 2026. Set this to <see langword="false"/> to emit flat output for a renderer
+	/// pinned to an older Mermaid.
 	/// </remarks>
 	public bool UseSubgraphs { get; set; } = true;
 
