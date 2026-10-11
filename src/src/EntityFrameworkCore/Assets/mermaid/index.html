@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>__TITLE__</title>
+		<style>
+			:root {
+				color-scheme: light dark;
+				--bg: #ffffff;
+				--fg: #1b1b1f;
+				--muted: #6b7280;
+				--line: #d4d4d8;
+				--panel: #f6f6f7;
+			}
+
+			@media (prefers-color-scheme: dark) {
+				:root {
+					--bg: #141417;
+					--fg: #e8e8ea;
+					--muted: #9ca3af;
+					--line: #2e2e33;
+					--panel: #1c1c20;
+				}
+			}
+
+			* {
+				box-sizing: border-box;
+			}
+
+			html,
+			body {
+				height: 100%;
+				margin: 0;
+			}
+
+			body {
+				overflow: hidden;
+				background: var(--bg);
+				color: var(--fg);
+				font:
+					13px/1.45 ui-sans-serif,
+					system-ui,
+					-apple-system,
+					Segoe UI,
+					sans-serif;
+			}
+
+			.toolbar {
+				position: absolute;
+				z-index: 10;
+				top: 12px;
+				left: 12px;
+				display: flex;
+				gap: 10px;
+				align-items: center;
+				padding: 8px 10px;
+				border: 1px solid var(--line);
+				border-radius: 8px;
+				background: var(--panel);
+			}
+
+			.toolbar button {
+				padding: 4px 8px;
+				border: 1px solid var(--line);
+				border-radius: 6px;
+				background: var(--bg);
+				color: inherit;
+				font: inherit;
+				cursor: pointer;
+			}
+
+			.toolbar .hint {
+				color: var(--muted);
+			}
+
+			#stage {
+				width: 100%;
+				height: 100%;
+				cursor: grab;
+			}
+
+			#stage.panning {
+				cursor: grabbing;
+			}
+
+			#canvas {
+				transform-origin: 0 0;
+			}
+
+			#error {
+				margin: 72px 24px;
+				color: #f43f5e;
+				font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+				white-space: pre-wrap;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="toolbar">
+			<button id="fit" type="button">Fit</button>
+			<button id="reset" type="button">100%</button>
+			<span class="hint">scroll to zoom · drag to pan</span>
+		</div>
+		<div id="stage"><div id="canvas"></div></div>
+		<div id="error" hidden></div>
+		<script type="module" src="./mermaid-app.js"></script>
+	</body>
+</html>

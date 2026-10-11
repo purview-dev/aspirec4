@@ -243,7 +243,7 @@ public sealed class SampleDataModelTests
 	}
 
 	[Test]
-	public async Task ComplexSample_ReadsColumnCommentsFromAttributeAndFluentApi()
+	public async Task ComplexSample_ReadsColumnCommentsFromAttributeAndFluentAPI()
 	{
 		// Act
 		var model = LoadComplex();

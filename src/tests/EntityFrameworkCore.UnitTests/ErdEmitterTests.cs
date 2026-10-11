@@ -355,11 +355,11 @@ public sealed class ErdEmitterTests
 	}
 
 	[Test]
-	[Arguments(ErdRenderer.Mermaid, "schema.gen.mmd")]
 	[Arguments(ErdRenderer.Dbml, "schema.gen.dbml")]
 	[Arguments(ErdRenderer.D2, "schema.gen.d2")]
-	public async Task Create_TextRenderer_ProducesASingleFile(ErdRenderer renderer, string expected)
+	public async Task Create_InterchangeRenderer_ProducesASingleFile(ErdRenderer renderer, string expected)
 	{
+		// DBML is for interchange and D2 is served by its own sidecar, so neither emits a viewer.
 		// Arrange
 		AspireC4EfDiagramOptions options = new() { Renderer = renderer, FileName = "schema.gen" };
 
@@ -369,6 +369,37 @@ public sealed class ErdEmitterTests
 		// Assert
 		await Assert.That(files.Count).IsEqualTo(1);
 		await Assert.That(files[0].FileName).IsEqualTo(expected);
+	}
+
+	[Test]
+	public async Task Create_MermaidRenderer_ProducesTheDiagramAndItsPreview()
+	{
+		// Arrange
+		AspireC4EfDiagramOptions options = new() { Renderer = ErdRenderer.Mermaid, FileName = "schema.gen" };
+
+		// Act
+		var files = ErdOutput.Create(CreateModel(), options);
+
+		// Assert
+		await Assert.That(files[0].FileName).IsEqualTo("schema.gen.mmd");
+		await Assert
+			.That(files.Select(f => f.FileName))
+			.IsEquivalentTo(["schema.gen.mmd", "index.html", "mermaid-app.js"]);
+	}
+
+	[Test]
+	public async Task Create_MermaidPreview_PointsAtTheGeneratedDiagram()
+	{
+		// The placeholder must be substituted, or the preview loads nothing.
+		// Arrange
+		AspireC4EfDiagramOptions options = new() { Renderer = ErdRenderer.Mermaid, FileName = "schema.gen" };
+
+		// Act
+		var script = ErdOutput.Create(CreateModel(), options).Single(f => f.FileName == "mermaid-app.js");
+
+		// Assert
+		await Assert.That(script.Content).Contains("schema.gen.mmd");
+		await Assert.That(script.Content).DoesNotContain("__MODEL__");
 	}
 
 	[Test]

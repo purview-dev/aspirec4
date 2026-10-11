@@ -147,13 +147,15 @@ descriptor directly, which is why it is the default.
 | --- | --- | --- | --- |
 | `Interactive` *(default)* | `.json` + viewer | **Full** — column-level edges, nested grouping, key badges | The primary experience |
 | `Dbml` | `.dbml` | High — column-level refs and precision types survive | Interchange: dbdiagram.io, SQL generation |
-| `Mermaid` | `.mmd` | Low — edges join entities, not columns; one flat grouping level | Publishing: GitHub, Azure DevOps, wikis |
+| `Mermaid` | `.mmd` + preview | Low — edges join entities, not columns; one flat grouping level | Publishing: GitHub, Azure DevOps, wikis |
 | `D2` | `.d2` + live sidecar | High — column-level edges, nested containers | Live local viewing |
 
 Known limitations, by renderer:
 
-- **Mermaid** cannot attach an edge to a column, so the participating columns are carried in the edge
-  label instead. Its attribute-type grammar permits parentheses but **not commas**, so `decimal(18,2)`
+- **Mermaid** emits a local preview alongside the `.mmd` for eyeballing the output before pasting it
+  somewhere that renders Mermaid natively. The preview is deliberately minimal — render, pan, zoom —
+  because Mermaid's job here is publishing, not being the primary experience. It cannot attach an edge
+  to a column, so the participating columns are carried in the edge label instead. Its attribute-type grammar permits parentheses but **not commas**, so `decimal(18,2)`
   is emitted as `decimal(18_2)` — the precision is kept rather than dropped. Grouping is one flat
   `subgraph` level, so the schema tier is lost; set `UseSubgraphs = false` for renderers pinned to a
   Mermaid older than 11.17.
@@ -181,7 +183,8 @@ analysis cannot recover, and guessing non-identifying would be misleading.
 
 ```sh
 just erd-vendor ./erd/gen             # bundle the viewer's JS deps into <dir>/vendor (once per output dir)
-just erd-check                        # drive the viewer in a real browser and assert it works
+just erd-check                        # drive the interactive viewer in a real browser
+just erd-mermaid-check                # drive the Mermaid preview in a real browser
 just erd-svg erd/gen/schema.gen.mmd   # render Mermaid to SVG via mermaid-cli 12 in a container
 ```
 

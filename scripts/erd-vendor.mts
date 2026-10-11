@@ -61,10 +61,32 @@ if (!result.success) {
 const [output] = result.outputs;
 await writeFile(join(vendor, "bundle.js"), await output.text(), "utf8");
 
+// Mermaid is bundled separately: only the Mermaid preview needs it, and it is large enough that
+// folding it into the interactive viewer's bundle would make every diagram pay for it.
+const mermaidEntry = join(import.meta.dir, ".erd-mermaid-entry.ts");
+await writeFile(mermaidEntry, `export { default } from "mermaid";\n`, "utf8");
+
+const mermaidResult = await Bun.build({
+	entrypoints: [mermaidEntry],
+	target: "browser",
+	format: "esm",
+	minify: true,
+	define: { "process.env.NODE_ENV": '"production"' },
+});
+
+await rm(mermaidEntry, { force: true });
+
+if (!mermaidResult.success) {
+	for (const log of mermaidResult.logs) console.error(log);
+	process.exit(1);
+}
+
+await writeFile(join(vendor, "mermaid.js"), await mermaidResult.outputs[0].text(), "utf8");
+
 await copyFile(
 	join(import.meta.dir, "..", "node_modules", "@xyflow", "react", "dist", "style.css"),
 	join(vendor, "reactflow.css"),
 );
 
 const kb = Math.round((await output.text()).length / 1024);
-console.log(`Vendored bundle.js (${kb} KB) and reactflow.css into ${vendor}`);
+console.log(`Vendored bundle.js (${kb} KB), mermaid.js and reactflow.css into ${vendor}`);

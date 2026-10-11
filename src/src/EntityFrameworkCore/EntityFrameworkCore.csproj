@@ -32,6 +32,8 @@
 		<!-- Viewer assets stay real files so they remain lintable; they are emitted at generation time. -->
 		<EmbeddedResource Include="Assets\viewer\index.html" />
 		<EmbeddedResource Include="Assets\viewer\app.js" />
+		<EmbeddedResource Include="Assets\mermaid\index.html" />
+		<EmbeddedResource Include="Assets\mermaid\mermaid-app.js" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -289,6 +289,13 @@ erd-check model="src/src/TestAppHost/erd/gen/schema.gen.json":
     bun scripts/erd-vendor.mts artifacts/erd-viewer-check
     bun scripts/erd-viewer-check.mts "{{ model }}"
 
+# Drive the Mermaid preview in a real browser. Takes an optional .mmd; uses a representative
+# diagram when omitted. Requires: bunx playwright install chromium
+[group('Diagrams')]
+erd-mermaid-check diagram="":
+    bun scripts/erd-vendor.mts artifacts/erd-mermaid-check
+    bun scripts/erd-mermaid-check.mts "{{ diagram }}"
+
 # Render an emitted Mermaid .mmd to SVG using mermaid-cli 12 in a one-shot container.
 # Animated edges are browser-only and will not appear in this output.
 [group('Diagrams')]

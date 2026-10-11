@@ -29,7 +29,16 @@ public static class ErdOutput
 
 		return options.Renderer switch
 		{
-			ErdRenderer.Mermaid => [new ErdFile($"{name}.mmd", MermaidGenerator.Generate(model, options))],
+			// The Mermaid preview is for eyeballing the output before pasting it somewhere that renders
+			// Mermaid natively; the interactive renderer remains the primary experience.
+			ErdRenderer.Mermaid =>
+			[
+				new ErdFile($"{name}.mmd", MermaidGenerator.Generate(model, options)),
+				.. InteractiveViewer.MermaidAssetNames.Select(asset => new ErdFile(
+					asset,
+					InteractiveViewer.MermaidAsset(asset, $"{name}.mmd", options.Title)
+				)),
+			],
 			ErdRenderer.Dbml => [new ErdFile($"{name}.dbml", DbmlGenerator.Generate(model, options))],
 			ErdRenderer.D2 =>
 			[

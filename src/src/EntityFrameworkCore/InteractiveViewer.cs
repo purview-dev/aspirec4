@@ -1,35 +1,42 @@
 namespace Aspire.Hosting.AspireC4.EntityFrameworkCore;
 
 /// <summary>
-/// Supplies the static assets for the interactive (React Flow + ELK) viewer.
+/// Supplies the static assets for the generated viewers.
 /// </summary>
 /// <remarks>
 /// The assets are embedded rather than written as C# string literals so they stay readable, lintable
-/// and editable as real files. They are emitted beside the model JSON, which keeps the viewer working
-/// with no server and no additional Aspire resource.
+/// and editable as real files. They are emitted beside the diagram, which keeps a viewer working with
+/// no server and no additional Aspire resource.
 /// </remarks>
 public static class InteractiveViewer
 {
-	const string ResourcePrefix = "Aspire.Hosting.AspireC4.EntityFrameworkCore.Assets.viewer.";
+	const string Prefix = "Aspire.Hosting.AspireC4.EntityFrameworkCore.Assets.";
 
-	/// <summary>Names of every asset the viewer needs written to disk.</summary>
+	/// <summary>Assets for the interactive (React Flow + ELK) viewer.</summary>
 	public static IReadOnlyList<string> AssetNames { get; } = ["index.html", "app.js"];
 
-	/// <summary>Reads an asset, substituting the model file name and title.</summary>
-	/// <param name="name">One of <see cref="AssetNames"/>.</param>
-	/// <param name="modelFileName">The JSON file the viewer loads, relative to the viewer.</param>
-	/// <param name="title">Title shown in the page, when set.</param>
+	/// <summary>Assets for the Mermaid preview.</summary>
+	public static IReadOnlyList<string> MermaidAssetNames { get; } = ["index.html", "mermaid-app.js"];
+
+	/// <summary>Reads an interactive-viewer asset, substituting the model file name and title.</summary>
 	public static string Asset(string name, string modelFileName, string? title) =>
-		Read(name)
-			.Replace("__MODEL__", modelFileName, StringComparison.Ordinal)
+		Substitute(Read("viewer." + name), modelFileName, title);
+
+	/// <summary>Reads a Mermaid-preview asset, substituting the diagram file name and title.</summary>
+	public static string MermaidAsset(string name, string diagramFileName, string? title) =>
+		Substitute(Read("mermaid." + name), diagramFileName, title);
+
+	static string Substitute(string content, string fileName, string? title) =>
+		content
+			.Replace("__MODEL__", fileName, StringComparison.Ordinal)
 			.Replace("__TITLE__", string.IsNullOrWhiteSpace(title) ? "ER Diagram" : title, StringComparison.Ordinal);
 
 	static string Read(string name)
 	{
 		using var stream =
-			typeof(InteractiveViewer).Assembly.GetManifestResourceStream(ResourcePrefix + name)
+			typeof(InteractiveViewer).Assembly.GetManifestResourceStream(Prefix + name)
 			?? throw new InvalidOperationException(
-				$"Embedded viewer asset '{name}' was not found. Expected resource '{ResourcePrefix}{name}'."
+				$"Embedded viewer asset '{name}' was not found. Expected resource '{Prefix}{name}'."
 			);
 
 		using StreamReader reader = new(stream);
