@@ -59,6 +59,20 @@ public sealed class AspireC4EfDiagramOptions
 	/// <summary>Pin the <c>d2lang/d2</c> image tag. <see langword="null"/> uses the package default.</summary>
 	public string? ContainerImageTag { get; set; }
 
+	/// <summary>
+	/// Whether the file-based renderers serve their viewer over HTTP so the dashboard can link to it.
+	/// </summary>
+	/// <remarks>
+	/// On by default: without a server there is no URL to publish, because a <c>file://</c> link
+	/// cannot be navigated to from the dashboard's own origin. Set to <see langword="false"/> where no
+	/// container runtime is available — the diagram is still generated, and the dashboard offers a
+	/// command that opens it locally instead.
+	/// </remarks>
+	public bool UseViewerServer { get; set; } = true;
+
+	/// <summary>Pin the viewer server image tag. <see langword="null"/> uses the package default.</summary>
+	public string? ViewerServerImageTag { get; set; }
+
 	/// <summary>Hide the d2 sidecar from the Aspire dashboard, surfacing it as a link instead.</summary>
 	public bool HideFromDashboard { get; set; }
 

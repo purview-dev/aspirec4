@@ -87,20 +87,47 @@ public sealed class EntityFrameworkDiagramTests(Fixtures.TestAppHostFixture fixt
 	}
 
 	[Test]
-	public async Task StartAsync_WhenAppStarts_PublishesACommandToOpenTheViewer()
+	public async Task StartAsync_WhenAppStarts_PublishesAUrlForTheViewer(CancellationToken cancellationToken)
 	{
-		// The default renderer writes a viewer to disk with no server behind it, so a file:// URL
-		// would not be clickable from the dashboard's own origin. A command is published instead.
+		// The viewer is served so the dashboard has a real link; a file:// URL could not be navigated
+		// to from the dashboard's own origin.
 		// Act
-		var resource = fixture.GetResource("aspirec4-er");
-		var command = resource
-			?.Annotations.OfType<ResourceCommandAnnotation>()
-			.FirstOrDefault(a => a.Name == "aspirec4-open-er-diagram");
+		var urls = await fixture.GetResourceUrlsAsync("aspirec4-er", cancellationToken);
 
 		// Assert
-		await Assert.That(resource).IsNotNull();
-		await Assert.That(command).IsNotNull();
-		await Assert.That(command!.UpdateState(null!)).IsEqualTo(ResourceCommandState.Enabled);
+		await Assert.That(urls).IsNotEmpty();
+		await Assert.That(urls.Any(u => u.StartsWith("http", StringComparison.OrdinalIgnoreCase))).IsTrue();
+	}
+
+	[Test]
+	public async Task StartAsync_WhenAppStarts_ServesTheViewerOverHttp(CancellationToken cancellationToken)
+	{
+		// Act
+		var urls = await fixture.GetResourceUrlsAsync("aspirec4-er", cancellationToken);
+		using HttpClient client = new() { Timeout = TimeSpan.FromSeconds(30) };
+
+		var response = await client.GetAsync(new Uri(urls[0]), cancellationToken);
+		var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+		// Assert
+		await Assert.That(response.IsSuccessStatusCode).IsTrue();
+		await Assert.That(body).Contains("</html>");
+	}
+
+	[Test]
+	public async Task StartAsync_WhenAppStarts_ServesTheGeneratedModelAlongsideTheViewer(
+		CancellationToken cancellationToken
+	)
+	{
+		// The whole output directory is served, so every export is downloadable from the same URL.
+		// Act
+		var urls = await fixture.GetResourceUrlsAsync("aspirec4-er", cancellationToken);
+		using HttpClient client = new() { Timeout = TimeSpan.FromSeconds(30) };
+
+		var response = await client.GetAsync(new Uri($"{urls[0].TrimEnd('/')}/schema.gen.json"), cancellationToken);
+
+		// Assert
+		await Assert.That(response.IsSuccessStatusCode).IsTrue();
 	}
 
 	[Test]

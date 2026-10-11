@@ -109,6 +109,19 @@ sealed partial class AspireC4EfLifecycleHook(
 			ErdLog.NoModelsFound(logger);
 		}
 
+		// The viewer loads its JavaScript from vendor/ rather than a CDN, and that directory is
+		// populated by a separate step. Without it the page loads and renders nothing, which is a
+		// confusing failure to debug from the browser alone.
+		if (_viewerPath is not null)
+		{
+			var vendor = Path.Combine(directory, "vendor");
+
+			if (!File.Exists(Path.Combine(vendor, "bundle.js")))
+			{
+				ErdLog.ViewerDependenciesMissing(logger, vendor, directory);
+			}
+		}
+
 		// This resource runs no process of its own, so it has to publish its own state or the
 		// dashboard leaves it Unknown with no logs.
 		await resourceNotificationService

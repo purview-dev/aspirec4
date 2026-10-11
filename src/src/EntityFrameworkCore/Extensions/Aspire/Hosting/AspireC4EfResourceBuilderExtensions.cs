@@ -59,12 +59,24 @@ public static class AspireC4EfResourceBuilderExtensions
 		);
 		Directory.CreateDirectory(outputDirectory);
 
-		// Only the d2 renderer has a live server to run. The other renderers write files the browser
-		// opens directly, so adding a sidecar for them would be a long-running resource doing nothing.
-		var inner =
-			snapshot.Renderer == ErdRenderer.D2
-				? CreateServerResource(builder.ApplicationBuilder, snapshot, outputDirectory, port).Resource
-				: null;
+		// d2 serves itself. The interactive and Mermaid renderers write static files, which are served
+		// by a small web server so the dashboard has a real URL to link to; DBML has no viewer at all.
+		IResource? inner = snapshot.Renderer switch
+		{
+			ErdRenderer.D2 => CreateServerResource(
+				builder.ApplicationBuilder,
+				snapshot,
+				outputDirectory,
+				port
+			).Resource,
+			ErdRenderer.Interactive or ErdRenderer.Mermaid when snapshot.UseViewerServer => CreateViewerServerResource(
+				builder.ApplicationBuilder,
+				snapshot,
+				outputDirectory,
+				port
+			).Resource,
+			_ => null,
+		};
 
 		builder
 			.ApplicationBuilder.AddResource(
@@ -202,6 +214,42 @@ public static class AspireC4EfResourceBuilderExtensions
 
 		return builder;
 	}
+
+	/// <summary>
+	/// Creates the static file server for the renderers that write a viewer rather than running one.
+	/// </summary>
+	/// <remarks>
+	/// The whole output directory is served, not just the viewer, so every generated export is
+	/// downloadable from the same URL.
+	/// </remarks>
+	static IResourceBuilder<ErdViewerServerResource> CreateViewerServerResource(
+		IDistributedApplicationBuilder builder,
+		AspireC4EfDiagramOptions options,
+		string outputDirectory,
+		int? port
+	) =>
+		builder
+			.AddResource(new ErdViewerServerResource(DefaultResourceName + ServerResourceSuffix))
+			.WithImage(ErdViewerServerResource.DefaultImage)
+			.WithImageTag(options.ViewerServerImageTag ?? ErdViewerServerResource.DefaultTag)
+			.WithImageRegistry(ErdViewerServerResource.DefaultRegistry)
+			.WithBindMount(outputDirectory, ErdViewerServerResource.WebRoot, isReadOnly: true)
+			.WithHttpEndpoint(
+				port: port,
+				targetPort: ErdViewerServerResource.DefaultPort,
+				name: AspireC4EfResource.HttpEndpointName
+			)
+			.WithUrlForEndpoint(
+				AspireC4EfResource.HttpEndpointName,
+				url =>
+				{
+					url.DisplayText = "View ER Diagram";
+					url.DisplayLocation = UrlDisplayLocation.SummaryAndDetails;
+				}
+			)
+			.WithHttpHealthCheck("/", statusCode: 200, endpointName: AspireC4EfResource.HttpEndpointName)
+			.ExcludeFromLikeC4()
+			.ExcludeFromManifest();
 
 	static IResourceBuilder<D2ServerResource> CreateServerResource(
 		IDistributedApplicationBuilder builder,

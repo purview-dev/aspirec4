@@ -30,10 +30,10 @@ public sealed class AspireC4EfResourceBuilderExtensionsTests
 	}
 
 	[Test]
-	public async Task WithEntityFrameworkDiagram_WithDefaultRenderer_AddsNoSidecar()
+	public async Task WithEntityFrameworkDiagram_WithDefaultRenderer_AddsAViewerServer()
 	{
-		// Only d2 has a server to run; the other renderers write files opened straight from disk, so
-		// a sidecar would be a long-running resource doing nothing.
+		// The interactive renderer writes static files, so a server is needed for the dashboard to
+		// have a URL to link to — a file:// link cannot be navigated to from the dashboard's origin.
 		// Arrange
 		var appBuilder = CreateAppBuilder();
 
@@ -43,7 +43,60 @@ public sealed class AspireC4EfResourceBuilderExtensionsTests
 		// Assert
 		await Assert.That(appBuilder.Resources.OfType<AspireC4EfResource>().Count()).IsEqualTo(1);
 		await Assert.That(appBuilder.Resources.OfType<D2ServerResource>()).IsEmpty();
+		await Assert.That(appBuilder.Resources.OfType<ErdViewerServerResource>().Count()).IsEqualTo(1);
+		await Assert
+			.That(appBuilder.Resources.OfType<AspireC4EfResource>().Single().InnerResource)
+			.IsTypeOf<ErdViewerServerResource>();
+	}
+
+	[Test]
+	public async Task WithEntityFrameworkDiagram_WithViewerServerDisabled_AddsNoSidecar()
+	{
+		// The escape hatch for machines with no container runtime: the diagram is still generated and
+		// the dashboard offers a command that opens it locally.
+		// Arrange
+		var appBuilder = CreateAppBuilder();
+
+		// Act
+		appBuilder.AddAspireC4().WithEntityFrameworkDiagram(configure: o => o.UseViewerServer = false);
+
+		// Assert
+		await Assert.That(appBuilder.Resources.OfType<ErdViewerServerResource>()).IsEmpty();
 		await Assert.That(appBuilder.Resources.OfType<AspireC4EfResource>().Single().InnerResource).IsNull();
+	}
+
+	[Test]
+	public async Task WithEntityFrameworkDiagram_WithDbmlRenderer_AddsNoSidecar()
+	{
+		// DBML is an interchange format with no viewer, so there is nothing to serve.
+		// Arrange
+		var appBuilder = CreateAppBuilder();
+
+		// Act
+		appBuilder.AddAspireC4().WithEntityFrameworkDiagram(configure: o => o.Renderer = ErdRenderer.Dbml);
+
+		// Assert
+		await Assert.That(appBuilder.Resources.OfType<ErdViewerServerResource>()).IsEmpty();
+		await Assert.That(appBuilder.Resources.OfType<AspireC4EfResource>().Single().InnerResource).IsNull();
+	}
+
+	[Test]
+	public async Task WithEntityFrameworkDiagram_ViewerServer_UsesAPinnedImage()
+	{
+		// Arrange
+		var appBuilder = CreateAppBuilder();
+
+		// Act
+		appBuilder.AddAspireC4().WithEntityFrameworkDiagram();
+		var image = appBuilder
+			.Resources.OfType<ErdViewerServerResource>()
+			.Single()
+			.Annotations.OfType<ContainerImageAnnotation>()
+			.Single();
+
+		// Assert
+		await Assert.That(image.Image).IsEqualTo(ErdViewerServerResource.DefaultImage);
+		await Assert.That(image.Tag).IsEqualTo(ErdViewerServerResource.DefaultTag);
 	}
 
 	[Test]

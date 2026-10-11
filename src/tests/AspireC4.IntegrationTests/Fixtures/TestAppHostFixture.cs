@@ -53,6 +53,43 @@ public sealed class TestAppHostFixture : TUnit.Aspire.AspireFixture<Projects.Tes
 
 	DistributedApplication? _app;
 
+	/// <summary>
+	/// Reads the public URLs a resource has published, waiting until it has at least one.
+	/// </summary>
+	public async Task<IReadOnlyList<string>> GetResourceUrlsAsync(
+		string resourceName,
+		CancellationToken cancellationToken
+	)
+	{
+		if (_app is null)
+			return [];
+
+		var notifications = _app.Services.GetRequiredService<ResourceNotificationService>();
+
+		using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+		cts.CancelAfter(ResourceTimeout);
+
+		try
+		{
+			await foreach (var evt in notifications.WatchAsync(cts.Token))
+			{
+				if (!evt.Resource.Name.Equals(resourceName, StringComparison.OrdinalIgnoreCase))
+					continue;
+
+				var urls = evt.Snapshot.Urls.Where(u => !u.IsInternal).Select(u => u.Url).ToArray();
+
+				if (urls.Length > 0)
+					return urls;
+			}
+		}
+		catch (OperationCanceledException)
+		{
+			// Fall through: the resource never published a URL.
+		}
+
+		return [];
+	}
+
 	/// <summary>Finds a resource in the running application model, so tests can inspect annotations.</summary>
 	public IResource? GetResource(string resourceName) =>
 		_app
