@@ -59,7 +59,12 @@ public static class AspireC4EfResourceBuilderExtensions
 		);
 		Directory.CreateDirectory(outputDirectory);
 
-		var server = CreateServerResource(builder.ApplicationBuilder, snapshot, outputDirectory, port);
+		// Only the d2 renderer has a live server to run. The other renderers write files the browser
+		// opens directly, so adding a sidecar for them would be a long-running resource doing nothing.
+		var inner =
+			snapshot.Renderer == ErdRenderer.D2
+				? CreateServerResource(builder.ApplicationBuilder, snapshot, outputDirectory, port).Resource
+				: null;
 
 		builder
 			.ApplicationBuilder.AddResource(
@@ -67,7 +72,7 @@ public static class AspireC4EfResourceBuilderExtensions
 				{
 					OutputDirectory = outputDirectory,
 					AppHostDirectory = builder.ApplicationBuilder.AppHostDirectory,
-					InnerResource = server.Resource,
+					InnerResource = inner,
 				}
 			)
 			.ExcludeFromLikeC4()
@@ -124,6 +129,15 @@ public static class AspireC4EfResourceBuilderExtensions
 			?? throw new InvalidOperationException(
 				$"No ER diagram resource was found. Call {nameof(WithEntityFrameworkDiagram)}() before {nameof(WithLocalD2CLI)}()."
 			);
+
+		if (diagram.InnerResource is null)
+		{
+			throw new InvalidOperationException(
+				$"{nameof(WithLocalD2CLI)}() only applies to the {nameof(ErdRenderer.D2)} renderer. "
+					+ $"Set {nameof(AspireC4EfDiagramOptions.Renderer)} to {nameof(ErdRenderer.D2)} in "
+					+ $"{nameof(WithEntityFrameworkDiagram)}()."
+			);
+		}
 
 		builder.ApplicationBuilder.Resources.Remove(diagram.InnerResource);
 

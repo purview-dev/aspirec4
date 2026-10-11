@@ -20,6 +20,11 @@
 	"packageManager": "bun@1.4.2",
 	"devDependencies": {
 		"@types/node": "^22.20.2",
+		"@xyflow/react": "12.10.0",
+		"elkjs": "0.11.0",
+		"playwright": "1.56.0",
+		"react": "19.2.0",
+		"react-dom": "19.2.0",
 		"typescript": "^7.0.2"
 	},
 	"engines": {

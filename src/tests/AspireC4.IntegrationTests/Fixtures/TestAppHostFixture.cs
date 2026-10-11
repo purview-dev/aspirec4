@@ -43,10 +43,13 @@ public sealed class TestAppHostFixture : TUnit.Aspire.AspireFixture<Projects.Tes
 	public string ConfigPath => Path.Combine(OutputDirectory, "likec4.config.json");
 
 	/// <summary>
-	/// Path of the generated d2 ER diagram, routed into <see cref="OutputDirectory"/> so the test run
-	/// does not write into the sample AppHost's source tree.
+	/// Path of the generated ER model, routed into <see cref="OutputDirectory"/> so the test run does
+	/// not write into the sample AppHost's source tree. The default renderer emits JSON.
 	/// </summary>
-	public string ErDiagramPath => Path.Combine(OutputDirectory, "schema.gen.d2");
+	public string ErDiagramPath => Path.Combine(OutputDirectory, "schema.gen.json");
+
+	/// <summary>Path of the interactive viewer emitted beside the model.</summary>
+	public string ErViewerPath => Path.Combine(OutputDirectory, "index.html");
 
 	/// <summary>Directory containing the copied image aliases (svg/png assets).</summary>
 	public string ImagesDirectory => Path.Combine(AppContext.BaseDirectory, "likec4", "images");

@@ -184,7 +184,10 @@ public sealed class AspireC4EfModelGenerator : IIncrementalGenerator
 						w.StartObject().Text("principalTable", foreignKey.PrincipalEntity);
 						w.Array("columns", foreignKey.Columns, static (a, c) => a.Value(c));
 						w.Array("principalColumns", foreignKey.PrincipalColumns, static (a, c) => a.Value(c));
-						w.Text("navigationName", foreignKey.NavigationName).EndObject();
+						w.Text("navigationName", foreignKey.NavigationName)
+							.Bool("isUnique", foreignKey.IsUnique)
+							.Bool("isRequired", foreignKey.IsRequired)
+							.EndObject();
 					}
 				);
 

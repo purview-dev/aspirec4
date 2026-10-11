@@ -1,13 +1,16 @@
+using System.Text.Json;
+
 namespace Aspire.Hosting.AspireC4;
 
 /// <summary>
-/// Verifies the d2 ER diagram is generated from the sample Entity Framework Core models during a real
-/// AppHost run.
+/// Verifies the ER diagram is generated from the sample Entity Framework Core models during a real
+/// AppHost run, using the default (interactive) renderer.
 /// </summary>
 /// <remarks>
 /// This is the only test that exercises the full AppHost path — annotation discovery, locating each
 /// contributing project's build output, reading descriptors from the assemblies in it, and writing the
 /// diagram. The unit tests read sample assemblies directly, so they cannot catch a break in that path.
+/// Emitter output itself is asserted exactly in <c>ErdEmitterTests</c>.
 /// </remarks>
 [ClassDataSource<Fixtures.TestAppHostFixture>(Shared = SharedType.PerTestSession)]
 public sealed class EntityFrameworkDiagramTests(Fixtures.TestAppHostFixture fixture)
@@ -19,87 +22,68 @@ public sealed class EntityFrameworkDiagramTests(Fixtures.TestAppHostFixture fixt
 			Skip.Test(fixture.SkipReason);
 	}
 
+	static JsonElement Root(string json) => JsonDocument.Parse(json).RootElement;
+
 	[Test]
-	public async Task StartAsync_WhenAppStarts_GeneratesTheErDiagram()
+	public async Task StartAsync_WhenAppStarts_GeneratesTheModelAndViewer()
 	{
-		// Assert
+		// Assert — the default renderer emits its data plus the viewer that reads it.
 		await Assert.That(File.Exists(fixture.ErDiagramPath)).IsTrue();
+		await Assert.That(File.Exists(fixture.ErViewerPath)).IsTrue();
 	}
 
 	[Test]
-	public async Task StartAsync_WhenAppStarts_ErDiagramPinsARowTargetingLayoutEngine(
-		CancellationToken cancellationToken
-	)
-	{
-		// dagre cannot target individual sql_table rows, so the generated file must pin elk or tala.
-		// Act
-		var content = await File.ReadAllTextAsync(fixture.ErDiagramPath, cancellationToken);
-
-		// Assert
-		await Assert.That(content).Contains("layout-engine: elk");
-	}
-
-	[Test]
-	public async Task StartAsync_WhenAppStarts_ErDiagramContainsEveryDiscoveredContext(
-		CancellationToken cancellationToken
-	)
+	public async Task StartAsync_WhenAppStarts_ModelContainsEveryDiscoveredContext(CancellationToken cancellationToken)
 	{
 		// Act
-		var content = await File.ReadAllTextAsync(fixture.ErDiagramPath, cancellationToken);
+		var json = await File.ReadAllTextAsync(fixture.ErDiagramPath, cancellationToken);
+		var names = Root(json)
+			.GetProperty("contexts")
+			.EnumerateArray()
+			.Select(c => c.GetProperty("name").GetString())
+			.ToArray();
 
 		// Assert — the simple sample's single context plus the complex sample's three.
-		await Assert.That(content).Contains("BlogDbContext");
-		await Assert.That(content).Contains("SalesDbContext");
-		await Assert.That(content).Contains("IdentityDbContext");
-		await Assert.That(content).Contains("AuditDbContext");
+		await Assert.That(names).Contains("BlogDbContext");
+		await Assert.That(names).Contains("SalesDbContext");
+		await Assert.That(names).Contains("IdentityDbContext");
+		await Assert.That(names).Contains("AuditDbContext");
 	}
 
 	[Test]
-	public async Task StartAsync_WhenAppStarts_ErDiagramRendersTablesAndColumnLevelEdges(
-		CancellationToken cancellationToken
-	)
+	public async Task StartAsync_WhenAppStarts_ModelPreservesAdvancedMappings(CancellationToken cancellationToken)
 	{
 		// Act
-		var content = await File.ReadAllTextAsync(fixture.ErDiagramPath, cancellationToken);
+		var json = await File.ReadAllTextAsync(fixture.ErDiagramPath, cancellationToken);
 
-		// Assert
-		await Assert.That(content).Contains("shape: sql_table");
-		await Assert.That(content).Contains("BlogDbContext.Posts.BlogId -> BlogDbContext.Blogs.Id");
+		// Assert — attribute renames, fluent renames and fluent column types all survive.
+		await Assert.That(json).Contains("product_id");
+		await Assert.That(json).Contains("email_address");
+		await Assert.That(json).Contains("decimal(18,2)");
 	}
 
 	[Test]
-	public async Task StartAsync_WhenAppStarts_ErDiagramPreservesAdvancedMappings(CancellationToken cancellationToken)
+	public async Task StartAsync_WhenAppStarts_ModelOmitsExcludedProperties(CancellationToken cancellationToken)
 	{
 		// Act
-		var content = await File.ReadAllTextAsync(fixture.ErDiagramPath, cancellationToken);
-
-		// Assert — attribute renames, fluent renames and types, and a composite key.
-		await Assert.That(content).Contains("product_id");
-		await Assert.That(content).Contains("email_address");
-		await Assert.That(content).Contains("decimal(18,2)");
-		await Assert.That(content).Contains("constraint: [primary_key; foreign_key]");
-	}
-
-	[Test]
-	public async Task StartAsync_WhenAppStarts_ErDiagramOmitsExcludedProperties(CancellationToken cancellationToken)
-	{
-		// Act
-		var content = await File.ReadAllTextAsync(fixture.ErDiagramPath, cancellationToken);
+		var json = await File.ReadAllTextAsync(fixture.ErDiagramPath, cancellationToken);
 
 		// Assert — [NotMapped] and the fluent Ignore call.
-		await Assert.That(content).DoesNotContain("Initials");
-		await Assert.That(content).DoesNotContain("CachedDisplayName");
+		await Assert.That(json).DoesNotContain("Initials");
+		await Assert.That(json).DoesNotContain("CachedDisplayName");
 	}
 
 	[Test]
-	public async Task StartAsync_WhenAppStarts_ErDiagramDoesNotLinkAcrossContexts(CancellationToken cancellationToken)
+	public async Task StartAsync_WhenAppStarts_ViewerPointsAtTheGeneratedModel(CancellationToken cancellationToken)
 	{
-		// AuditEntry.ActorUserId references the identity context's Users by id with no navigation.
 		// Act
-		var content = await File.ReadAllTextAsync(fixture.ErDiagramPath, cancellationToken);
+		var script = await File.ReadAllTextAsync(
+			Path.Combine(Path.GetDirectoryName(fixture.ErViewerPath)!, "app.js"),
+			cancellationToken
+		);
 
-		// Assert
-		await Assert.That(content).Contains("ActorUserId");
-		await Assert.That(content).DoesNotContain("ActorUserId -> ");
+		// Assert — the placeholder must have been substituted, or the viewer loads nothing.
+		await Assert.That(script).Contains("schema.gen.json");
+		await Assert.That(script).DoesNotContain("__MODEL__");
 	}
 }

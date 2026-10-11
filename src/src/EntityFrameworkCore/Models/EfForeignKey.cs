@@ -14,4 +14,21 @@ public sealed record EfForeignKey
 
 	/// <summary>The navigation property this relationship was derived from, when known. Used for labelling.</summary>
 	public string? NavigationName { get; init; }
+
+	/// <summary>
+	/// Whether the dependent side is constrained to at most one row, making this one-to-one rather than
+	/// one-to-many.
+	/// </summary>
+	/// <remarks>
+	/// Derived statically: true when the foreign key columns are themselves the primary key, or are
+	/// covered by a unique index. EF's own <c>IsUnique</c> is a runtime model concept and is not
+	/// available to the generator.
+	/// </remarks>
+	public bool IsUnique { get; init; }
+
+	/// <summary>
+	/// Whether the relationship is mandatory, i.e. every dependent row must reference a principal.
+	/// </summary>
+	/// <remarks>Derived from the nullability of the foreign key columns.</remarks>
+	public bool IsRequired { get; init; }
 }

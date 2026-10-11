@@ -1,7 +1,5 @@
 using Aspire.Hosting.AspireC4.EntityFrameworkCore.Annotations;
 using Aspire.Hosting.AspireC4.EntityFrameworkCore.ApplicationModel;
-using Aspire.Hosting.AspireC4.EntityFrameworkCore.D2;
-using Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Generators;
 using Aspire.Hosting.AspireC4.EntityFrameworkCore.Models;
 using Aspire.Hosting.Eventing;
 using Aspire.Hosting.Lifecycle;
@@ -64,13 +62,11 @@ sealed partial class AspireC4EfLifecycleHook(
 		CancellationToken cancellationToken
 	)
 	{
-		var efModel = LoadModel(model);
-		var d2Model = D2ModelBuilder.Build(efModel, _options);
-		var dsl = D2DSLGenerator.Generate(d2Model, _options);
+		var files = ErdOutput.Create(LoadModel(model), _options);
 
-		// The header carries a timestamp, so comparing the stripped body keeps the file off the
-		// git diff when nothing has actually changed.
-		var body = StripHeader(dsl);
+		// The first file is the diagram itself; its header carries a timestamp, so comparing the
+		// stripped body keeps the file off the git diff when nothing has actually changed.
+		var body = StripHeader(files[0].Content);
 
 		if (string.Equals(body, _lastRawBody, StringComparison.Ordinal))
 		{
@@ -83,9 +79,11 @@ sealed partial class AspireC4EfLifecycleHook(
 
 		Directory.CreateDirectory(directory);
 
-		var path = Path.Combine(directory, $"{_options.FileName}.d2");
-
-		await File.WriteAllTextAsync(path, dsl, cancellationToken).ConfigureAwait(false);
+		foreach (var file in files)
+		{
+			await File.WriteAllTextAsync(Path.Combine(directory, file.FileName), file.Content, cancellationToken)
+				.ConfigureAwait(false);
+		}
 	}
 
 	/// <summary>
@@ -164,11 +162,22 @@ sealed partial class AspireC4EfLifecycleHook(
 		var lines = dsl.Split('\n');
 		var index = 0;
 
-		while (index < lines.Length && lines[index].TrimStart().StartsWith('#'))
+		// Each text format comments differently: d2 uses '#', Mermaid '%%', DBML '//'. JSON carries no
+		// header at all, in which case nothing is stripped.
+		while (index < lines.Length && IsHeaderComment(lines[index]))
 		{
 			index++;
 		}
 
 		return string.Join("\n", lines.Skip(index)).TrimStart('\n');
+	}
+
+	static bool IsHeaderComment(string line)
+	{
+		var trimmed = line.TrimStart();
+
+		return trimmed.StartsWith('#')
+			|| trimmed.StartsWith("%%", StringComparison.Ordinal)
+			|| trimmed.StartsWith("//", StringComparison.Ordinal);
 	}
 }

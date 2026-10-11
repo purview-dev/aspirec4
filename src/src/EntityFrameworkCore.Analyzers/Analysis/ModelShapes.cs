@@ -51,4 +51,10 @@ sealed class ForeignKeyShape
 	public List<string> PrincipalColumns { get; } = [];
 
 	public string? NavigationName { get; set; }
+
+	/// <summary>Set once the dependent columns are known to be a primary key or unique index.</summary>
+	public bool IsUnique { get; set; }
+
+	/// <summary>Set when every dependent column is non-nullable.</summary>
+	public bool IsRequired { get; set; }
 }

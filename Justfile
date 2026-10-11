@@ -273,3 +273,30 @@ _try-docker path=justfile_dir():
 _try-bun path=justfile_dir():
     echo "Docker not available, falling back to Bun..."
     sh -c 'set -- --use-hash-history; if command -v dot >/dev/null 2>&1; then set -- "$@" --use-dot-bin; fi; bunx likec4 serve "{{ path }}" "$@"'
+
+# ── ER diagrams ───────────────────────────────────────────────────────────────
+
+# Fetch the interactive viewer's JavaScript dependencies into an output directory's vendor/ folder.
+# Run once per output directory; the viewer loads these locally rather than from a CDN.
+[group('Diagrams')]
+erd-vendor dir:
+    bun scripts/erd-vendor.mts "{{ dir }}"
+
+# Drive the interactive viewer in a real browser and assert it renders, lays out, searches and
+# animates. Takes a generated model JSON. Requires: bunx playwright install chromium
+[group('Diagrams')]
+erd-check model="src/src/TestAppHost/erd/gen/schema.gen.json":
+    bun scripts/erd-vendor.mts artifacts/erd-viewer-check
+    bun scripts/erd-viewer-check.mts "{{ model }}"
+
+# Render an emitted Mermaid .mmd to SVG using mermaid-cli 12 in a one-shot container.
+# Animated edges are browser-only and will not appear in this output.
+[group('Diagrams')]
+erd-svg input output="artifacts/erd/schema.svg":
+    # justfile_directory() rather than $(pwd): under Git Bash on Windows the latter resolves to the
+    # shell's own install root. MSYS_NO_PATHCONV stops Git Bash rewriting the in-container /work
+    # paths into Windows ones before docker ever sees them.
+    mkdir -p artifacts/erd
+    MSYS_NO_PATHCONV=1 docker run --rm -v "{{ justfile_directory() }}:/work" \
+        ghcr.io/mermaid-js/mermaid-cli/mermaid-cli:12.0.0 \
+        -i "/work/{{ input }}" -o "/work/{{ output }}"

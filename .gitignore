@@ -664,3 +664,8 @@ sketch
 BenchmarkDotNet.Artifacts/
 
 .tools/purview-build/**
+
+# AspireC4 ER diagram viewer: bundled JS dependencies and browser-check output are generated
+# locally (just erd-vendor / just erd-check) and never committed.
+**/erd/gen/vendor/
+**/erd/gen/viewer-check.png

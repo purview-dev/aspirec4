@@ -125,16 +125,72 @@ architecture diagram.
 
 | Property | Default | Description |
 | --- | --- | --- |
+| `Renderer` | `Interactive` | `Interactive`, `Mermaid`, `Dbml` or `D2` — see [Renderers](#renderers) |
 | `Title` | `null` | Title shown in the generated diagram |
-| `OutputDirectory` | `"./d2/gen/"` | Directory the generated `.d2` file is written to |
+| `OutputDirectory` | `"./erd/gen/"` | Directory the generated files are written to |
 | `FileName` | `"schema.gen"` | Generated file name without extension |
-| `LayoutEngine` | `Elk` | `Dagre`, `Elk` or `Tala`. **dagre cannot target `sql_table` rows** |
+| `UseSubgraphs` | `true` | Mermaid only — group entities into one `subgraph` per `DbContext` (needs Mermaid 11.17+) |
+| `LayoutEngine` | `Elk` | D2 only. `Dagre`, `Elk` or `Tala`. **dagre cannot target `sql_table` rows** |
 | `ShowNullability` | `true` | Render nullable columns with a trailing `?` |
 | `GroupBySchema` | `true` | Group tables into d2 containers by database schema |
 | `GroupByContext` | `true` | Group by `DbContext` when more than one is discovered |
 | `ContainerImageTag` | `null` (`v0.9.0`) | Pin the [`d2lang/d2`](https://hub.docker.com/r/d2lang/d2/) image tag |
 | `HideFromDashboard` | `false` | Hide the d2 sidecar from the Aspire dashboard |
 | `DashboardLinkDisplayName` | `"ER Diagram"` | Name used for the diagram link |
+
+### Renderers
+
+Every text format is a **lossy projection** of the model. Only the interactive renderer consumes the
+descriptor directly, which is why it is the default.
+
+| Renderer | Output | Fidelity | Use it for |
+| --- | --- | --- | --- |
+| `Interactive` *(default)* | `.json` + viewer | **Full** — column-level edges, nested grouping, key badges | The primary experience |
+| `Dbml` | `.dbml` | High — column-level refs and precision types survive | Interchange: dbdiagram.io, SQL generation |
+| `Mermaid` | `.mmd` | Low — edges join entities, not columns; one flat grouping level | Publishing: GitHub, Azure DevOps, wikis |
+| `D2` | `.d2` + live sidecar | High — column-level edges, nested containers | Live local viewing |
+
+Known limitations, by renderer:
+
+- **Mermaid** cannot attach an edge to a column, so the participating columns are carried in the edge
+  label instead. Its attribute-type grammar permits parentheses but **not commas**, so `decimal(18,2)`
+  is emitted as `decimal(18_2)` — the precision is kept rather than dropped. Grouping is one flat
+  `subgraph` level, so the schema tier is lost; set `UseSubgraphs = false` for renderers pinned to a
+  Mermaid older than 11.17.
+- **DBML** renders nowhere on its own — it is an interchange format for tools such as dbdiagram.io.
+- **D2** needs the container (or a local `d2` binary) and renders nowhere else.
+- **Interactive** needs its JavaScript dependencies vendored once per output directory — see below.
+
+#### Cardinality mapping
+
+EF's own `IsUnique`/`IsRequired` are runtime concepts, so both are derived statically: a foreign key is
+*unique* when its columns are the primary key or carry a unique index, and *required* when they are
+non-nullable. The principal side is always `||`, because a foreign key references exactly one row.
+
+| Unique | Required | Mermaid | Meaning |
+| --- | --- | --- | --- |
+| yes | yes | `\|\|--\|\|` | one-to-one, mandatory |
+| yes | no | `\|\|--o\|` | one-to-zero-or-one |
+| no | yes | `\|\|--\|{` | one-to-one-or-many |
+| no | no | `\|\|--o{` | one-to-zero-or-many |
+
+Lines are always identifying (`--`). Delete behaviour and ownership are runtime EF concepts that static
+analysis cannot recover, and guessing non-identifying would be misleading.
+
+### Recipes
+
+```sh
+just erd-vendor ./erd/gen             # bundle the viewer's JS deps into <dir>/vendor (once per output dir)
+just erd-check                        # drive the viewer in a real browser and assert it works
+just erd-svg erd/gen/schema.gen.mmd   # render Mermaid to SVG via mermaid-cli 12 in a container
+```
+
+The viewer loads its dependencies from `./vendor/` rather than a CDN, so a generated diagram keeps
+working offline. They are genuinely bundled with `bun build`; fetching ESM modules from a CDN at
+vendoring time does **not** work, because the responses are re-export stubs pointing at absolute CDN
+paths. Run `bunx playwright install chromium` once before `just erd-check`.
+
+Animated edges are browser-only and will not appear in the SVG output.
 
 ### How the model is read
 

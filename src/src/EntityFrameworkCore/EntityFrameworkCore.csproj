@@ -29,6 +29,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<!-- Viewer assets stay real files so they remain lintable; they are emitted at generation time. -->
+		<EmbeddedResource Include="Assets\viewer\index.html" />
+		<EmbeddedResource Include="Assets\viewer\app.js" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="Aspire.Hosting" />
 	</ItemGroup>
 

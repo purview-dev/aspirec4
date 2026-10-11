@@ -1,0 +1,766 @@
+{
+  "schemaVersion": 1,
+  "contexts": [
+    {
+      "typeName": "Aspire.Hosting.AspireC4.TestAppHost.ComplexData.Audit.AuditDbContext",
+      "name": "AuditDbContext",
+      "defaultSchema": "audit",
+      "tables": [
+        {
+          "name": "audit_entries",
+          "clrTypeName": "Aspire.Hosting.AspireC4.TestAppHost.ComplexData.Audit.AuditEntry",
+          "schema": null,
+          "columns": [
+            {
+              "name": "Id",
+              "storeType": "bigint",
+              "clrTypeName": "long",
+              "isNullable": false,
+              "isPrimaryKey": true,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": null
+            },
+            {
+              "name": "entity",
+              "storeType": "varchar",
+              "clrTypeName": "string",
+              "isNullable": false,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": 128
+            },
+            {
+              "name": "Action",
+              "storeType": "varchar",
+              "clrTypeName": "string",
+              "isNullable": false,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": 64
+            },
+            {
+              "name": "ActorUserId",
+              "storeType": "guid",
+              "clrTypeName": "System.Guid",
+              "isNullable": false,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": null
+            },
+            {
+              "name": "OccurredAt",
+              "storeType": "datetimeoffset",
+              "clrTypeName": "System.DateTimeOffset",
+              "isNullable": false,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": null
+            }
+          ],
+          "foreignKeys": [],
+          "indexes": []
+        },
+        {
+          "name": "AuditEntryChanges",
+          "clrTypeName": "Aspire.Hosting.AspireC4.TestAppHost.ComplexData.Audit.AuditEntryChange",
+          "schema": null,
+          "columns": [
+            {
+              "name": "Id",
+              "storeType": "bigint",
+              "clrTypeName": "long",
+              "isNullable": false,
+              "isPrimaryKey": true,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": null
+            },
+            {
+              "name": "AuditEntryId",
+              "storeType": "bigint",
+              "clrTypeName": "long",
+              "isNullable": false,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isForeignKey": true,
+              "maxLength": null
+            },
+            {
+              "name": "PropertyName",
+              "storeType": "varchar",
+              "clrTypeName": "string",
+              "isNullable": false,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": 128
+            },
+            {
+              "name": "OldValue",
+              "storeType": "varchar",
+              "clrTypeName": "string?",
+              "isNullable": true,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": null
+            },
+            {
+              "name": "NewValue",
+              "storeType": "varchar",
+              "clrTypeName": "string?",
+              "isNullable": true,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": null
+            }
+          ],
+          "foreignKeys": [
+            {
+              "columns": [
+                "AuditEntryId"
+              ],
+              "principalTable": "audit_entries",
+              "principalColumns": [
+                "Id"
+              ],
+              "navigationName": "AuditEntry",
+              "isUnique": false,
+              "isRequired": true
+            }
+          ],
+          "indexes": []
+        }
+      ]
+    },
+    {
+      "typeName": "Aspire.Hosting.AspireC4.TestAppHost.ComplexData.Identity.IdentityDbContext",
+      "name": "IdentityDbContext",
+      "defaultSchema": "identity",
+      "tables": [
+        {
+          "name": "Users",
+          "clrTypeName": "Aspire.Hosting.AspireC4.TestAppHost.ComplexData.Identity.User",
+          "schema": null,
+          "columns": [
+            {
+              "name": "Id",
+              "storeType": "guid",
+              "clrTypeName": "System.Guid",
+              "isNullable": false,
+              "isPrimaryKey": true,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": null
+            },
+            {
+              "name": "UserName",
+              "storeType": "varchar",
+              "clrTypeName": "string",
+              "isNullable": false,
+              "isPrimaryKey": false,
+              "isUnique": true,
+              "isForeignKey": false,
+              "maxLength": 64
+            },
+            {
+              "name": "Email",
+              "storeType": "varchar",
+              "clrTypeName": "string?",
+              "isNullable": true,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": 256
+            },
+            {
+              "name": "IsLockedOut",
+              "storeType": "bool",
+              "clrTypeName": "bool",
+              "isNullable": false,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": null
+            },
+            {
+              "name": "LastSignInAt",
+              "storeType": "datetimeoffset",
+              "clrTypeName": "System.DateTimeOffset?",
+              "isNullable": true,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": null
+            }
+          ],
+          "foreignKeys": [],
+          "indexes": []
+        },
+        {
+          "name": "Roles",
+          "clrTypeName": "Aspire.Hosting.AspireC4.TestAppHost.ComplexData.Identity.Role",
+          "schema": null,
+          "columns": [
+            {
+              "name": "Id",
+              "storeType": "guid",
+              "clrTypeName": "System.Guid",
+              "isNullable": false,
+              "isPrimaryKey": true,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": null
+            },
+            {
+              "name": "Name",
+              "storeType": "varchar",
+              "clrTypeName": "string",
+              "isNullable": false,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": 64
+            }
+          ],
+          "foreignKeys": [],
+          "indexes": []
+        },
+        {
+          "name": "UserRoles",
+          "clrTypeName": "Aspire.Hosting.AspireC4.TestAppHost.ComplexData.Identity.UserRole",
+          "schema": null,
+          "columns": [
+            {
+              "name": "UserId",
+              "storeType": "guid",
+              "clrTypeName": "System.Guid",
+              "isNullable": false,
+              "isPrimaryKey": true,
+              "isUnique": false,
+              "isForeignKey": true,
+              "maxLength": null
+            },
+            {
+              "name": "RoleId",
+              "storeType": "guid",
+              "clrTypeName": "System.Guid",
+              "isNullable": false,
+              "isPrimaryKey": true,
+              "isUnique": false,
+              "isForeignKey": true,
+              "maxLength": null
+            },
+            {
+              "name": "GrantedAt",
+              "storeType": "datetimeoffset",
+              "clrTypeName": "System.DateTimeOffset",
+              "isNullable": false,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": null
+            }
+          ],
+          "foreignKeys": [
+            {
+              "columns": [
+                "UserId"
+              ],
+              "principalTable": "Users",
+              "principalColumns": [
+                "Id"
+              ],
+              "navigationName": "User",
+              "isUnique": true,
+              "isRequired": true
+            },
+            {
+              "columns": [
+                "RoleId"
+              ],
+              "principalTable": "Roles",
+              "principalColumns": [
+                "Id"
+              ],
+              "navigationName": "Role",
+              "isUnique": true,
+              "isRequired": true
+            }
+          ],
+          "indexes": []
+        }
+      ]
+    },
+    {
+      "typeName": "Aspire.Hosting.AspireC4.TestAppHost.ComplexData.Sales.SalesDbContext",
+      "name": "SalesDbContext",
+      "defaultSchema": "sales",
+      "tables": [
+        {
+          "name": "Customers",
+          "clrTypeName": "Aspire.Hosting.AspireC4.TestAppHost.ComplexData.Sales.Customer",
+          "schema": null,
+          "columns": [
+            {
+              "name": "Id",
+              "storeType": "int",
+              "clrTypeName": "int",
+              "isNullable": false,
+              "isPrimaryKey": true,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": null
+            },
+            {
+              "name": "email_address",
+              "storeType": "varchar",
+              "clrTypeName": "string",
+              "isNullable": false,
+              "isPrimaryKey": false,
+              "isUnique": true,
+              "isForeignKey": false,
+              "maxLength": 200
+            },
+            {
+              "name": "DisplayName",
+              "storeType": "varchar",
+              "clrTypeName": "string?",
+              "isNullable": true,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": 120
+            },
+            {
+              "name": "CreatedAt",
+              "storeType": "datetimeoffset",
+              "clrTypeName": "System.DateTimeOffset",
+              "isNullable": false,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": null
+            }
+          ],
+          "foreignKeys": [],
+          "indexes": []
+        },
+        {
+          "name": "categories",
+          "clrTypeName": "Aspire.Hosting.AspireC4.TestAppHost.ComplexData.Sales.Category",
+          "schema": "catalogue",
+          "columns": [
+            {
+              "name": "Id",
+              "storeType": "int",
+              "clrTypeName": "int",
+              "isNullable": false,
+              "isPrimaryKey": true,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": null
+            },
+            {
+              "name": "Name",
+              "storeType": "varchar",
+              "clrTypeName": "string",
+              "isNullable": false,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": 100
+            },
+            {
+              "name": "ParentCategoryId",
+              "storeType": "int",
+              "clrTypeName": "int?",
+              "isNullable": true,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isForeignKey": true,
+              "maxLength": null
+            }
+          ],
+          "foreignKeys": [
+            {
+              "columns": [
+                "ParentCategoryId"
+              ],
+              "principalTable": "categories",
+              "principalColumns": [
+                "Id"
+              ],
+              "navigationName": "ParentCategory",
+              "isUnique": false,
+              "isRequired": false
+            }
+          ],
+          "indexes": []
+        },
+        {
+          "name": "products",
+          "clrTypeName": "Aspire.Hosting.AspireC4.TestAppHost.ComplexData.Sales.Product",
+          "schema": "catalogue",
+          "columns": [
+            {
+              "name": "product_id",
+              "storeType": "int",
+              "clrTypeName": "int",
+              "isNullable": false,
+              "isPrimaryKey": true,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": null
+            },
+            {
+              "name": "product_name",
+              "storeType": "varchar",
+              "clrTypeName": "string",
+              "isNullable": false,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": 200
+            },
+            {
+              "name": "unit_price",
+              "storeType": "decimal(18,4)",
+              "clrTypeName": "decimal",
+              "isNullable": false,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": null
+            },
+            {
+              "name": "CategoryId",
+              "storeType": "int",
+              "clrTypeName": "int",
+              "isNullable": false,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isForeignKey": true,
+              "maxLength": null
+            }
+          ],
+          "foreignKeys": [
+            {
+              "columns": [
+                "CategoryId"
+              ],
+              "principalTable": "categories",
+              "principalColumns": [
+                "Id"
+              ],
+              "navigationName": "Category",
+              "isUnique": false,
+              "isRequired": true
+            }
+          ],
+          "indexes": []
+        },
+        {
+          "name": "Orders",
+          "clrTypeName": "Aspire.Hosting.AspireC4.TestAppHost.ComplexData.Sales.Order",
+          "schema": null,
+          "columns": [
+            {
+              "name": "Id",
+              "storeType": "int",
+              "clrTypeName": "int",
+              "isNullable": false,
+              "isPrimaryKey": true,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": null
+            },
+            {
+              "name": "CustomerId",
+              "storeType": "int",
+              "clrTypeName": "int",
+              "isNullable": false,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isForeignKey": true,
+              "maxLength": null
+            },
+            {
+              "name": "Status",
+              "storeType": "int",
+              "clrTypeName": "Aspire.Hosting.AspireC4.TestAppHost.ComplexData.Sales.OrderStatus",
+              "isNullable": false,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": null
+            },
+            {
+              "name": "Total",
+              "storeType": "decimal(18,2)",
+              "clrTypeName": "decimal",
+              "isNullable": false,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": null
+            },
+            {
+              "name": "PlacedAt",
+              "storeType": "datetimeoffset",
+              "clrTypeName": "System.DateTimeOffset",
+              "isNullable": false,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": null
+            },
+            {
+              "name": "ShippedAt",
+              "storeType": "datetimeoffset",
+              "clrTypeName": "System.DateTimeOffset?",
+              "isNullable": true,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": null
+            }
+          ],
+          "foreignKeys": [
+            {
+              "columns": [
+                "CustomerId"
+              ],
+              "principalTable": "Customers",
+              "principalColumns": [
+                "Id"
+              ],
+              "navigationName": "Customer",
+              "isUnique": false,
+              "isRequired": true
+            }
+          ],
+          "indexes": []
+        },
+        {
+          "name": "OrderLines",
+          "clrTypeName": "Aspire.Hosting.AspireC4.TestAppHost.ComplexData.Sales.OrderLine",
+          "schema": null,
+          "columns": [
+            {
+              "name": "OrderId",
+              "storeType": "int",
+              "clrTypeName": "int",
+              "isNullable": false,
+              "isPrimaryKey": true,
+              "isUnique": false,
+              "isForeignKey": true,
+              "maxLength": null
+            },
+            {
+              "name": "ProductId",
+              "storeType": "int",
+              "clrTypeName": "int",
+              "isNullable": false,
+              "isPrimaryKey": true,
+              "isUnique": false,
+              "isForeignKey": true,
+              "maxLength": null
+            },
+            {
+              "name": "Quantity",
+              "storeType": "int",
+              "clrTypeName": "int",
+              "isNullable": false,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": null
+            },
+            {
+              "name": "UnitPrice",
+              "storeType": "decimal(18,4)",
+              "clrTypeName": "decimal",
+              "isNullable": false,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": null
+            }
+          ],
+          "foreignKeys": [
+            {
+              "columns": [
+                "OrderId"
+              ],
+              "principalTable": "Orders",
+              "principalColumns": [
+                "Id"
+              ],
+              "navigationName": "Order",
+              "isUnique": true,
+              "isRequired": true
+            },
+            {
+              "columns": [
+                "ProductId"
+              ],
+              "principalTable": "products",
+              "principalColumns": [
+                "product_id"
+              ],
+              "navigationName": "Product",
+              "isUnique": true,
+              "isRequired": true
+            }
+          ],
+          "indexes": []
+        }
+      ]
+    },
+    {
+      "typeName": "Aspire.Hosting.AspireC4.TestAppHost.SimpleData.BlogDbContext",
+      "name": "BlogDbContext",
+      "defaultSchema": null,
+      "tables": [
+        {
+          "name": "Blogs",
+          "clrTypeName": "Aspire.Hosting.AspireC4.TestAppHost.SimpleData.Blog",
+          "schema": null,
+          "columns": [
+            {
+              "name": "Id",
+              "storeType": "int",
+              "clrTypeName": "int",
+              "isNullable": false,
+              "isPrimaryKey": true,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": null
+            },
+            {
+              "name": "Name",
+              "storeType": "varchar",
+              "clrTypeName": "string",
+              "isNullable": false,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": null
+            },
+            {
+              "name": "Description",
+              "storeType": "varchar",
+              "clrTypeName": "string?",
+              "isNullable": true,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": null
+            },
+            {
+              "name": "CreatedAt",
+              "storeType": "datetimeoffset",
+              "clrTypeName": "System.DateTimeOffset",
+              "isNullable": false,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": null
+            }
+          ],
+          "foreignKeys": [],
+          "indexes": []
+        },
+        {
+          "name": "Posts",
+          "clrTypeName": "Aspire.Hosting.AspireC4.TestAppHost.SimpleData.Post",
+          "schema": null,
+          "columns": [
+            {
+              "name": "Id",
+              "storeType": "int",
+              "clrTypeName": "int",
+              "isNullable": false,
+              "isPrimaryKey": true,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": null
+            },
+            {
+              "name": "Title",
+              "storeType": "varchar",
+              "clrTypeName": "string",
+              "isNullable": false,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": null
+            },
+            {
+              "name": "Body",
+              "storeType": "varchar",
+              "clrTypeName": "string",
+              "isNullable": false,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": null
+            },
+            {
+              "name": "IsPublished",
+              "storeType": "bool",
+              "clrTypeName": "bool",
+              "isNullable": false,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": null
+            },
+            {
+              "name": "PublishedAt",
+              "storeType": "datetimeoffset",
+              "clrTypeName": "System.DateTimeOffset?",
+              "isNullable": true,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isForeignKey": false,
+              "maxLength": null
+            },
+            {
+              "name": "BlogId",
+              "storeType": "int",
+              "clrTypeName": "int",
+              "isNullable": false,
+              "isPrimaryKey": false,
+              "isUnique": false,
+              "isForeignKey": true,
+              "maxLength": null
+            }
+          ],
+          "foreignKeys": [
+            {
+              "columns": [
+                "BlogId"
+              ],
+              "principalTable": "Blogs",
+              "principalColumns": [
+                "Id"
+              ],
+              "navigationName": "Blog",
+              "isUnique": false,
+              "isRequired": true
+            }
+          ],
+          "indexes": []
+        }
+      ]
+    }
+  ]
+}

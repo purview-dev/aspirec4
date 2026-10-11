@@ -16,8 +16,24 @@ public sealed class AspireC4EfResourceBuilderExtensionsTests
 	// Tests
 
 	[Test]
-	public async Task WithEntityFrameworkDiagram_AddsTheDiagramAndContainerResources()
+	public async Task WithEntityFrameworkDiagram_WithD2Renderer_AddsTheDiagramAndContainerResources()
 	{
+		// Arrange
+		var appBuilder = CreateAppBuilder();
+
+		// Act
+		appBuilder.AddAspireC4().WithEntityFrameworkDiagram(configure: o => o.Renderer = ErdRenderer.D2);
+
+		// Assert
+		await Assert.That(appBuilder.Resources.OfType<AspireC4EfResource>().Count()).IsEqualTo(1);
+		await Assert.That(appBuilder.Resources.OfType<D2ServerResource>().Count()).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task WithEntityFrameworkDiagram_WithDefaultRenderer_AddsNoSidecar()
+	{
+		// Only d2 has a server to run; the other renderers write files opened straight from disk, so
+		// a sidecar would be a long-running resource doing nothing.
 		// Arrange
 		var appBuilder = CreateAppBuilder();
 
@@ -26,7 +42,8 @@ public sealed class AspireC4EfResourceBuilderExtensionsTests
 
 		// Assert
 		await Assert.That(appBuilder.Resources.OfType<AspireC4EfResource>().Count()).IsEqualTo(1);
-		await Assert.That(appBuilder.Resources.OfType<D2ServerResource>().Count()).IsEqualTo(1);
+		await Assert.That(appBuilder.Resources.OfType<D2ServerResource>()).IsEmpty();
+		await Assert.That(appBuilder.Resources.OfType<AspireC4EfResource>().Single().InnerResource).IsNull();
 	}
 
 	[Test]
@@ -37,7 +54,7 @@ public sealed class AspireC4EfResourceBuilderExtensionsTests
 		var appBuilder = CreateAppBuilder();
 
 		// Act
-		appBuilder.AddAspireC4().WithEntityFrameworkDiagram();
+		appBuilder.AddAspireC4().WithEntityFrameworkDiagram(configure: o => o.Renderer = ErdRenderer.D2);
 		var image = appBuilder
 			.Resources.OfType<D2ServerResource>()
 			.Single()
@@ -71,11 +88,14 @@ public sealed class AspireC4EfResourceBuilderExtensionsTests
 		var appBuilder = CreateAppBuilder();
 
 		// Act
-		appBuilder.AddAspireC4().WithEntityFrameworkDiagram().WithLocalD2CLI();
+		appBuilder
+			.AddAspireC4()
+			.WithEntityFrameworkDiagram(configure: o => o.Renderer = ErdRenderer.D2)
+			.WithLocalD2CLI();
 
 		// Assert
 		await Assert.That(appBuilder.Resources.OfType<D2ServerResource>()).IsEmpty();
-		await Assert.That(GetDiagram(appBuilder).InnerResource).IsTypeOf<D2LocalServerResource>();
+		await Assert.That(GetDiagram(appBuilder).InnerResource!).IsTypeOf<D2LocalServerResource>();
 	}
 
 	[Test]
@@ -85,8 +105,11 @@ public sealed class AspireC4EfResourceBuilderExtensionsTests
 		var appBuilder = CreateAppBuilder();
 
 		// Act
-		appBuilder.AddAspireC4().WithEntityFrameworkDiagram().WithLocalD2CLI();
-		var local = (D2LocalServerResource)GetDiagram(appBuilder).InnerResource;
+		appBuilder
+			.AddAspireC4()
+			.WithEntityFrameworkDiagram(configure: o => o.Renderer = ErdRenderer.D2)
+			.WithLocalD2CLI();
+		var local = (D2LocalServerResource)GetDiagram(appBuilder).InnerResource!;
 
 		// Assert
 		await Assert.That(local.Command).IsEqualTo("d2");
@@ -99,8 +122,11 @@ public sealed class AspireC4EfResourceBuilderExtensionsTests
 		var appBuilder = CreateAppBuilder();
 
 		// Act
-		appBuilder.AddAspireC4().WithEntityFrameworkDiagram().WithLocalD2CLI("/opt/d2/bin/d2");
-		var local = (D2LocalServerResource)GetDiagram(appBuilder).InnerResource;
+		appBuilder
+			.AddAspireC4()
+			.WithEntityFrameworkDiagram(configure: o => o.Renderer = ErdRenderer.D2)
+			.WithLocalD2CLI("/opt/d2/bin/d2");
+		var local = (D2LocalServerResource)GetDiagram(appBuilder).InnerResource!;
 
 		// Assert
 		await Assert.That(local.Command).IsEqualTo("/opt/d2/bin/d2");
@@ -113,8 +139,11 @@ public sealed class AspireC4EfResourceBuilderExtensionsTests
 		var appBuilder = CreateAppBuilder();
 
 		// Act
-		appBuilder.AddAspireC4().WithEntityFrameworkDiagram().WithLocalD2CLI();
-		var local = (D2LocalServerResource)GetDiagram(appBuilder).InnerResource;
+		appBuilder
+			.AddAspireC4()
+			.WithEntityFrameworkDiagram(configure: o => o.Renderer = ErdRenderer.D2)
+			.WithLocalD2CLI();
+		var local = (D2LocalServerResource)GetDiagram(appBuilder).InnerResource!;
 		var endpoint = local
 			.Annotations.OfType<EndpointAnnotation>()
 			.Single(e => e.Name == AspireC4EfResource.HttpEndpointName);

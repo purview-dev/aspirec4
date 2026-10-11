@@ -1,0 +1,127 @@
+// Drives the generated interactive ER viewer in a real browser and asserts it works.
+//
+// The viewer is the default renderer, so "it compiles" is not enough: ELK layout, node rendering,
+// edge animation and search all run only in a browser. Served over HTTP rather than opened from
+// file://, because fetch() of the model JSON is blocked under the file:// origin.
+import { serve } from "bun";
+import { chromium } from "playwright";
+import { join } from "node:path";
+import { existsSync } from "node:fs";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+
+const model = process.argv[2];
+
+if (!model || !existsSync(model)) {
+	console.error("usage: bun scripts/erd-viewer-check.mts <model.json>");
+	process.exit(1);
+}
+
+// Assembled from the asset sources rather than a previously generated directory, so the check always
+// exercises the current viewer rather than whatever the last AppHost run happened to leave behind.
+const assets = join(import.meta.dir, "..", "src", "src", "EntityFrameworkCore", "Assets", "viewer");
+const dir = join(import.meta.dir, "..", "artifacts", "erd-viewer-check");
+
+await mkdir(dir, { recursive: true });
+
+for (const name of ["index.html", "app.js"]) {
+	const text = (await readFile(join(assets, name), "utf8"))
+		.replaceAll("__MODEL__", "model.json")
+		.replaceAll("__TITLE__", "Viewer check");
+
+	await writeFile(join(dir, name), text, "utf8");
+}
+
+await writeFile(join(dir, "model.json"), await readFile(model, "utf8"), "utf8");
+
+if (!existsSync(join(dir, "vendor", "bundle.js"))) {
+	console.error(`vendor/bundle.js missing — run: just erd-vendor ${dir}`);
+	process.exit(1);
+}
+
+const server = serve({
+	port: 0,
+	async fetch(request) {
+		const path = new URL(request.url).pathname;
+		const file = Bun.file(join(dir, path === "/" ? "index.html" : decodeURIComponent(path)));
+
+		return (await file.exists()) ? new Response(file) : new Response("not found", { status: 404 });
+	},
+});
+
+const base = `http://localhost:${server.port}`;
+const failures: string[] = [];
+const check = (name: string, ok: boolean, detail = "") => {
+	console.log(`${ok ? "ok   " : "FAIL "} ${name}${detail ? ` — ${detail}` : ""}`);
+	if (!ok) failures.push(name);
+};
+
+const browser = await chromium.launch();
+
+try {
+	for (const reducedMotion of ["no-preference", "reduce"] as const) {
+		const context = await browser.newContext({ reducedMotion, viewport: { width: 1600, height: 1000 } });
+		const page = await context.newPage();
+
+		const errors: string[] = [];
+		page.on("pageerror", (e) => errors.push(e.message));
+		page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
+
+		await page.goto(base, { waitUntil: "networkidle" });
+
+		if (reducedMotion === "no-preference") {
+			await page.waitForSelector(".entity", { timeout: 20000 });
+
+			const nodes = await page.locator(".entity").count();
+			check("entity nodes render", nodes > 0, `${nodes} nodes`);
+
+			const edges = await page.locator(".react-flow__edge-path").count();
+			check("relationship edges render", edges > 0, `${edges} edges`);
+
+			const badges = await page.locator(".entity .badge").count();
+			check("key badges render", badges > 0, `${badges} badges`);
+
+			// ELK ran if the nodes are not all stacked at the origin.
+			const xs = await page.locator(".react-flow__node").evaluateAll((els) =>
+				els.map((e) => (e as HTMLElement).style.transform),
+			);
+			check("ELK positioned the nodes", new Set(xs).size > 1, `${new Set(xs).size} distinct positions`);
+
+			// Search dims non-matching entities.
+			const first = (await page.locator(".entity header").first().innerText()).split("\n")[0];
+			await page.fill(".toolbar input", first.slice(0, 4));
+			await page.waitForTimeout(300);
+			check(
+				"search highlights matches",
+				(await page.locator(".entity.hit").count()) > 0,
+				`matching "${first.slice(0, 4)}"`,
+			);
+			check("search dims non-matches", (await page.locator(".entity.dimmed").count()) > 0);
+
+			await page.fill(".toolbar input", "");
+			await page.waitForTimeout(200);
+			await page.screenshot({ path: join(dir, "viewer-check.png"), fullPage: false });
+		}
+
+		// Animation is CSS-driven, so the computed style is the honest check.
+		const animation = await page
+			.locator(".react-flow__edge.flowing .react-flow__edge-path")
+			.first()
+			.evaluate((el) => getComputedStyle(el).animationName);
+
+		check(
+			reducedMotion === "reduce" ? "animation disabled under reduced motion" : "edges animate",
+			reducedMotion === "reduce" ? animation === "none" : animation === "dash",
+			`animation-name: ${animation}`,
+		);
+
+		check(`no console errors (${reducedMotion})`, errors.length === 0, errors.slice(0, 2).join(" | "));
+
+		await context.close();
+	}
+} finally {
+	await browser.close();
+	server.stop(true);
+}
+
+console.log(failures.length === 0 ? "\nAll viewer checks passed." : `\n${failures.length} check(s) failed.`);
+process.exit(failures.length === 0 ? 0 : 1);

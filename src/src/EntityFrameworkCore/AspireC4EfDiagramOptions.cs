@@ -19,8 +19,24 @@ public sealed class AspireC4EfDiagramOptions
 	/// <summary>Title shown in the generated diagram.</summary>
 	public string? Title { get; set; }
 
-	/// <summary>Directory the generated <c>.d2</c> file is written to, relative to the AppHost directory.</summary>
-	public string OutputDirectory { get; set; } = "./d2/gen/";
+	/// <summary>
+	/// Which renderer produces the diagram. Defaults to <see cref="ErdRenderer.Interactive"/>, the only
+	/// renderer that loses nothing; the text formats are projections for publishing and interchange.
+	/// </summary>
+	public ErdRenderer Renderer { get; set; } = ErdRenderer.Interactive;
+
+	/// <summary>
+	/// Whether the Mermaid renderer groups entities into one <c>subgraph</c> per <c>DbContext</c>.
+	/// </summary>
+	/// <remarks>
+	/// <c>subgraph</c> inside <c>erDiagram</c> requires Mermaid 11.17+. Set this to <see langword="false"/>
+	/// to emit flat output for renderers pinned to an older Mermaid — GitHub in particular has lagged
+	/// the current release.
+	/// </remarks>
+	public bool UseSubgraphs { get; set; } = true;
+
+	/// <summary>Directory the generated diagram is written to, relative to the AppHost directory.</summary>
+	public string OutputDirectory { get; set; } = "./erd/gen/";
 
 	/// <summary>Generated file name, without extension.</summary>
 	public string FileName { get; set; } = "schema.gen";

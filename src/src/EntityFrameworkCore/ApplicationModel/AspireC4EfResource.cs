@@ -22,8 +22,9 @@ public sealed class AspireC4EfResource(string name) : Resource(name)
 	public required string AppHostDirectory { get; init; }
 
 	/// <summary>
-	/// The inner sidecar resource actually running d2. Settable so <c>WithLocalD2CLI()</c> can swap the
-	/// container for a local executable.
+	/// The inner sidecar resource actually running d2, or <see langword="null"/> when the configured
+	/// renderer needs no server. Settable so <c>WithLocalD2CLI()</c> can swap the container for a local
+	/// executable.
 	/// </summary>
-	public required IResource InnerResource { get; set; }
+	public required IResource? InnerResource { get; set; }
 }

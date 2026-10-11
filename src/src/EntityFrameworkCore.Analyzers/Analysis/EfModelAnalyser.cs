@@ -307,6 +307,10 @@ static class EfModelAnalyser
 			{
 				PrincipalEntity = target.ToDisplayString(),
 				NavigationName = navigation.Name,
+				// A foreign key that is also the key, or is uniquely indexed, can only match one
+				// principal row — that is what makes a relationship one-to-one rather than one-to-many.
+				IsUnique = column.IsPrimaryKey || column.IsUnique,
+				IsRequired = !column.IsNullable,
 			};
 
 			foreignKey.Columns.Add(column.Name);

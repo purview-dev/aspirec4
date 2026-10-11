@@ -88,6 +88,13 @@ sealed partial class AspireC4EfLifecycleHook
 	/// <summary>Watches the sidecar until it reports a public URL.</summary>
 	async Task<string?> WaitForDiagramUrlAsync(AspireC4EfResource resource, CancellationToken cancellationToken)
 	{
+		// Only the d2 renderer runs a server; the others write files opened straight from disk, so
+		// there is no URL to surface and nothing to wait for.
+		if (resource.InnerResource is null)
+		{
+			return null;
+		}
+
 		try
 		{
 			await foreach (var evt in resourceNotificationService.WatchAsync(cancellationToken).ConfigureAwait(false))
