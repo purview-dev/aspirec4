@@ -12,8 +12,7 @@ _typescriptAppHost := "samples/typescript-app-host/"
 config_default := "Debug"
 default_test_filter := "/*/*/*/*"
 
-pipeline_feed := "https://api.nuget.org/v3/index.json"
-pipeline_tool := ".tools/purview-build/purview-build"
+pipeline_tool := "dotnet purview-build"
 
 current_version := `bun -p "require('./package.json').version"`
 
@@ -22,33 +21,31 @@ current_version := `bun -p "require('./package.json').version"`
 default:
     just --list
 
-# Install the shared Purview.Build tool (authenticated to the Purview-Dev feed) if not present
+# Restore the repository's .NET local tools (.config/dotnet-tools.json)
 [private]
 ensure-pipeline-tool:
-    if [ ! -x "{{ pipeline_tool }}" ]; then \
-        dotnet tool install Purview.Build --tool-path .tools/purview-build --add-source "{{ pipeline_feed }}"; \
-    fi
+    dotnet tool restore
 
 # Run the PR pipeline (restore, build, lint, tests)
 [group('Pipeline')]
 pipeline-pr *args:
     just ensure-pipeline-tool
     echo "Running PR pipeline..."
-    "{{ pipeline_tool }}" {{ args }}
+    {{ pipeline_tool }} {{ args }}
 
 # Run the build pipeline (restore, build, lint)
 [group('Pipeline')]
 pipeline-build *args:
     just ensure-pipeline-tool
     echo "Running build pipeline..."
-    "{{ pipeline_tool }}" --Build:RunTests=false --Release:Mode=None {{ args }}
+    {{ pipeline_tool }} --Build:RunTests=false --Release:Mode=None {{ args }}
 
 # Run the release pipeline (restore, build, lint, tests, pack, publish, GitHub release)
 [group('Pipeline')]
 pipeline-release *args:
     just ensure-pipeline-tool
     echo "Running release pipeline..."
-    "{{ pipeline_tool }}" --Release:Mode=NuGet {{ args }}
+    {{ pipeline_tool }} --Release:Mode=NuGet {{ args }}
 
 # Run the release pipeline (restore, build, lint, tests, pack, local nuget publish)
 # Note: `just` runs recipes through the shell, which strips backslashes from unquoted arguments.
@@ -59,21 +56,21 @@ pipeline-local-release *args:
     just ensure-pipeline-tool
     just lint-fix
     echo "Running local release pipeline..."
-    "{{ pipeline_tool }}" --Release:Mode=LocalNuGet {{ args }}
+    {{ pipeline_tool }} --Release:Mode=LocalNuGet {{ args }}
 
 # Run the pipeline with tests enabled
 [group('Pipeline')]
 pipeline-tests *args:
     just ensure-pipeline-tool
     echo "Running tests pipeline..."
-    "{{ pipeline_tool }}" --Build:RunTests=true --Release:Mode=None {{ args }}
+    {{ pipeline_tool }} --Build:RunTests=true --Release:Mode=None {{ args }}
 
 # Run the pipeline through pack + validate (restore, build, lint, tests, pack, validate pack contents) without publishing/releasing
 [group('Pipeline')]
 pipeline-pack-validate *args:
     just ensure-pipeline-tool
     echo "Running pack + validate pipeline..."
-    "{{ pipeline_tool }}" --Build:RunPack=true --Build:ValidatePack=true --Release:Mode=None {{ args }}
+    {{ pipeline_tool }} --Build:RunPack=true --Build:ValidatePack=true --Release:Mode=None {{ args }}
 
 # Initialise the repo: restore packages, install tools, and wire up git hooks.
 # Safe to run multiple times.
