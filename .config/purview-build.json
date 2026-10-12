@@ -8,12 +8,45 @@
 	"PackValidation": {
 		"RequireSymbolPackage": true,
 		"RequireSymbolFiles": true,
+		// These three are the tool's documented shipped defaults (false/false/[]), stated explicitly
+		// because the pinned tool otherwise falls back to its C# initialisers (true/true/
+		// ["optimization=release"]). Any one of them being enabled turns on assembly inspection,
+		// which fails the analyzer-only package: the PDB embedded under analyzers/dotnet/ carries no
+		// compiler-flags record. Turn these back on once every packed assembly satisfies them.
+		"RequireSourceLink": false,
+		"RequireDeterministic": false,
+		"RequiredCompilerFlags": [],
+		// RequireExplicitContent defaults to true, so this is the exhaustive declaration of what each
+		// package ships: a package with no rule here, or an entry matching none of its globs, fails
+		// validation. The lib/ paths are literal net10.0 and must be updated alongside the target
+		// framework in src/Directory.Build.props - the stale net8.0 entries they replace are what
+		// broke this manifest. $(TFM) is deliberately not used: AspireC4.Hosting ships a TFM-less
+		// build/ folder, so the token expands to include "any" and the rule could never be met.
 		"RequiredContent": {
+			// The Aspire integration: the library, the registry/DSL source generator that ships beside
+			// it, and the props file that wires the generator up in a consuming AppHost.
 			"aspirec4.hosting": [
 				"analyzers/dotnet/cs/Aspire.Hosting.AspireC4.SourceGenerators.dll",
 				"build/AspireC4.Hosting.props",
-				"lib/net8.0/Aspire.Hosting.AspireC4.dll",
-				"lib/net8.0/Aspire.Hosting.AspireC4.xml",
+				"lib/net10.0/Aspire.Hosting.AspireC4.dll",
+				"lib/net10.0/Aspire.Hosting.AspireC4.xml",
+				"likec4-logo.png",
+				"README.md"
+			],
+			// The AppHost-side EF Core to d2 ER diagram library. Library only: its generator ships as
+			// the separate analyzer-only AspireC4.EntityFrameworkCore package below.
+			"aspirec4.hosting.entityframeworkcore": [
+				"lib/net10.0/Aspire.Hosting.AspireC4.EntityFrameworkCore.dll",
+				"lib/net10.0/Aspire.Hosting.AspireC4.EntityFrameworkCore.xml",
+				"likec4-logo.png",
+				"README.md"
+			],
+			// Analyzer-only: referenced by service projects (where the DbContext lives), so it ships no
+			// lib/ assembly. The PDB sits beside the analyzer in the package rather than the symbol
+			// package, so it has to be declared here.
+			"aspirec4.entityframeworkcore": [
+				"analyzers/dotnet/cs/Aspire.Hosting.AspireC4.EntityFrameworkCore.Analyzers.dll",
+				"analyzers/dotnet/cs/Aspire.Hosting.AspireC4.EntityFrameworkCore.Analyzers.pdb",
 				"likec4-logo.png",
 				"README.md"
 			]
