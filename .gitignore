@@ -669,3 +669,8 @@ BenchmarkDotNet.Artifacts/
 # locally (just erd-vendor / just erd-check) and never committed.
 **/erd/gen/vendor/
 **/erd/gen/viewer-check.png
+
+# AspireC4 generated diagram output. Regenerated on every AppHost run, and the LikeC4 model embeds
+# ephemeral localhost ports, so tracking it guarantees a dirty tree after every run.
+**/likec4/gen/
+**/erd/gen/
