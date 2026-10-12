@@ -163,6 +163,22 @@ function EntityNode({ data }) {
 	);
 }
 
+/*
+ * Self-loop geometry, shared between the edge and the layout.
+ *
+ * A self-loop arcs out to the right of its own card and hangs its label out there too, so the
+ * layout has to reserve that space or the arc lands across whatever card ELK packed alongside.
+ * Both numbers derive from SELF_LOOP_REACH so the drawing and the reservation cannot drift apart.
+ */
+const ENTITY_WIDTH = 240;
+const SELF_LOOP_REACH = 220;
+
+// A cubic bezier peaks at roughly three quarters of its control offset, which is what puts the
+// arc clear of the card. The label rides just inside that peak, so the space actually needed is
+// the overhang plus room for the widest label worth reading.
+const SELF_LOOP_LABEL_ALLOWANCE = 70;
+const SELF_LOOP_GUTTER = SELF_LOOP_REACH * 0.75 - ENTITY_WIDTH / 2 + SELF_LOOP_LABEL_ALLOWANCE;
+
 /**
  * A relationship from a table to itself, such as a parent category.
  *
@@ -170,9 +186,7 @@ function EntityNode({ data }) {
  * behind the card and leaves only a stub visible. This arcs clear of the right-hand edge instead.
  */
 function SelfLoopEdge({ sourceX, sourceY, targetX, targetY, style, label }) {
-	// A cubic bezier peaks at roughly three quarters of its control offset, so the reach has to
-	// exceed half the card width by a comfortable margin for the arc to clear it.
-	const reach = 220;
+	const reach = SELF_LOOP_REACH;
 	const d = `M ${sourceX},${sourceY} C ${sourceX + reach},${sourceY + 24} ${targetX + reach},${targetY - 24} ${targetX},${targetY}`;
 
 	return h(
@@ -198,7 +212,16 @@ function SelfLoopEdge({ sourceX, sourceY, targetX, targetY, style, label }) {
 const nodeTypes = { entity: EntityNode, context: ContextNode };
 const edgeTypes = { selfLoop: SelfLoopEdge };
 
-const entitySize = (table) => ({ width: 240, height: 48 + (table.columns?.length ?? 0) * 22 });
+/**
+ * The box ELK should lay the table out in.
+ *
+ * Wider than the rendered card when the table references itself: React Flow draws the card at its
+ * own width against the left of this box, which leaves the remainder as clear gutter for the loop.
+ */
+const entitySize = (table, selfReferencing = false) => ({
+	width: ENTITY_WIDTH + (selfReferencing ? SELF_LOOP_GUTTER : 0),
+	height: 48 + (table.columns?.length ?? 0) * 22,
+});
 
 /**
  * Lays the graph out with one container per DbContext.
@@ -219,6 +242,7 @@ async function layout(tables, edges, colourOf) {
 	const contexts = [...new Set(tables.map((t) => t.context))];
 
 	const contextOf = new Map(tables.map((t) => [t.name, t.context]));
+	const selfReferencing = new Set(edges.filter((e) => e.source === e.target).map((e) => e.source));
 
 	const graph = {
 		id: "root",
@@ -245,11 +269,13 @@ async function layout(tables, edges, colourOf) {
 			},
 			children: tables
 				.filter((t) => t.context === context)
-				.map((table) => ({ id: table.name, ...entitySize(table) })),
+				.map((table) => ({ id: table.name, ...entitySize(table, selfReferencing.has(table.name)) })),
 			// Only relationships within this context: they order the tables sensibly. Cross-context
 			// edges are left out because ELK's routing is unused — React Flow draws every edge itself
-			// from the resulting node positions.
+			// from the resulting node positions. Self-loops go too: they say nothing about ordering,
+			// and the space they need is already reserved in the node's own box.
 			edges: edges
+				.filter((e) => e.source !== e.target)
 				.filter((e) => contextOf.get(e.source) === context && contextOf.get(e.target) === context)
 				.map((e) => ({ id: e.id, sources: [e.source], targets: [e.target] })),
 		})),

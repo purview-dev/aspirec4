@@ -110,6 +110,30 @@ try {
 				`${selfLoop?.overhang ?? "not found"}px beyond the node`,
 			);
 
+			// The arc and its label hang into the space beside the card, so the layout has to reserve
+			// it. Without that, the label lands on whichever table ELK happened to pack alongside.
+			const collisions = await page.evaluate(() => {
+				const label = document.querySelector(".self-loop-label")?.getBoundingClientRect();
+				if (!label) return null;
+
+				return [...document.querySelectorAll(".react-flow__node .entity")]
+					.map((el) => ({ el, box: el.getBoundingClientRect() }))
+					.filter(
+						({ box }) =>
+							box.left < label.right &&
+							box.right > label.left &&
+							box.top < label.bottom &&
+							box.bottom > label.top,
+					)
+					.map(({ el }) => el.querySelector("header")?.textContent?.split("\n")[0] ?? "?");
+			});
+
+			check(
+				"self-referencing label overlaps no card",
+				collisions !== null && collisions.length === 0,
+				collisions === null ? "label not found" : (collisions.join(", ") || "clear of every card"),
+			);
+
 			// ELK ran if the nodes are not all stacked at the origin.
 			const xs = await page.locator(".react-flow__node").evaluateAll((els) =>
 				els.map((e) => (e as HTMLElement).style.transform),
