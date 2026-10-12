@@ -67,6 +67,28 @@ function buildEdges(tables) {
 	return edges;
 }
 
+// Matches the palette the Mermaid emitter uses for classDef, so a diagram looks the same whichever
+// renderer produced it. Only the stroke is defined; the fill is derived from it so it stays legible
+// against both the light and dark themes.
+const CONTEXT_COLOURS = ["#3b82f6", "#22c55e", "#f59e0b", "#a855f7", "#f43f5e", "#14b8a6"];
+
+const tint = (hex, alpha) => {
+	const n = Number.parseInt(hex.slice(1), 16);
+	return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+};
+
+/** A labelled container holding every table from one DbContext. */
+function ContextNode({ data }) {
+	return h(
+		"div",
+		{
+			className: "context",
+			style: { borderColor: data.colour, background: tint(data.colour, 0.06) },
+		},
+		h("span", { className: "context-label", style: { color: data.colour } }, data.label),
+	);
+}
+
 function EntityNode({ data }) {
 	const badges = (col) => {
 		const keys = [];
@@ -89,9 +111,10 @@ function EntityNode({ data }) {
 		h(Handle, { type: "target", position: Position.Top }),
 		h(
 			"header",
-			null,
+			{ style: { borderBottomColor: data.colour } },
 			data.table.name,
-			h("span", { className: "ctx" }, data.table.schema ? `${data.table.context} · ${data.table.schema}` : data.table.context),
+			// The context is the container's label now, so only the schema is worth repeating here.
+			data.table.schema ? h("span", { className: "ctx" }, data.table.schema) : null,
 		),
 		(data.table.columns ?? []).map((col) =>
 			h(
@@ -105,32 +128,77 @@ function EntityNode({ data }) {
 	);
 }
 
-const nodeTypes = { entity: EntityNode };
+const nodeTypes = { entity: EntityNode, context: ContextNode };
 
-/** Runs ELK over the graph, returning positioned nodes. */
-async function layout(nodes, edges) {
+const entitySize = (table) => ({ width: 240, height: 48 + (table.columns?.length ?? 0) * 22 });
+
+/**
+ * Lays the graph out with one container per DbContext.
+ *
+ * ELK is given a nested graph so it sizes each container around its own tables and routes edges
+ * between them; React Flow then expects child positions relative to their parent, which is exactly
+ * what ELK returns.
+ */
+async function layout(tables, edges) {
+	const contexts = [...new Set(tables.map((t) => t.context))];
+
 	const graph = {
 		id: "root",
 		layoutOptions: {
 			"elk.algorithm": "layered",
 			"elk.direction": "DOWN",
+			// Without this ELK treats each container as opaque and cannot route the edges that cross
+			// between them.
+			"elk.hierarchyHandling": "INCLUDE_CHILDREN",
 			"elk.layered.spacing.nodeNodeBetweenLayers": "90",
-			"elk.spacing.nodeNode": "50",
+			"elk.spacing.nodeNode": "60",
 		},
-		children: nodes.map((n) => ({
-			id: n.id,
-			width: 240,
-			height: 44 + (n.data.table.columns?.length ?? 0) * 22,
+		children: contexts.map((context) => ({
+			id: `ctx:${context}`,
+			layoutOptions: {
+				"elk.padding": "[top=46,left=20,bottom=20,right=20]",
+				"elk.spacing.nodeNode": "40",
+			},
+			children: tables
+				.filter((t) => t.context === context)
+				.map((table) => ({ id: table.name, ...entitySize(table) })),
 		})),
 		edges: edges.map((e) => ({ id: e.id, sources: [e.source], targets: [e.target] })),
 	};
 
 	const result = await elk.layout(graph);
+	const nodes = [];
 
-	return nodes.map((n) => {
-		const laid = result.children.find((c) => c.id === n.id);
-		return { ...n, position: { x: laid?.x ?? 0, y: laid?.y ?? 0 } };
-	});
+	for (const [index, container] of (result.children ?? []).entries()) {
+		const context = container.id.slice("ctx:".length);
+		const colour = CONTEXT_COLOURS[index % CONTEXT_COLOURS.length];
+
+		// Containers must precede their children in the array or React Flow cannot resolve parentId.
+		nodes.push({
+			id: container.id,
+			type: "context",
+			position: { x: container.x ?? 0, y: container.y ?? 0 },
+			style: { width: container.width, height: container.height },
+			data: { label: context, colour },
+			selectable: false,
+			draggable: false,
+		});
+
+		for (const child of container.children ?? []) {
+			const table = tables.find((t) => t.name === child.id);
+
+			nodes.push({
+				id: child.id,
+				type: "entity",
+				parentId: container.id,
+				extent: "parent",
+				position: { x: child.x ?? 0, y: child.y ?? 0 },
+				data: { table, colour, match: "" },
+			});
+		}
+	}
+
+	return nodes;
 }
 
 function Diagram({ model }) {
@@ -140,15 +208,9 @@ function Diagram({ model }) {
 	const [query, setQuery] = useState("");
 
 	useEffect(() => {
-		const initial = tables.map((table) => ({
-			id: table.name,
-			type: "entity",
-			position: { x: 0, y: 0 },
-			data: { table, match: "" },
-		}));
 		const built = buildEdges(tables);
 
-		layout(initial, built).then((positioned) => {
+		layout(tables, built).then((positioned) => {
 			setNodes(positioned);
 			setEdges(built);
 		});
@@ -161,6 +223,9 @@ function Diagram({ model }) {
 
 			setNodes((current) =>
 				current.map((n) => {
+					// Containers are never dimmed; doing so would wash out the tables inside them.
+					if (n.type !== "entity") return n;
+
 					if (!needle) return { ...n, data: { ...n.data, match: "" } };
 
 					const hit =
