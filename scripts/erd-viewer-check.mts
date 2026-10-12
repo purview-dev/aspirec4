@@ -100,6 +100,16 @@ try {
 			await page.fill(".toolbar input", "");
 			await page.waitForTimeout(200);
 			await page.screenshot({ path: join(dir, "viewer-check.png"), fullPage: false });
+
+			// A dark capture too, so a styling regression in either theme is visible without a rerun.
+			const dark = await browser.newContext({ colorScheme: "dark", viewport: { width: 1600, height: 1000 } });
+			const darkPage = await dark.newPage();
+
+			await darkPage.goto(base, { waitUntil: "networkidle" });
+			await darkPage.waitForSelector(".entity", { timeout: 20000 });
+			await darkPage.waitForTimeout(600);
+			await darkPage.screenshot({ path: join(dir, "viewer-check-dark.png") });
+			await dark.close();
 		}
 
 		// Animation is CSS-driven, so the computed style is the honest check.

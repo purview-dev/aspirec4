@@ -90,7 +90,7 @@ function ContextNode({ data }) {
 		"div",
 		{
 			className: "context",
-			style: { borderColor: data.colour, background: tint(data.colour, 0.06) },
+			style: { borderColor: tint(data.colour, 0.45), background: tint(data.colour, 0.04) },
 		},
 		h("span", { className: "context-label", style: { color: data.colour } }, data.label),
 	);
@@ -99,10 +99,10 @@ function ContextNode({ data }) {
 function EntityNode({ data }) {
 	const badges = (col) => {
 		const keys = [];
-		if (col.isPrimaryKey) keys.push("PK");
-		if (col.isForeignKey) keys.push("FK");
-		if (col.isUnique && !col.isPrimaryKey) keys.push("UK");
-		return keys.map((k) => h("span", { className: "badge", key: k }, k));
+		if (col.isPrimaryKey) keys.push("pk");
+		if (col.isForeignKey) keys.push("fk");
+		if (col.isUnique && !col.isPrimaryKey) keys.push("uk");
+		return keys.map((k) => h("span", { className: `badge ${k}`, key: k }, k.toUpperCase()));
 	};
 
 	const type = (col) => {
@@ -119,15 +119,15 @@ function EntityNode({ data }) {
 		h(
 			"header",
 			{ style: { borderBottomColor: data.colour } },
-			data.table.name,
+			h("span", null, data.table.name),
 			// The context is the container's label now, so only the schema is worth repeating here.
-			data.table.schema ? h("span", { className: "ctx" }, data.table.schema) : null,
+			data.table.schema ? h("span", { className: "schema" }, data.table.schema) : null,
 		),
 		(data.table.columns ?? []).map((col) =>
 			h(
 				"div",
 				{ className: "col", key: col.name },
-				h("span", null, col.name, badges(col)),
+				h("span", { className: "name" }, col.name, ...badges(col)),
 				h("span", { className: "type" }, type(col)),
 			),
 		),
