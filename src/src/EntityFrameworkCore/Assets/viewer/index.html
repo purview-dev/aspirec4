@@ -20,6 +20,7 @@
 				--muted: #6e7480;
 				--line: #e3e5ea;
 				--accent: #3b82f6;
+				--grid: rgb(0 0 0 / 6%);
 				--pk: #b45309;
 				--fk: #1d4ed8;
 				--uk: #7e22ce;
@@ -28,11 +29,12 @@
 
 			@media (prefers-color-scheme: dark) {
 				:root {
-					--bg: #0f1419;
-					--panel: #161c23;
+					--bg: #0b141b;
+					--panel: #121d26;
 					--fg: #e6e8ec;
 					--muted: #8b93a1;
-					--line: #242c36;
+					--line: #1f2f3a;
+					--grid: rgb(255 255 255 / 5%);
 					--pk: #f59e0b;
 					--fk: #60a5fa;
 					--uk: #c084fc;
@@ -143,7 +145,7 @@
 				gap: 10px;
 				align-items: baseline;
 				justify-content: space-between;
-				padding: 7px 11px 6px;
+				padding: 8px 12px 7px;
 				border-bottom: 2px solid;
 				font-size: 13px;
 				font-weight: 600;
@@ -161,11 +163,7 @@
 				gap: 10px;
 				align-items: baseline;
 				justify-content: space-between;
-				padding: 4px 11px;
-			}
-
-			.entity .col + .col {
-				border-top: 1px solid rgb(var(--key-bg) / 7%);
+				padding: 5px 12px;
 			}
 
 			.entity .col .name {
@@ -235,8 +233,14 @@
 				background: var(--bg);
 			}
 
-			.react-flow__background pattern circle {
-				fill: rgb(var(--key-bg) / 10%);
+
+			/* Relationship labels ride on the line, so they are set as pills rather than plain text. */
+			.react-flow__edge-textbg {
+				stroke-width: 1;
+			}
+
+			.react-flow__edge-text {
+				font-weight: 500;
 			}
 
 			/*
@@ -248,7 +252,7 @@
 			 * than read off the markers.
 			 */
 			.react-flow__edge.flowing .react-flow__edge-path {
-				stroke-dasharray: 6 4;
+				stroke-dasharray: 9 4;
 				animation: dash 0.9s linear infinite;
 			}
 

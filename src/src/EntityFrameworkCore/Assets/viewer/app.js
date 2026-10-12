@@ -41,9 +41,15 @@ function flatten(model) {
 	return tables;
 }
 
-/** Builds edges from foreign keys, dropping any whose principal is outside the model. */
-function buildEdges(tables) {
+/**
+ * Builds edges from foreign keys, dropping any whose principal is outside the model.
+ *
+ * Each edge is drawn in its principal's context colour, so a relationship is traceable to where it
+ * starts without following the line back.
+ */
+function buildEdges(tables, colourOf) {
 	const known = new Set(tables.map((t) => t.name.toLowerCase()));
+	const contextOf = new Map(tables.map((t) => [t.name, t.context]));
 	const edges = [];
 
 	for (const table of tables) {
@@ -59,13 +65,14 @@ function buildEdges(tables) {
 				target: table.name,
 				label: fk.navigationName ?? fk.columns.join(", "),
 				className: "flowing",
+				style: { stroke: colourOf(contextOf.get(fk.principalTable)), strokeWidth: 2.5 },
 				// Labels sit on top of whatever the edge crosses, so they carry their own background
 				// rather than being read against a table underneath them.
 				labelShowBg: true,
-				labelBgStyle: { fill: "var(--panel)", fillOpacity: 0.92 },
-				labelBgPadding: [6, 3],
-				labelBgBorderRadius: 4,
-				labelStyle: { fill: "var(--muted)", fontSize: 11 },
+				labelBgStyle: { fill: "var(--panel)", stroke: "var(--line)" },
+				labelBgPadding: [8, 4],
+				labelBgBorderRadius: 10,
+				labelStyle: { fill: "var(--fg)", fontSize: 11 },
 				data: { unique: !!fk.isUnique, required: !!fk.isRequired },
 			});
 		}
@@ -114,11 +121,11 @@ function EntityNode({ data }) {
 
 	return h(
 		"div",
-		{ className: `entity ${data.match}` },
+		{ className: `entity ${data.match}`, style: { borderColor: tint(data.colour, 0.5) } },
 		h(Handle, { type: "target", position: Position.Top }),
 		h(
 			"header",
-			{ style: { borderBottomColor: data.colour } },
+			{ style: { borderBottomColor: data.colour, background: tint(data.colour, 0.14) } },
 			h("span", null, data.table.name),
 			// The context is the container's label now, so only the schema is worth repeating here.
 			data.table.schema ? h("span", { className: "schema" }, data.table.schema) : null,
@@ -146,7 +153,15 @@ const entitySize = (table) => ({ width: 240, height: 48 + (table.columns?.length
  * between them; React Flow then expects child positions relative to their parent, which is exactly
  * what ELK returns.
  */
-async function layout(tables, edges) {
+/** Assigns each context a stable colour, so nodes and edges agree on it. */
+function contextColours(tables) {
+	const contexts = [...new Set(tables.map((t) => t.context))];
+	const byContext = new Map(contexts.map((c, i) => [c, CONTEXT_COLOURS[i % CONTEXT_COLOURS.length]]));
+
+	return (context) => byContext.get(context) ?? CONTEXT_COLOURS[0];
+}
+
+async function layout(tables, edges, colourOf) {
 	const contexts = [...new Set(tables.map((t) => t.context))];
 
 	const contextOf = new Map(tables.map((t) => [t.name, t.context]));
@@ -189,9 +204,9 @@ async function layout(tables, edges) {
 	const result = await elk.layout(graph);
 	const nodes = [];
 
-	for (const [index, container] of (result.children ?? []).entries()) {
+	for (const container of result.children ?? []) {
 		const context = container.id.slice("ctx:".length);
-		const colour = CONTEXT_COLOURS[index % CONTEXT_COLOURS.length];
+		const colour = colourOf(context);
 
 		// Containers must precede their children in the array or React Flow cannot resolve parentId.
 		nodes.push({
@@ -228,9 +243,10 @@ function Diagram({ model }) {
 	const [query, setQuery] = useState("");
 
 	useEffect(() => {
-		const built = buildEdges(tables);
+		const colourOf = contextColours(tables);
+		const built = buildEdges(tables, colourOf);
 
-		layout(tables, built).then((positioned) => {
+		layout(tables, built, colourOf).then((positioned) => {
 			setNodes(positioned);
 			setEdges(built);
 		});
@@ -283,7 +299,7 @@ function Diagram({ model }) {
 			fitViewOptions: { padding: 0.12 },
 			proOptions: { hideAttribution: true },
 			children: [
-				h(Background, { key: "bg" }),
+				h(Background, { key: "bg", variant: "lines", gap: 28, color: "var(--grid)" }),
 				h(Controls, { key: "controls" }),
 				h(MiniMap, { key: "minimap", pannable: true, zoomable: true }),
 			],
