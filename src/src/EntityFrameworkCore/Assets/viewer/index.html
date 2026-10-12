@@ -25,6 +25,20 @@
 				--fk: #1d4ed8;
 				--uk: #7e22ce;
 				--key-bg: 0 0 0;
+
+				/*
+				 * Card metrics are fixed rather than content-derived, because the layout has to know
+				 * the size of a card before one exists. ELK is given a box per table and React Flow
+				 * drops the card into it; if the card is taller than the box, it eats the gap to its
+				 * neighbour and the container's own padding. The error compounds per row, so the
+				 * tallest tables end up the most crowded.
+				 *
+				 * ENTITY_WIDTH, ENTITY_HEADER_HEIGHT and ENTITY_ROW_HEIGHT in app.js mirror these
+				 * three values. Change one, change the other.
+				 */
+				--entity-width: 248px;
+				--entity-header-height: 36px;
+				--entity-row-height: 28px;
 			}
 
 			@media (prefers-color-scheme: dark) {
@@ -130,7 +144,7 @@
 
 			/* Catalogue cards: squarer than the container, held by a rule rather than a shadow. */
 			.entity {
-				min-width: 200px;
+				width: var(--entity-width);
 				border: 1px solid var(--line);
 				border-radius: 3px;
 				background: var(--panel);
@@ -149,12 +163,15 @@
 			.entity header {
 				display: flex;
 				gap: 10px;
-				align-items: baseline;
+				/* Centred, not baseline: a fixed height puts a baseline-aligned row against its top. */
+				align-items: center;
 				justify-content: space-between;
-				padding: 8px 12px 7px;
+				height: var(--entity-header-height);
+				padding: 0 12px;
 				border-bottom: 2px solid;
 				font-size: 13px;
 				font-weight: 600;
+				line-height: 20px;
 				letter-spacing: -0.01em;
 			}
 
@@ -167,19 +184,30 @@
 			.entity .col {
 				display: flex;
 				gap: 10px;
-				align-items: baseline;
+				align-items: center;
 				justify-content: space-between;
-				padding: 5px 12px;
+				height: var(--entity-row-height);
+				padding: 0 12px;
+				line-height: 18px;
 			}
 
 			.entity .col .name {
 				display: flex;
 				gap: 5px;
-				align-items: baseline;
+				align-items: center;
+				min-width: 0;
+			}
+
+			/* The card is a fixed width, so an unusually long name gives way rather than widening it. */
+			.entity .col .col-name {
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
 			}
 
 			/* Store types are code, so they are set as code. */
 			.entity .col .type {
+				flex: none;
 				color: var(--muted);
 				font-family: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, monospace;
 				font-size: 11px;
@@ -187,6 +215,7 @@
 
 			/* Colour separates what a column does: key, reference, uniqueness. */
 			.badge {
+				flex: none;
 				padding: 1px 4px;
 				border-radius: 2px;
 				background: rgb(var(--key-bg) / 6%);

@@ -155,7 +155,7 @@ function EntityNode({ data }) {
 			h(
 				"div",
 				{ className: "col", key: col.name },
-				h("span", { className: "name" }, col.name, ...badges(col)),
+				h("span", { className: "name" }, h("span", { className: "col-name" }, col.name), ...badges(col)),
 				h("span", { className: "type" }, type(col)),
 			),
 		),
@@ -170,14 +170,25 @@ function EntityNode({ data }) {
  * layout has to reserve that space or the arc lands across whatever card ELK packed alongside.
  * Both numbers derive from SELF_LOOP_REACH so the drawing and the reservation cannot drift apart.
  */
-const ENTITY_WIDTH = 240;
-const SELF_LOOP_REACH = 220;
+/*
+ * Card metrics, mirroring --entity-width / --entity-header-height / --entity-row-height in
+ * index.html. ELK lays out boxes of this size and React Flow drops the real card into each one,
+ * so an estimate that runs small is silently paid for out of the gaps between cards and the
+ * container's own padding — and the error compounds with every row.
+ */
+const ENTITY_WIDTH = 248;
+const ENTITY_HEADER_HEIGHT = 36;
+const ENTITY_ROW_HEIGHT = 28;
+const ENTITY_BORDER = 2;
 
-// A cubic bezier peaks at roughly three quarters of its control offset, which is what puts the
-// arc clear of the card. The label rides just inside that peak, so the space actually needed is
-// the overhang plus room for the widest label worth reading.
+const SELF_LOOP_REACH = 280;
+
+// Measured, not derived: the bezier's rightmost point lands at about this fraction of the control
+// offset, and the label rides on it. The space needed beside the card is that overhang plus room
+// for the widest label worth reading.
+const SELF_LOOP_PEAK = 0.72;
 const SELF_LOOP_LABEL_ALLOWANCE = 70;
-const SELF_LOOP_GUTTER = SELF_LOOP_REACH * 0.75 - ENTITY_WIDTH / 2 + SELF_LOOP_LABEL_ALLOWANCE;
+const SELF_LOOP_GUTTER = SELF_LOOP_REACH * SELF_LOOP_PEAK - ENTITY_WIDTH / 2 + SELF_LOOP_LABEL_ALLOWANCE;
 
 /**
  * A relationship from a table to itself, such as a parent category.
@@ -198,7 +209,7 @@ function SelfLoopEdge({ sourceX, sourceY, targetX, targetY, style, label }) {
 					"text",
 					{
 						className: "self-loop-label",
-						x: Math.max(sourceX, targetX) + reach * 0.72,
+						x: Math.max(sourceX, targetX) + reach * SELF_LOOP_PEAK,
 						y: (sourceY + targetY) / 2,
 						dominantBaseline: "middle",
 						textAnchor: "middle",
@@ -220,7 +231,7 @@ const edgeTypes = { selfLoop: SelfLoopEdge };
  */
 const entitySize = (table, selfReferencing = false) => ({
 	width: ENTITY_WIDTH + (selfReferencing ? SELF_LOOP_GUTTER : 0),
-	height: 48 + (table.columns?.length ?? 0) * 22,
+	height: ENTITY_BORDER + ENTITY_HEADER_HEIGHT + (table.columns?.length ?? 0) * ENTITY_ROW_HEIGHT,
 });
 
 /**
@@ -263,9 +274,11 @@ async function layout(tables, edges, colourOf) {
 			layoutOptions: {
 				"elk.algorithm": "layered",
 				"elk.direction": "DOWN",
-				"elk.padding": "[top=46,left=20,bottom=20,right=20]",
-				"elk.spacing.nodeNode": "40",
-				"elk.layered.spacing.nodeNodeBetweenLayers": "70",
+				// Top carries the label that sits on the border line; the other three are even, so the
+				// container reads as a frame around its tables rather than a box they are pushed into.
+				"elk.padding": "[top=52,left=28,bottom=28,right=28]",
+				"elk.spacing.nodeNode": "48",
+				"elk.layered.spacing.nodeNodeBetweenLayers": "76",
 			},
 			children: tables
 				.filter((t) => t.context === context)

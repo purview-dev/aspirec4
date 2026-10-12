@@ -134,6 +134,76 @@ try {
 				collisions === null ? "label not found" : (collisions.join(", ") || "clear of every card"),
 			);
 
+			// ELK sizes a container around boxes it was told the size of, so a card that renders
+			// bigger than its box is paid for out of the gaps and the container's own padding. These
+			// two assert the result rather than the estimate, so any future drift shows up here.
+			const spacing = await page.evaluate(() => {
+				// The view is zoomed to fit, so screen pixels are not layout pixels. Everything below
+				// is divided back out by the viewport scale to compare against the configured spacing.
+				const viewport = document.querySelector<HTMLElement>(".react-flow__viewport")!;
+				const scale = viewport.getBoundingClientRect().width / viewport.offsetWidth;
+
+				// React Flow renders child nodes as DOM siblings of their container, not inside it, so
+				// parentage has to come from the geometry.
+				const cards = [...document.querySelectorAll<HTMLElement>(".react-flow__node-entity")].map((n) => ({
+					id: n.dataset.id ?? "?",
+					box: n.getBoundingClientRect(),
+					parent: "",
+				}));
+
+				const containers = [...document.querySelectorAll<HTMLElement>(".react-flow__node-context")].map(
+					(c) => {
+						const id = c.dataset.id ?? "?";
+						const rect = c.getBoundingClientRect();
+						const own = cards.filter(
+							(n) =>
+								n.box.left >= rect.left &&
+								n.box.right <= rect.right &&
+								n.box.top >= rect.top &&
+								n.box.bottom <= rect.bottom,
+						);
+
+						for (const n of own) n.parent = id;
+
+						return {
+							id,
+							count: own.length,
+							pad: Math.round(Math.min(...own.map((n) => rect.bottom - n.box.bottom)) / scale),
+						};
+					},
+				);
+
+				// Only cards that share horizontal space can crowd each other vertically.
+				let closest = { pair: "none", gap: Number.POSITIVE_INFINITY };
+				for (const a of cards)
+					for (const b of cards) {
+						if (a === b || a.parent !== b.parent || b.box.top < a.box.bottom) continue;
+						if (a.box.left >= b.box.right || a.box.right <= b.box.left) continue;
+
+						const gap = Math.round((b.box.top - a.box.bottom) / scale);
+						if (gap < closest.gap) closest = { pair: `${a.id} → ${b.id}`, gap };
+					}
+
+				return { containers, closest };
+			});
+
+			const tightest = spacing.containers.reduce((a, b) => (b.pad < a.pad ? b : a));
+			const empty = spacing.containers.filter((c) => c.count === 0);
+
+			check(
+				"every context has padding below its last table",
+				empty.length === 0 && tightest.pad >= 20,
+				empty.length > 0
+					? `no tables matched ${empty.map((c) => c.id).join(", ")}`
+					: `${tightest.id} has ${tightest.pad}px`,
+			);
+
+			check(
+				"stacked tables stay visually separate",
+				spacing.closest.gap >= 40,
+				`${spacing.closest.pair} — ${spacing.closest.gap}px`,
+			);
+
 			// ELK ran if the nodes are not all stacked at the origin.
 			const xs = await page.locator(".react-flow__node").evaluateAll((els) =>
 				els.map((e) => (e as HTMLElement).style.transform),
