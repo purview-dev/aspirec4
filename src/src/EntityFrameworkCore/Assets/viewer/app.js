@@ -42,6 +42,18 @@ function flatten(model) {
 }
 
 /**
+ * Picks the crow's-foot marker for the dependent end.
+ *
+ * The same two flags the Mermaid emitter uses for its cardinality, so both renderers say the same
+ * thing about a relationship: unique means at most one dependent row, required means at least one.
+ */
+function dependentMarker(fk) {
+	if (fk.isUnique) return fk.isRequired ? "erd-one" : "erd-one-optional";
+
+	return fk.isRequired ? "erd-many" : "erd-many-optional";
+}
+
+/**
  * Builds edges from foreign keys, dropping any whose principal is outside the model.
  *
  * Each edge is drawn in its principal's context colour, so a relationship is traceable to where it
@@ -65,7 +77,13 @@ function buildEdges(tables, colourOf) {
 				target: table.name,
 				label: fk.navigationName ?? fk.columns.join(", "),
 				className: "flowing",
-				style: { stroke: colourOf(contextOf.get(fk.principalTable)), strokeWidth: 2.5 },
+				style: {
+					stroke: colourOf(contextOf.get(fk.principalTable)),
+					strokeWidth: 2.5,
+					// The principal end is always exactly one: a foreign key references a single row.
+					markerStart: "url(#erd-one)",
+					markerEnd: `url(#${dependentMarker(fk)})`,
+				},
 				// Labels sit on top of whatever the edge crosses, so they carry their own background
 				// rather than being read against a table underneath them.
 				labelShowBg: true,

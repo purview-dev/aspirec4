@@ -65,6 +65,12 @@
 				-webkit-font-smoothing: antialiased;
 			}
 
+			.erd-markers {
+				position: absolute;
+				width: 0;
+				height: 0;
+			}
+
 			.toolbar {
 				position: absolute;
 				z-index: 10;
@@ -270,6 +276,71 @@
 		</style>
 	</head>
 	<body>
+		<!--
+			Crow's-foot notation for relationship ends. context-stroke makes each marker take the
+			colour of the edge it belongs to, so they match without being generated per colour.
+			Markers converge on the line and fan towards the entity, which is the standard reading.
+		-->
+		<svg class="erd-markers" aria-hidden="true">
+			<defs>
+				<marker
+					id="erd-one"
+					viewBox="0 0 14 14"
+					markerWidth="14"
+					markerHeight="14"
+					refX="12"
+					refY="7"
+					orient="auto"
+					markerUnits="userSpaceOnUse"
+				>
+					<path d="M9 2 V12" fill="none" stroke="context-stroke" stroke-width="1.6" />
+				</marker>
+				<marker
+					id="erd-one-optional"
+					viewBox="0 0 18 14"
+					markerWidth="18"
+					markerHeight="14"
+					refX="16"
+					refY="7"
+					orient="auto"
+					markerUnits="userSpaceOnUse"
+				>
+					<circle cx="4" cy="7" r="3" fill="none" stroke="context-stroke" stroke-width="1.4" />
+					<path d="M12 2 V12" fill="none" stroke="context-stroke" stroke-width="1.6" />
+				</marker>
+				<marker
+					id="erd-many"
+					viewBox="0 0 18 14"
+					markerWidth="18"
+					markerHeight="14"
+					refX="16"
+					refY="7"
+					orient="auto"
+					markerUnits="userSpaceOnUse"
+				>
+					<path d="M5 2 V12" fill="none" stroke="context-stroke" stroke-width="1.6" />
+					<path d="M8 7 L16 1 M8 7 L16 7 M8 7 L16 13" fill="none" stroke="context-stroke" stroke-width="1.4" />
+				</marker>
+				<marker
+					id="erd-many-optional"
+					viewBox="0 0 22 14"
+					markerWidth="22"
+					markerHeight="14"
+					refX="20"
+					refY="7"
+					orient="auto"
+					markerUnits="userSpaceOnUse"
+				>
+					<circle cx="4" cy="7" r="3" fill="none" stroke="context-stroke" stroke-width="1.4" />
+					<path
+						d="M12 7 L20 1 M12 7 L20 7 M12 7 L20 13"
+						fill="none"
+						stroke="context-stroke"
+						stroke-width="1.4"
+					/>
+				</marker>
+			</defs>
+		</svg>
 		<div id="root"></div>
 		<script type="module" src="./app.js"></script>
 	</body>

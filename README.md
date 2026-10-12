@@ -147,7 +147,7 @@ descriptor directly, which is why it is the default.
 
 | Renderer | Output | Fidelity | Use it for |
 | --- | --- | --- | --- |
-| `Interactive` *(default)* | `.json` + viewer | **Full** — column-level edges, nested grouping, key badges | The primary experience |
+| `Interactive` *(default)* | `.json` + viewer | **Full** — column-level edges, grouping, key badges, crow's-foot cardinality | The primary experience |
 | `Dbml` | `.dbml` | High — column-level refs and precision types survive | Interchange: dbdiagram.io, SQL generation |
 | `Mermaid` | `.mmd` + preview | Low — edges join entities, not columns; one flat grouping level | Publishing: GitHub, Azure DevOps, wikis |
 | `D2` | `.d2` + live sidecar | High — column-level edges, nested containers | Live local viewing |
@@ -170,6 +170,9 @@ Known limitations, by renderer:
 EF's own `IsUnique`/`IsRequired` are runtime concepts, so both are derived statically: a foreign key is
 *unique* when its columns are the primary key or carry a unique index, and *required* when they are
 non-nullable. The principal side is always `||`, because a foreign key references exactly one row.
+
+The interactive renderer draws the same mapping as crow's-foot notation, so both renderers say the
+same thing about a relationship.
 
 | Unique | Required | Mermaid | Meaning |
 | --- | --- | --- | --- |

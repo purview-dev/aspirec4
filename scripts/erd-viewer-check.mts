@@ -80,6 +80,19 @@ try {
 			const badges = await page.locator(".entity .badge").count();
 			check("key badges render", badges > 0, `${badges} badges`);
 
+			// Cardinality is derived data, so it has to reach the drawing or the richest renderer
+			// shows less about a relationship than the Mermaid output does.
+			const markers = await page.locator(".react-flow__edge-path").evaluateAll((els) => ({
+				starts: els.filter((e) => (e as SVGElement).style.markerStart?.includes("erd-one")).length,
+				feet: els.filter((e) => (e as SVGElement).style.markerEnd?.includes("erd-many")).length,
+			}));
+
+			check("principal ends marked as one", markers.starts > 0, `${markers.starts} edges`);
+			check("dependent ends marked with a crow's foot", markers.feet > 0, `${markers.feet} edges`);
+
+			const defined = await page.locator("svg.erd-markers marker").count();
+			check("every marker is defined", defined === 4, `${defined} markers`);
+
 			// ELK ran if the nodes are not all stacked at the origin.
 			const xs = await page.locator(".react-flow__node").evaluateAll((els) =>
 				els.map((e) => (e as HTMLElement).style.transform),
