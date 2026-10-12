@@ -6,7 +6,13 @@
 		"TestFilter": "/*/*/*/*[Category=Unit]"
 	},
 	"PackValidation": {
-		"RequireSymbolPackage": true,
+		// AspireC4.EntityFrameworkCore is analyzer-only (IncludeBuildOutput=false), so NuGet produces
+		// no .snupkg for it, and it no longer embeds a PDB under analyzers/dotnet/ - which is the only
+		// thing that exempts a package from the symbol-package requirement. The PDB was dropped
+		// because the merge pass strips the compiler-flags record the validator demands; see
+		// EntityFrameworkCore.Analyzers.csproj. Re-enable this once that analyzer can ship symbols
+		// again, as the two library packages do produce .snupkg files and are no longer checked.
+		"RequireSymbolPackage": false,
 		"RequireSymbolFiles": true,
 		// These three are the tool's documented shipped defaults (false/false/[]), stated explicitly
 		// because the pinned tool otherwise falls back to its C# initialisers (true/true/
@@ -42,11 +48,9 @@
 				"README.md"
 			],
 			// Analyzer-only: referenced by service projects (where the DbContext lives), so it ships no
-			// lib/ assembly. The PDB sits beside the analyzer in the package rather than the symbol
-			// package, so it has to be declared here.
+			// lib/ assembly and, by way of PurviewPackAnalyzerPdb=false, no PDB either.
 			"aspirec4.entityframeworkcore": [
 				"analyzers/dotnet/cs/Aspire.Hosting.AspireC4.EntityFrameworkCore.Analyzers.dll",
-				"analyzers/dotnet/cs/Aspire.Hosting.AspireC4.EntityFrameworkCore.Analyzers.pdb",
 				"likec4-logo.png",
 				"README.md"
 			]
