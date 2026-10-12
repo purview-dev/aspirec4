@@ -3,17 +3,17 @@
 		<CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
 		<RoslynCompilerVersion>5.9.0</RoslynCompilerVersion>
 		<RoslynAnalyzersVersion>5.9.0</RoslynAnalyzersVersion>
-		<TUnitVersion>1.67.0</TUnitVersion>
-		<PurviewSourceGenVersion>1.0.0</PurviewSourceGenVersion>
-		<PurviewTelemetryVersion>5.0.2</PurviewTelemetryVersion>
+		<TUnitVersion>1.74.0</TUnitVersion>
+		<PurviewSourceGenVersion>1.1.0</PurviewSourceGenVersion>
+		<PurviewTelemetryVersion>5.0.3</PurviewTelemetryVersion>
 		<AspireVersion>13.5.3</AspireVersion>
 	</PropertyGroup>
 	<ItemGroup>
-		<PackageVersion Include="Aspire.Hosting" Version="$(AspireVersion)" />
-		<PackageVersion Include="Aspire.Hosting.Testing" Version="$(AspireVersion)" />
-		<PackageVersion Include="Aspire.Hosting.JavaScript" Version="$(AspireVersion)" />
-		<PackageVersion Include="Aspire.Hosting.Azure.PostgreSQL" Version="$(AspireVersion)" />
-		<PackageVersion Include="Aspire.Hosting.Azure.Redis" Version="$(AspireVersion)" />
+		<PackageVersion Include="Aspire.Hosting" Version="13.6.1" />
+		<PackageVersion Include="Aspire.Hosting.Testing" Version="13.6.1" />
+		<PackageVersion Include="Aspire.Hosting.JavaScript" Version="13.6.1" />
+		<PackageVersion Include="Aspire.Hosting.Azure.PostgreSQL" Version="13.6.1" />
+		<PackageVersion Include="Aspire.Hosting.Azure.Redis" Version="13.6.1" />
 		<PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.401" />
 		<PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="$(RoslynCompilerVersion)" />
 		<PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="$(RoslynAnalyzersVersion)" />
