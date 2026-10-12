@@ -59,6 +59,13 @@ function buildEdges(tables) {
 				target: table.name,
 				label: fk.navigationName ?? fk.columns.join(", "),
 				className: "flowing",
+				// Labels sit on top of whatever the edge crosses, so they carry their own background
+				// rather than being read against a table underneath them.
+				labelShowBg: true,
+				labelBgStyle: { fill: "var(--panel)", fillOpacity: 0.92 },
+				labelBgPadding: [6, 3],
+				labelBgBorderRadius: 4,
+				labelStyle: { fill: "var(--muted)", fontSize: 11 },
 				data: { unique: !!fk.isUnique, required: !!fk.isRequired },
 			});
 		}
@@ -142,28 +149,41 @@ const entitySize = (table) => ({ width: 240, height: 48 + (table.columns?.length
 async function layout(tables, edges) {
 	const contexts = [...new Set(tables.map((t) => t.context))];
 
+	const contextOf = new Map(tables.map((t) => [t.name, t.context]));
+
 	const graph = {
 		id: "root",
+		// Two algorithms: rectpacking arranges the containers towards a landscape ratio, and layered
+		// arranges the tables inside each. Using layered at both levels put every container in a
+		// single row — it has no edges between them to work with, and elk.aspectRatio does not reach
+		// its component packer — which was far wider than tall and forced the view to zoom out.
 		layoutOptions: {
-			"elk.algorithm": "layered",
-			"elk.direction": "DOWN",
-			// Without this ELK treats each container as opaque and cannot route the edges that cross
-			// between them.
-			"elk.hierarchyHandling": "INCLUDE_CHILDREN",
-			"elk.layered.spacing.nodeNodeBetweenLayers": "90",
+			"elk.algorithm": "rectpacking",
+			// Tuned by measuring the rendered result: 1.7 left every container in a single row, since
+			// one row was already closer to that ratio than wrapping would be, and 1.4 produced a
+			// ragged three-plus-one. A target squarer than the viewport is what actually wraps.
+			"elk.aspectRatio": "1.1",
 			"elk.spacing.nodeNode": "60",
 		},
 		children: contexts.map((context) => ({
 			id: `ctx:${context}`,
 			layoutOptions: {
+				"elk.algorithm": "layered",
+				"elk.direction": "DOWN",
 				"elk.padding": "[top=46,left=20,bottom=20,right=20]",
 				"elk.spacing.nodeNode": "40",
+				"elk.layered.spacing.nodeNodeBetweenLayers": "70",
 			},
 			children: tables
 				.filter((t) => t.context === context)
 				.map((table) => ({ id: table.name, ...entitySize(table) })),
+			// Only relationships within this context: they order the tables sensibly. Cross-context
+			// edges are left out because ELK's routing is unused — React Flow draws every edge itself
+			// from the resulting node positions.
+			edges: edges
+				.filter((e) => contextOf.get(e.source) === context && contextOf.get(e.target) === context)
+				.map((e) => ({ id: e.id, sources: [e.source], targets: [e.target] })),
 		})),
-		edges: edges.map((e) => ({ id: e.id, sources: [e.source], targets: [e.target] })),
 	};
 
 	const result = await elk.layout(graph);
