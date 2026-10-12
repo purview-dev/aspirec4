@@ -54,7 +54,7 @@ async function bundle(name: string, source: string): Promise<Uint8Array> {
 
 const viewer = await bundle(
 	"viewer",
-	`export { default as React, useCallback, useEffect, useMemo, useState } from "react";
+	`export { default as React, useCallback, useEffect, useMemo, useRef, useState } from "react";
 export { createRoot } from "react-dom/client";
 export {
 	Background,
@@ -66,8 +66,12 @@ export {
 	ReactFlowProvider,
 	useEdgesState,
 	useNodesState,
+	useReactFlow,
 } from "@xyflow/react";
 export { default as ELK } from "elkjs/lib/elk.bundled.js";
+// Image export. React Flow's own recommendation for the job: it walks the rendered DOM and inlines
+// the computed styles, so the export matches what is on screen rather than re-deriving a drawing.
+export { toPng, toSvg } from "html-to-image";
 `,
 );
 

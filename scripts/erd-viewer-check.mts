@@ -31,7 +31,26 @@ for (const name of ["index.html", "app.js"]) {
 	await writeFile(join(dir, name), text, "utf8");
 }
 
-await writeFile(join(dir, "model.json"), await readFile(model, "utf8"), "utf8");
+const descriptor = await readFile(model, "utf8");
+
+await writeFile(join(dir, "model.json"), descriptor, "utf8");
+
+// A column name no table name contains, so searching for it can only match through a column. Taken
+// from the model rather than hard-coded, so the check travels with whatever schema it is given.
+const modelTables = (JSON.parse(descriptor).contexts ?? []).flatMap((c: any) => c.tables ?? []);
+const columnOnly: string =
+	modelTables
+		.flatMap((t: any) => (t.columns ?? []).map((c: any) => c.name as string))
+		.find(
+			(name: string) =>
+				name.length > 4 &&
+				!modelTables.some((t: any) => t.name.toLowerCase().includes(name.toLowerCase())),
+		) ?? "";
+
+if (!columnOnly) {
+	console.error("no column name is distinct from every table name in this model — cannot check column search");
+	process.exit(1);
+}
 
 if (!existsSync(join(dir, "vendor", "bundle.js"))) {
 	console.error(`vendor/bundle.js missing — run: just erd-vendor ${dir}`);
@@ -210,30 +229,224 @@ try {
 			);
 			check("ELK positioned the nodes", new Set(xs).size > 1, `${new Set(xs).size} distinct positions`);
 
-			// Search dims non-matching entities.
-			const first = (await page.locator(".entity header").first().innerText()).split("\n")[0];
-			await page.fill(".toolbar input", first.slice(0, 4));
-			await page.waitForTimeout(300);
-			check(
-				"search highlights matches",
-				(await page.locator(".entity.hit").count()) > 0,
-				`matching "${first.slice(0, 4)}"`,
-			);
-			check("search dims non-matches", (await page.locator(".entity.dimmed").count()) > 0);
+			// The toolbar floats over the canvas, so the initial fit has to leave room for it. It is
+			// also the thing most likely to grow, and it hides a container's label when it does.
+			const covered = await page.evaluate(() => {
+				const bar = document.querySelector(".toolbar")!.getBoundingClientRect();
 
-			await page.fill(".toolbar input", "");
-			await page.waitForTimeout(200);
+				return [...document.querySelectorAll(".react-flow__node")]
+					.map((n) => ({ id: (n as HTMLElement).dataset.id ?? "?", box: n.getBoundingClientRect() }))
+					// Container labels ride above the top border of their node.
+					.filter(
+						({ box }) =>
+							box.left < bar.right &&
+							box.right > bar.left &&
+							box.top - 18 < bar.bottom &&
+							box.bottom > bar.top,
+					)
+					.map(({ id }) => id);
+			});
+
+			check("the toolbar covers nothing on the initial fit", covered.length === 0, covered.join(", "));
+
+			// ── Search ────────────────────────────────────────────────────────────────────────
+			//
+			// Search is the only way into a schema too large to read at a glance, so it is checked as
+			// a working tool — marks, counter, navigation and the ways out of it — not just as a
+			// class that lands on an element.
+
+			const first = (await page.locator(".entity header").first().innerText()).split("\n")[0];
+			const term = first.slice(0, 4);
+
+			await page.fill(".toolbar input", term);
+			await page.waitForTimeout(300);
+
+			check("search highlights matches", (await page.locator(".entity.hit").count()) > 0, `matching "${term}"`);
+			check("search dims non-matches", (await page.locator(".entity.dimmed").count()) > 0);
+			check(
+				"search dims relationships to dimmed tables",
+				(await page.locator(".react-flow__edge.dimmed").count()) > 0,
+			);
+
+			const counter = await page.locator(".search .matches").innerText();
+			check("search reports its position in the matches", /^\d+\/\d+$/.test(counter), counter);
+
+			// A query that only a column can satisfy: the table has to match on it, and the row that
+			// caused the match has to say so, or the reader is left hunting for it by eye.
+			await page.fill(".toolbar input", columnOnly);
+			await page.waitForTimeout(300);
+
+			check(
+				"a column-only match marks the column",
+				(await page.locator(".entity .col.hit").count()) > 0,
+				`matching "${columnOnly}"`,
+			);
+
+			// Enter travels: first to the match the counter points at, then onward through the rest.
+			await page.fill(".toolbar input", term);
+			await page.waitForTimeout(300);
+
+			const total = Number(((await page.locator(".search .matches").innerText()).split("/")[1] ?? "0").trim());
+			const viewportBefore = await page.locator(".react-flow__viewport").getAttribute("style");
+
+			await page.locator(".toolbar input").press("Enter");
+			await page.waitForTimeout(700);
+
+			check(
+				"Enter brings a match into view",
+				(await page.locator(".react-flow__viewport").getAttribute("style")) !== viewportBefore,
+			);
+			check("exactly one match is current", (await page.locator(".entity.current").count()) === 1);
+
+			if (total > 1) {
+				await page.locator(".toolbar input").press("Enter");
+				await page.waitForTimeout(500);
+
+				const advanced = await page.locator(".search .matches").innerText();
+				check("Enter advances through the matches", advanced.startsWith("2/"), advanced);
+			}
+
+			await page.fill(".toolbar input", "zzzzqqqq");
+			await page.waitForTimeout(250);
+			check("an empty result says so", (await page.locator(".search .matches.none").count()) === 1);
+
+			await page.locator(".toolbar input").press("Escape");
+			await page.waitForTimeout(250);
+			check(
+				"Escape clears the search",
+				(await page.inputValue(".toolbar input")) === "" &&
+					(await page.locator(".entity.dimmed").count()) === 0,
+			);
+
+			// The field is reachable without the mouse, from wherever the reader happens to be.
+			await page.locator("body").click({ position: { x: 900, y: 900 } });
+			await page.keyboard.press("/");
+			await page.waitForTimeout(150);
+			check(
+				"'/' focuses the search field",
+				await page.evaluate(() => document.activeElement?.tagName === "INPUT"),
+			);
+
 			await page.screenshot({ path: join(dir, "viewer-check.png"), fullPage: false });
 
-			// A dark capture too, so a styling regression in either theme is visible without a rerun.
-			const dark = await browser.newContext({ colorScheme: "dark", viewport: { width: 1600, height: 1000 } });
-			const darkPage = await dark.newPage();
+			// ── Image export ──────────────────────────────────────────────────────────────────
+			//
+			// The export is the diagram at native size, not a capture of the window, so both the
+			// file arriving and it being bigger than the viewport are part of the contract.
+
+			for (const format of ["svg", "png"] as const) {
+				const [download] = await Promise.all([
+					page.waitForEvent("download", { timeout: 30000 }),
+					page.click(`[data-export="${format}"]`),
+				]);
+
+				const file = await download.path();
+				const bytes = file ? (await readFile(file)).length : 0;
+
+				check(
+					`${format.toUpperCase()} export downloads a file`,
+					bytes > 10_000 && download.suggestedFilename().endsWith(`.${format}`),
+					`${download.suggestedFilename()}, ${Math.round(bytes / 1024)} KB`,
+				);
+
+				await writeFile(join(dir, `viewer-export.${format}`), await readFile(file!));
+
+				if (format === "svg") {
+					const svg = await readFile(file!, "utf8");
+
+					// The crow's-foot markers are defined outside the captured subtree, so without a
+					// copy riding along every url(#erd-…) in the export resolves to nothing.
+					check("SVG export carries the cardinality markers", svg.includes('id="erd-many"'));
+					check("SVG export carries the tables", svg.includes(first));
+				}
+			}
+
+			// ── Theme ─────────────────────────────────────────────────────────────────────────
+
+			check(
+				"no theme is pinned by default",
+				(await page.evaluate(() => document.documentElement.dataset.theme)) === undefined,
+			);
+
+			const background = () =>
+				page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+
+			// Luminance, so the assertion is "this is the dark theme" rather than an exact hex that
+			// any palette change would have to be chased through.
+			const luminance = async () => {
+				const [r, g, b] = (await background()).match(/\d+/g)!.map(Number);
+
+				return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+			};
+
+			await page.click('[data-theme-option="dark"]');
+			await page.waitForTimeout(200);
+
+			check(
+				"dark is applied on demand",
+				(await page.evaluate(() => document.documentElement.dataset.theme)) === "dark" &&
+					(await luminance()) < 0.3,
+				await background(),
+			);
+			check(
+				"React Flow's own chrome follows the theme",
+				(await page.locator(".react-flow.dark").count()) === 1,
+			);
+
+			await page.screenshot({ path: join(dir, "viewer-check-dark.png") });
+
+			// Reloading is where an unpersisted choice shows up, and where a choice applied only by
+			// the module shows up as a flash of the wrong theme before it loads.
+			await page.reload({ waitUntil: "networkidle" });
+			await page.waitForSelector(".entity", { timeout: 20000 });
+
+			check(
+				"the choice survives a reload",
+				(await page.evaluate(() => document.documentElement.dataset.theme)) === "dark" &&
+					(await luminance()) < 0.3,
+			);
+			check(
+				"the dark button is still the pressed one",
+				(await page.locator('[data-theme-option="dark"][aria-pressed="true"]').count()) === 1,
+			);
+
+			await page.click('[data-theme-option="auto"]');
+			await page.waitForTimeout(200);
+
+			check(
+				"auto returns to the system theme",
+				(await page.evaluate(() => document.documentElement.dataset.theme)) === undefined &&
+					(await luminance()) > 0.7,
+				await background(),
+			);
+
+			// The pin has to beat the operating system in both directions, so the opposite case is
+			// checked against a context that reports a dark desktop.
+			const darkDesktop = await browser.newContext({
+				colorScheme: "dark",
+				viewport: { width: 1600, height: 1000 },
+			});
+			const darkPage = await darkDesktop.newPage();
 
 			await darkPage.goto(base, { waitUntil: "networkidle" });
 			await darkPage.waitForSelector(".entity", { timeout: 20000 });
-			await darkPage.waitForTimeout(600);
-			await darkPage.screenshot({ path: join(dir, "viewer-check-dark.png") });
-			await dark.close();
+
+			const darkDesktopLuminance = async () => {
+				const [r, g, b] = (
+					await darkPage.evaluate(() => getComputedStyle(document.body).backgroundColor)
+				).match(/\d+/g)!.map(Number);
+
+				return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+			};
+
+			check("a dark desktop gets the dark theme unasked", (await darkDesktopLuminance()) < 0.3);
+
+			await darkPage.click('[data-theme-option="light"]');
+			await darkPage.waitForTimeout(200);
+
+			check("light overrides a dark desktop", (await darkDesktopLuminance()) > 0.7);
+
+			await darkDesktop.close();
 		}
 
 		// Animation is CSS-driven, so the computed style is the honest check.

@@ -42,7 +42,7 @@ sealed partial class AspireC4LifecycleHook
 		);
 		var dsl = LikeC4DSLGenerator.Generate(model, opts);
 
-		var outputDir = Path.GetFullPath(opts.OutputDirectory);
+		var (outputDir, serveDir) = LikeC4ProjectLayout.Resolve(Environment.CurrentDirectory, opts);
 		Directory.CreateDirectory(outputDir);
 
 		var filename = opts.FileName;
@@ -86,8 +86,8 @@ sealed partial class AspireC4LifecycleHook
 			telemetry.AdditionalDSLFileSynced(Path.GetFileNameWithoutExtension(absoluteSource));
 		}
 
-		// Generate likec4.config.json when opted in (default).
-		if (opts.GenerateConfigFile)
+		// Generate likec4.config.json when opted in (default) and AspireC4 owns the served project.
+		if (opts.GenerateConfigFile && !LikeC4ProjectLayout.IsHandAuthoredProject(serveDir, outputDir))
 		{
 			await WriteConfigFileAsync(opts, outputDir, cancellationToken);
 		}

@@ -41,4 +41,20 @@ public sealed record LikeC4Element
 
 	/// <summary>Optional view-level group label. Elements sharing the same label are emitted inside a <c>group 'label' { include ... }</c> block in the generated view.</summary>
 	public string? Group { get; init; }
+
+	/// <summary>
+	/// Whether <see cref="Name"/> refers to an element declared in a hand-authored LikeC4 project
+	/// rather than one this model declares.
+	/// </summary>
+	/// <remarks>
+	/// Set by <c>WithLikeC4Element</c>. Such elements are emitted as <c>extend &lt;id&gt; { … }</c> and
+	/// their kind is not declared in the specification block, because the project already declares it.
+	/// <para>
+	/// LikeC4's <c>extend</c> body accepts tags, links, metadata and nested declarations only, so
+	/// <see cref="Technology"/>, <see cref="Description"/>, <see cref="Summary"/> and <see cref="Icon"/>
+	/// are always <see langword="null"/> here and <see cref="Label"/> is never emitted — the project
+	/// those come from remains their only source.
+	/// </para>
+	/// </remarks>
+	public bool ExtendsExistingElement { get; init; }
 }

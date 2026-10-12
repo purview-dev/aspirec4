@@ -23,7 +23,9 @@ builder.AddAspireC4(options =>
 | `Title` | `null` | Title shown in the LikeC4 application. |
 | `ViewTitle` | `"Architecture"` | Title shown in the generated view. |
 | `ViewDescription` | `null` | Optional view description (Markdown supported by recent LikeC4 versions). |
-| `OutputDirectory` | `"./likec4/gen/"` | Directory where the generated `.c4` file is written. |
+| `OutputDirectory` | `"./.aspirec4/likec4/"` | Directory where the generated `.c4` file is written. |
+| `ProjectDirectory` | `null` | An existing hand-authored LikeC4 project to generate into and serve. Set with `WithLikeC4ProjectFolder(path)`. See [Generated Output](Generated-Output.md). |
+| `UseLegacyLayout` | `false` | Restores the pre-13.6 output paths (`./likec4/gen/`, `./erd/gen/`) and flat dashboard resource names. Set with `WithLegacyLayout()`. A compatibility shim — see [Migration](Migration.md). |
 | `FileName` | `"model.gen"` | Generated file name without extension. |
 | `DisableHMR` | `false` | Disable the Hot Module Replacement channel. |
 | `HMRPort` | `null` (dynamic) | Fixed HMR port when the LikeC4 server supports configurable ports (v1.57+); ignored on older versions, which always use port `24678`. |

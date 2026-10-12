@@ -96,6 +96,59 @@ try {
 	const after = await page.locator("#canvas").evaluate((el) => (el as HTMLElement).style.transform);
 
 	check("zoom changes the transform", before !== after);
+
+	// Mermaid bakes its palette into the SVG at render time, so a theme change has to re-render:
+	// flipping a CSS token would leave the diagram in the theme it was drawn in.
+	const fill = () =>
+		page.locator("#canvas svg").evaluate((el) => getComputedStyle(el.querySelector("rect")!).fill);
+
+	const lightFill = await fill();
+
+	await page.click('[data-theme-option="dark"]');
+	await page.waitForTimeout(600);
+
+	check("the diagram is redrawn in the chosen theme", (await fill()) !== lightFill, `${lightFill} → ${await fill()}`);
+	check(
+		"the page follows the chosen theme",
+		(await page.evaluate(() => document.documentElement.dataset.theme)) === "dark",
+	);
+
+	await page.screenshot({ path: join(dir, "mermaid-check-dark.png") });
+
+	await page.click('[data-theme-option="auto"]');
+	await page.waitForTimeout(600);
+
+	check(
+		"auto returns to the system theme",
+		(await page.evaluate(() => document.documentElement.dataset.theme)) === undefined &&
+			(await fill()) === lightFill,
+	);
+
+	for (const format of ["svg", "png"] as const) {
+		const [download] = await Promise.all([
+			page.waitForEvent("download", { timeout: 30000 }),
+			page.click(`[data-export="${format}"]`),
+		]);
+
+		const file = await download.path();
+		const bytes = file ? (await readFile(file)).length : 0;
+
+		check(
+			`${format.toUpperCase()} export downloads a file`,
+			bytes > 1000 && download.suggestedFilename().endsWith(`.${format}`),
+			`${download.suggestedFilename()}, ${Math.round(bytes / 1024)} KB`,
+		);
+
+		if (format === "svg") {
+			const svg = await readFile(file!, "utf8");
+
+			// A percentage width is what Mermaid leaves behind, and it is what makes the export open
+			// at the wrong size everywhere outside a browser.
+			check("SVG export is sized in absolute units", /width="\d+"/.test(svg), svg.slice(0, 120));
+			check("SVG export carries the entities", svg.includes("Order"));
+		}
+	}
+
 	check("no console errors", errors.length === 0, errors.slice(0, 2).join(" | "));
 
 	await page.screenshot({ path: join(dir, "mermaid-check.png") });

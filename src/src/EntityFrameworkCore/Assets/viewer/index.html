@@ -12,19 +12,27 @@
 			 * colour marks what a column does, and monospace is reserved for store types, which are
 			 * code rather than prose.
 			 */
+			/*
+			 * One token block for all three themes. light-dark() resolves against the element's own
+			 * color-scheme, so the theme control only has to change color-scheme on :root and every
+			 * token follows — no duplicated dark block to keep in step with the light one.
+			 */
 			:root {
 				color-scheme: light dark;
-				--bg: #fbfbfd;
-				--panel: #ffffff;
-				--fg: #1a1d23;
-				--muted: #6e7480;
-				--line: #e3e5ea;
-				--accent: #3b82f6;
-				--grid: rgb(0 0 0 / 6%);
-				--pk: #b45309;
-				--fk: #1d4ed8;
-				--uk: #7e22ce;
-				--key-bg: 0 0 0;
+				--bg: light-dark(#fbfbfd, #0b141b);
+				--panel: light-dark(#ffffff, #121d26);
+				--fg: light-dark(#1a1d23, #e6e8ec);
+				--muted: light-dark(#6e7480, #8b93a1);
+				--line: light-dark(#e3e5ea, #1f2f3a);
+				--accent: light-dark(#3b82f6, #60a5fa);
+				--grid: light-dark(rgb(0 0 0 / 6%), rgb(255 255 255 / 5%));
+				--pk: light-dark(#b45309, #f59e0b);
+				--fk: light-dark(#1d4ed8, #60a5fa);
+				--uk: light-dark(#7e22ce, #c084fc);
+
+				/* Faint wash over the current background, for badge fills and the minimap mask. */
+				--wash: light-dark(rgb(0 0 0 / 6%), rgb(255 255 255 / 6%));
+				--wash-strong: light-dark(rgb(0 0 0 / 11%), rgb(255 255 255 / 11%));
 
 				/*
 				 * Card metrics are fixed rather than content-derived, because the layout has to know
@@ -41,19 +49,17 @@
 				--entity-row-height: 28px;
 			}
 
-			@media (prefers-color-scheme: dark) {
-				:root {
-					--bg: #0b141b;
-					--panel: #121d26;
-					--fg: #e6e8ec;
-					--muted: #8b93a1;
-					--line: #1f2f3a;
-					--grid: rgb(255 255 255 / 5%);
-					--pk: #f59e0b;
-					--fk: #60a5fa;
-					--uk: #c084fc;
-					--key-bg: 255 255 255;
-				}
+			/*
+			 * The theme control pins color-scheme; without data-theme the root keeps `light dark` and
+			 * follows the operating system. Set on <html> before first paint, so there is no flash of
+			 * the wrong theme while the module loads.
+			 */
+			:root[data-theme="light"] {
+				color-scheme: light;
+			}
+
+			:root[data-theme="dark"] {
+				color-scheme: dark;
 			}
 
 			* {
@@ -91,7 +97,7 @@
 				top: 14px;
 				left: 14px;
 				display: flex;
-				gap: 12px;
+				gap: 8px;
 				align-items: center;
 				padding: 7px 9px;
 				border: 1px solid var(--line);
@@ -99,26 +105,103 @@
 				background: var(--panel);
 			}
 
-			.toolbar input {
-				min-width: 230px;
-				padding: 5px 8px;
+			/*
+			 * The field, its match counter and its clear button read as one control, so the border is
+			 * on the wrapper and the input inside it is bare.
+			 */
+			.search {
+				display: flex;
+				gap: 6px;
+				align-items: center;
+				padding: 0 6px 0 8px;
 				border: 1px solid var(--line);
 				border-radius: 2px;
 				background: var(--bg);
-				color: inherit;
-				font: inherit;
 			}
 
-			.toolbar input:focus-visible {
+			.search:focus-within {
 				border-color: var(--accent);
 				outline: 2px solid rgb(59 130 246 / 35%);
 				outline-offset: 1px;
+			}
+
+			.search input {
+				min-width: 230px;
+				padding: 5px 0;
+				border: 0;
+				background: none;
+				color: inherit;
+				font: inherit;
+				outline: none;
+			}
+
+			/* Position within the matches, e.g. 2/7. Tabular so it does not jog while cycling. */
+			.search .matches {
+				flex: none;
+				color: var(--muted);
+				font-size: 11px;
+				font-variant-numeric: tabular-nums;
+				white-space: nowrap;
+			}
+
+			.search .matches.none {
+				color: var(--pk);
 			}
 
 			.toolbar .count {
 				padding-right: 2px;
 				color: var(--muted);
 				font-variant-numeric: tabular-nums;
+			}
+
+			.toolbar .sep {
+				width: 1px;
+				height: 20px;
+				background: var(--line);
+			}
+
+			.toolbar button {
+				padding: 4px 8px;
+				border: 1px solid transparent;
+				border-radius: 2px;
+				background: none;
+				color: var(--muted);
+				font: inherit;
+				font-size: 11px;
+				cursor: pointer;
+			}
+
+			.toolbar button[disabled] {
+				cursor: default;
+				opacity: 0.5;
+			}
+
+			.toolbar button:not([disabled]):hover {
+				background: var(--wash);
+				color: var(--fg);
+			}
+
+			.toolbar button:focus-visible {
+				outline: 2px solid var(--accent);
+				outline-offset: 1px;
+			}
+
+			/* The chosen theme is held rather than merely hovered, so it is filled, not just coloured. */
+			.toolbar button[aria-pressed="true"] {
+				border-color: var(--line);
+				background: var(--wash-strong);
+				color: var(--fg);
+			}
+
+			.segmented {
+				display: flex;
+				gap: 2px;
+			}
+
+			.search button.clear {
+				padding: 2px 5px;
+				font-size: 13px;
+				line-height: 1;
 			}
 
 			/*
@@ -158,6 +241,22 @@
 			.entity.hit {
 				border-color: var(--accent);
 				box-shadow: 0 0 0 2px rgb(59 130 246 / 28%);
+			}
+
+			/* The one match Enter has stepped to, picked out from the rest of the matches. */
+			.entity.current {
+				border-color: var(--accent);
+				box-shadow: 0 0 0 3px rgb(59 130 246 / 55%);
+			}
+
+			/* A match on a column is marked on the row itself, so the reason for the hit is visible. */
+			.entity .col.hit {
+				background: rgb(59 130 246 / 14%);
+			}
+
+			/* Relationships to a table that did not match recede with it. */
+			.react-flow__edge.dimmed {
+				opacity: 0.18;
 			}
 
 			.entity header {
@@ -218,7 +317,7 @@
 				flex: none;
 				padding: 1px 4px;
 				border-radius: 2px;
-				background: rgb(var(--key-bg) / 6%);
+				background: var(--wash);
 				font-size: 9px;
 				font-weight: 700;
 				letter-spacing: 0.04em;
@@ -244,7 +343,7 @@
 			}
 
 			.react-flow__minimap-mask {
-				fill: rgb(var(--key-bg) / 7%);
+				fill: var(--wash);
 			}
 
 			.react-flow__minimap-node {
@@ -313,6 +412,26 @@
 				}
 			}
 		</style>
+		<script>
+			/*
+			 * Applies the pinned theme before anything paints, so a dark-pinned viewer on a light
+			 * desktop does not flash white while the module graph loads. The module sets the same
+			 * attribute once it is running; this only has to cover the gap.
+			 *
+			 * localStorage throws outright on an opaque origin, which is what a sandboxed iframe or
+			 * some file:// configurations give you, so the absence of a stored choice and the
+			 * inability to read one both end up meaning "follow the system".
+			 */
+			try {
+				const stored = localStorage.getItem("aspirec4-erd-theme");
+
+				if (stored === "light" || stored === "dark") {
+					document.documentElement.dataset.theme = stored;
+				}
+			} catch {
+				/* no stored preference available */
+			}
+		</script>
 	</head>
 	<body>
 		<!--

@@ -188,8 +188,7 @@ public static class MermaidGenerator
 	/// <remarks>
 	/// Mermaid 12 defaults ER diagrams to the <c>redux-color</c> theme, which these override. That is
 	/// deliberate: the theme has no concept of which <c>DbContext</c> an entity came from, and showing
-	/// that is the point of the grouping. Fills are kept pale and strokes strong so the result stays
-	/// legible under both the light and dark themes.
+	/// that is the point of the grouping.
 	/// </remarks>
 	static readonly (string Fill, string Stroke)[] ContextPalette =
 	[
@@ -200,6 +199,17 @@ public static class MermaidGenerator
 		("#ffe4e6", "#f43f5e"),
 		("#ccfbf1", "#14b8a6"),
 	];
+
+	/// <summary>
+	/// Label colour pinned alongside every context fill.
+	/// </summary>
+	/// <remarks>
+	/// A <c>classDef</c> that sets a fill but not a colour leaves the label to the active Mermaid
+	/// theme, which under the dark theme is near-white — illegible on these pale fills. The fills are
+	/// fixed whatever the theme, so the text on them has to be fixed too. Dark enough to clear WCAG AA
+	/// against the lightest fill in the palette.
+	/// </remarks>
+	const string ContextLabelColour = "#1f2937";
 
 	static void WriteStyles(StringBuilder sb, EfModel model, bool grouped)
 	{
@@ -219,7 +229,9 @@ public static class MermaidGenerator
 				.Append(" fill:")
 				.Append(fill)
 				.Append(",stroke:")
-				.AppendLine(stroke);
+				.Append(stroke)
+				.Append(",color:")
+				.AppendLine(ContextLabelColour);
 		}
 
 		foreach (var context in model.Contexts)

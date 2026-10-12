@@ -36,7 +36,30 @@ public sealed class AspireC4EfDiagramOptions
 	public bool UseSubgraphs { get; set; } = true;
 
 	/// <summary>Directory the generated diagram is written to, relative to the AppHost directory.</summary>
-	public string OutputDirectory { get; set; } = "./erd/gen/";
+	/// <remarks>
+	/// Sits beneath the same <c>.aspirec4/</c> root as the architecture diagram, so a consumer has a
+	/// single directory to ignore in source control. Reverts to <c>./erd/gen/</c> when
+	/// <c>AspireC4DiagramOptions.UseLegacyLayout</c> is set on the architecture diagram, unless set
+	/// explicitly here.
+	/// </remarks>
+	public string OutputDirectory { get; set; } = DefaultOutputDirectory;
+
+	/// <summary>
+	/// The default <see cref="OutputDirectory"/>, used to detect whether a consumer chose one.
+	/// </summary>
+	internal const string DefaultOutputDirectory = "./.aspirec4/erd/";
+
+	/// <summary>The <see cref="OutputDirectory"/> used before 13.6, restored by the legacy layout.</summary>
+	internal const string LegacyOutputDirectory = "./erd/gen/";
+
+	/// <summary>Whether <see cref="OutputDirectory"/> still holds the value the property initialised to.</summary>
+	internal static bool IsDefaultOutputDirectory(string? outputDirectory) =>
+		string.IsNullOrWhiteSpace(outputDirectory)
+		|| string.Equals(
+			outputDirectory.Replace('\\', '/').TrimEnd('/'),
+			DefaultOutputDirectory.Replace('\\', '/').TrimEnd('/'),
+			StringComparison.OrdinalIgnoreCase
+		);
 
 	/// <summary>Generated file name, without extension.</summary>
 	public string FileName { get; set; } = "schema.gen";

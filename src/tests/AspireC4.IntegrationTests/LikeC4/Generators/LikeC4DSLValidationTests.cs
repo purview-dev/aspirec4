@@ -498,4 +498,87 @@ public sealed class LikeC4DSLValidationTests
 		AssertNoValidationErrors(result, $"main:\n{dsl}\nextension:\n{extensionDsl}");
 		await Assert.That(result.TotalErrors).IsEqualTo(0);
 	}
+
+	/// <summary>
+	/// A hand-authored project declaring <c>cloud.backend.api</c>, the element the generated model
+	/// attaches Aspire's runtime state to via <c>WithLikeC4Element</c>.
+	/// </summary>
+	const string HandAuthoredProjectDSL = """
+		specification {
+		  element system
+		  element service
+		}
+
+		model {
+		  cloud = system 'Cloud' {
+		    backend = system 'Backend' {
+		      api = service 'API'
+		    }
+		  }
+		}
+		""";
+
+	[Test]
+	public async Task Generate_ExtendingAHandAuthoredElement_ProducesNoValidationErrors(
+		CancellationToken cancellationToken
+	)
+	{
+		// The whole point of WithLikeC4Element is that the generated extend block merges into a project
+		// AspireC4 never parsed, so only the real CLI can confirm the two files agree.
+		// Arrange
+		LikeC4Model model = new()
+		{
+			Elements =
+			[
+				// Only tags, links and metadata: LikeC4's extend body rejects title, technology,
+				// summary, description and icon, so the model builder never sets them here.
+				new LikeC4Element
+				{
+					Name = "cloud.backend.api",
+					Label = "Backend API",
+					Kind = "service",
+					ExtendsExistingElement = true,
+					State = KnownResourceStates.Running,
+					Tags = ["aspire-run-state-running"],
+					Links = [new LikeC4Link("http://localhost:5123", "Endpoint: http")],
+					Metadata = [new LikeC4Metadata("aspire-name", "api")],
+				},
+				new LikeC4Element
+				{
+					Name = "db",
+					Label = "Database",
+					Kind = LikeC4ElementKind.Container,
+				},
+			],
+			Relationships =
+			[
+				new LikeC4Relationship
+				{
+					SourceName = "cloud.backend.api",
+					TargetName = "db",
+					Label = "Persists data",
+				},
+			],
+		};
+
+		// Act
+		var dsl = LikeC4DSLGenerator.Generate(model, DefaultOptions);
+
+		// Assert
+		var result = await RunValidateAsync(dsl, cancellationToken, [("project.c4", HandAuthoredProjectDSL)]);
+		AssertNoValidationErrors(result, $"main:\n{dsl}\nproject:\n{HandAuthoredProjectDSL}");
+
+		// TotalErrors covers both files: the generated extend block only means anything if it merges
+		// cleanly into the project it references.
+		if (result.TotalErrors != 0)
+		{
+			throw new InvalidOperationException(
+				$"Expected 0 LikeC4 DSL validation errors across the project but got {result.TotalErrors}.\n\n"
+					+ $"Validator output:\n{result.RawOutput}\n\n"
+					+ $"Generated DSL:\n{dsl}\n\nProject DSL:\n{HandAuthoredProjectDSL}"
+			);
+		}
+
+		await Assert.That(result.TotalErrors).IsEqualTo(0);
+	}
 }

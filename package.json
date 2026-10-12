@@ -22,6 +22,7 @@
 		"@types/node": "^22.20.2",
 		"@xyflow/react": "12.10.0",
 		"elkjs": "0.11.0",
+		"html-to-image": "1.11.13",
 		"mermaid": "12.1.0",
 		"playwright": "1.56.0",
 		"react": "19.2.0",

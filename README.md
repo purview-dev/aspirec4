@@ -43,7 +43,7 @@ builder.AddAspireC4();
 builder.Build().Run();
 ```
 
-This writes `./likec4/gen/model.gen.c4`, starts the LikeC4 server, and refreshes the diagram as the Aspire app changes.
+This writes `./.aspirec4/likec4/model.gen.c4`, starts the LikeC4 server, and refreshes the diagram as the Aspire app changes.
 
 ## Configuration
 
@@ -54,7 +54,9 @@ Configure the diagram through `AspireC4DiagramOptions`:
 | `Title` | `null` | Title shown in the LikeC4 app |
 | `ViewTitle` | `"Architecture"` | Title shown in the generated view |
 | `ViewDescription` | `null` | Optional view description |
-| `OutputDirectory` | `"./likec4/gen/"` | Directory where the generated `.c4` file is written |
+| `OutputDirectory` | `"./.aspirec4/likec4/"` | Directory where the generated `.c4` file is written |
+| `ProjectDirectory` | `null` | An existing LikeC4 project to generate into and serve — see [Using your own LikeC4 project](#using-your-own-likec4-project) |
+| `UseLegacyLayout` | `false` | Restores the pre-13.6 paths and dashboard names — see [Upgrading from before 13.6](#upgrading-from-before-136) |
 | `FileName` | `"model.gen"` | Generated file name without extension |
 | `DisableHMR` | `false` | Disable Hot Module Replacement |
 | `HMRPort` | `null` (dynamically allocated) | HMR port used by the LikeC4 server and browser when it supports configurable HMR ports; set a fixed port when needed |
@@ -88,6 +90,58 @@ builder.AddAspireC4(options => options.WithHMRDisabled());
 
 The LikeC4 sidecar is excluded automatically. Set `WithIncludeAspireC4InternalResource(true)` in the options callback if you want to inspect it.
 
+## Upgrading from before 13.6
+
+13.6 changed two things, both breaking:
+
+- Generated output moved under one root: `./.aspirec4/likec4/` (was `./likec4/gen/`) and
+  `./.aspirec4/erd/` (was `./erd/gen/`). Replace your `.gitignore` entries with `**/.aspirec4/`.
+- When more than one diagram is registered, they nest under a shared dashboard parent and the
+  architecture diagram's resource is renamed from `aspirec4` to `aspirec4-likec4`. With only
+  `AddAspireC4()`, nothing changes.
+
+Both revert together with one switch, for a zero-change upgrade:
+
+```csharp
+builder.AddAspireC4(configure: options => options.WithLegacyLayout());
+```
+
+It is a compatibility shim that will be removed in a future major version — prefer adopting the new
+layout. The full details, including what to update when you drop it, are in the
+[migration guide](docs/wiki/Migration.md).
+
+## Using your own LikeC4 project
+
+Point AspireC4 at a LikeC4 project you already maintain and it serves that directory instead of its own:
+your `likec4.config.json`, `.c4` sources and views are all in play, and the generated model joins them as
+one more file. AspireC4 writes to `.aspirec4/` beneath the project and never generates a config over yours.
+
+```csharp
+builder.AddAspireC4(configure: options => options
+    .WithLikeC4ProjectFolder("../../architecture"));
+
+builder.AddProject<Projects.Api>("api")
+       // Attach Aspire's live state to the element the project already declares,
+       // rather than adding a duplicate beside it.
+       .WithLikeC4Element("cloud.backend.api");
+```
+
+The generated model emits an `extend` block for a mapped resource:
+
+```likec4
+model {
+  extend cloud.backend.api {
+    #aspire-run-state-running
+    link http://localhost:5123 'Endpoint: http'
+    metadata { aspire-name 'api' }
+  }
+}
+```
+
+Only tags, links, metadata, relationships and nested elements are applied — LikeC4's `extend` body accepts
+nothing else, so your project stays the single source of each element's title, technology, description and
+icon. See [Generated Output](docs/wiki/Generated-Output.md) for the details.
+
 ## Entity Framework Core ER diagrams (d2)
 
 `AspireC4.Hosting.EntityFrameworkCore` adds a second, complementary diagram: a live
@@ -117,9 +171,23 @@ builder.AddProject<Projects.Api>("api")
 builder.Build().Run();
 ```
 
-This writes `./d2/gen/schema.gen.d2`, starts a `d2lang/d2` sidecar running `d2 --watch`, and adds
-an **ER Diagram** link to each contributing project in the dashboard and on its element in the
+This writes `./.aspirec4/erd/schema.gen.d2`, starts a `d2lang/d2` sidecar running `d2 --watch`, and
+adds an **ER Diagram** link to each contributing project in the dashboard and on its element in the
 architecture diagram.
+
+### Dashboard layout
+
+Both diagrams write beneath a single `./.aspirec4/` root in the AppHost directory — one directory to
+ignore in source control regardless of how many are enabled.
+
+With only the architecture diagram registered, the dashboard shows the one `aspirec4` row it always
+has. Registering a second diagram nests them under a shared parent instead:
+
+```text
+aspirec4                 # parent row, added only when there is more than one diagram
+├── aspirec4-likec4      # the architecture diagram
+└── aspirec4-er          # the ER diagram
+```
 
 ### Configuration
 
@@ -127,7 +195,7 @@ architecture diagram.
 | --- | --- | --- |
 | `Renderer` | `Interactive` | `Interactive`, `Mermaid`, `Dbml` or `D2` — see [Renderers](#renderers) |
 | `Title` | `null` | Title shown in the generated diagram |
-| `OutputDirectory` | `"./erd/gen/"` | Directory the generated files are written to |
+| `OutputDirectory` | `"./.aspirec4/erd/"` | Directory the generated files are written to |
 | `FileName` | `"schema.gen"` | Generated file name without extension |
 | `UseSubgraphs` | `true` | Mermaid only — group entities into one `subgraph` per `DbContext` (needs Mermaid 11.17+) |
 | `LayoutEngine` | `Elk` | D2 only. `Dagre`, `Elk` or `Tala`. **dagre cannot target `sql_table` rows** |
@@ -155,8 +223,8 @@ descriptor directly, which is why it is the default.
 Known limitations, by renderer:
 
 - **Mermaid** emits a local preview alongside the `.mmd` for eyeballing the output before pasting it
-  somewhere that renders Mermaid natively. The preview is deliberately minimal — render, pan, zoom —
-  because Mermaid's job here is publishing, not being the primary experience. It cannot attach an edge
+  somewhere that renders Mermaid natively. The preview is deliberately minimal — render, pan, zoom,
+  theme and export — because Mermaid's job here is publishing, not being the primary experience. It cannot attach an edge
   to a column, so the participating columns are carried in the edge label instead. Its attribute-type grammar permits parentheses but **not commas**, so `decimal(18,2)`
   is emitted as `decimal(18_2)` — the precision is kept rather than dropped. Grouping is one flat
   `subgraph` level, so the schema tier is lost. GitHub was confirmed to render the subgraph output in
@@ -184,13 +252,35 @@ same thing about a relationship.
 Lines are always identifying (`--`). Delete behaviour and ownership are runtime EF concepts that static
 analysis cannot recover, and guessing non-identifying would be misleading.
 
+### Using the viewer
+
+The interactive viewer is a tool for reading a schema, not just a picture of one.
+
+**Search** (`/` or `Ctrl`/`Cmd`+`K` to focus) matches table *and* column names. Matching tables are
+highlighted, everything else — including the relationships into it — recedes, and the row that caused
+a match is marked on the card, so a hit on a column is visible without hunting for it. The counter
+shows your position in the results; `Enter` travels to the next match and `Shift`+`Enter` to the
+previous, bringing each into view. `Esc` clears.
+
+**Theme** is `Auto`, `Light` or `Dark`. `Auto` follows the operating system and is the default; a
+pinned choice is remembered across reloads and is applied before the page paints, so there is no flash
+of the wrong theme. The Mermaid preview shares the setting — pinning a theme in one applies it to both.
+
+**Export** writes `PNG` or `SVG` of the *whole* diagram at its natural size, not a capture of the
+window, so nothing scrolled out of view is lost. PNG is rendered at 2× for printing and zooming. Both
+honour the current theme, so a diagram exported in dark mode is dark.
+
+The Mermaid preview carries the same theme control and the same PNG/SVG export; beyond that it stays
+deliberately minimal — render, pan, zoom — because Mermaid's job here is publishing. Note that
+animated edges are browser-only and do not appear in any exported image.
+
 ### Recipes
 
 ```sh
 just erd-vendor --embed               # rebuild the viewer's bundled JS after a dependency bump
 just erd-check                        # drive the interactive viewer in a real browser
 just erd-mermaid-check                # drive the Mermaid preview in a real browser
-just erd-svg erd/gen/schema.gen.mmd   # render Mermaid to SVG via mermaid-cli 12 in a container
+just erd-svg .aspirec4/erd/schema.gen.mmd   # render Mermaid to SVG via mermaid-cli 12 in a container
 ```
 
 ### How the viewer is served

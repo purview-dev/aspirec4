@@ -46,7 +46,7 @@ builder.Build().Run();
 
 That is all it takes. On startup AspireC4:
 
-1. Writes the generated model to `./likec4/gen/model.gen.c4` (relative to the AppHost working directory).
+1. Writes the generated model to `./.aspirec4/likec4/model.gen.c4` (relative to the AppHost working directory).
 2. Starts the official `ghcr.io/likec4/likec4` container as a sidecar resource named `aspirec4`.
 3. Refreshes the diagram whenever the Aspire application changes — for example when a resource transitions to `Running` or `Exited`.
 

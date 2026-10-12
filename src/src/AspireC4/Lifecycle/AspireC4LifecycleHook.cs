@@ -141,15 +141,11 @@ sealed partial class AspireC4LifecycleHook(
 				{
 					// Immediately surface the resolved version on the outer resource so the
 					// dashboard shows it before the inner container emits its first state notification.
-					if (_resolvedLikeC4Version is { } resolvedVersion)
+					if (_resolvedLikeC4Version is not null)
 					{
 						await resourceNotificationService.PublishUpdateAsync(
 							aspirec4Resource,
-							s =>
-								s with
-								{
-									Properties = [new ResourcePropertySnapshot("LikeC4 Version", resolvedVersion)],
-								}
+							s => s with { Properties = WithLikeC4Version(s.Properties) }
 						);
 					}
 

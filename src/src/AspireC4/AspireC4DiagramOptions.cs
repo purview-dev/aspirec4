@@ -51,9 +51,86 @@ public sealed class AspireC4DiagramOptions
 
 	/// <summary>
 	/// Directory where the generated <c>.c4</c> file is written.
-	/// Defaults to <c>./likec4/gen/</c> relative to the AppHost working directory.
+	/// Defaults to <c>./.aspirec4/likec4/</c> relative to the AppHost working directory.
 	/// </summary>
-	public string OutputDirectory { get; set; } = "./likec4/gen/";
+	/// <remarks>
+	/// Every AspireC4 diagram writes beneath the same <c>.aspirec4/</c> root, so a consumer only ever
+	/// has one directory to ignore in source control regardless of how many diagrams are enabled.
+	/// </remarks>
+	public string OutputDirectory { get; set; } = DefaultOutputDirectory;
+
+	/// <summary>
+	/// The default <see cref="OutputDirectory"/>, used to detect whether a consumer chose one.
+	/// </summary>
+	internal const string DefaultOutputDirectory = "./.aspirec4/likec4/";
+
+	/// <summary>The <see cref="OutputDirectory"/> used before 13.6, restored by <see cref="UseLegacyLayout"/>.</summary>
+	internal const string LegacyOutputDirectory = "./likec4/gen/";
+
+	/// <summary>The configuration key that <see cref="UseLegacyLayout"/> binds from.</summary>
+	internal const string UseLegacyLayoutConfigurationKey = $"{SectionName}:{nameof(UseLegacyLayout)}";
+
+	/// <summary>
+	/// Restores the pre-13.6 generated-output paths and dashboard resource names, for upgrading without
+	/// changing anything else. Defaults to <see langword="false"/>.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// 13.6 moved generated output beneath a single <c>.aspirec4/</c> root and began nesting the diagram
+	/// resources under a shared dashboard parent. Setting this reverts both, in full:
+	/// </para>
+	/// <list type="bullet">
+	///   <item><description>
+	///     <see cref="OutputDirectory"/> defaults to <c>./likec4/gen/</c> rather than
+	///     <c>./.aspirec4/likec4/</c>, and the ER diagram's to <c>./erd/gen/</c> rather than
+	///     <c>./.aspirec4/erd/</c>. An <see cref="OutputDirectory"/> you set yourself always wins over
+	///     either default.
+	///   </description></item>
+	///   <item><description>
+	///     The diagram resources stay flat in the dashboard — <c>aspirec4</c> and <c>aspirec4-er</c> as
+	///     siblings, with no parent row and no <c>-likec4</c> suffix — so anything addressing them by
+	///     name keeps working.
+	///   </description></item>
+	/// </list>
+	/// <para>
+	/// This is a single switch covering the whole integration: the ER diagram follows the architecture
+	/// diagram rather than exposing a second setting that could disagree with it. It has no effect on
+	/// <see cref="ProjectDirectory"/>, which always places generated output beneath the project it
+	/// serves.
+	/// </para>
+	/// <para>
+	/// It is a compatibility shim rather than a supported alternative layout, and will be removed in a
+	/// future major version. Prefer moving to the default layout and updating any resource names.
+	/// </para>
+	/// </remarks>
+	/// <seealso cref="AspireC4DiagramOptionsExtensions.WithLegacyLayout"/>
+	public bool UseLegacyLayout { get; set; }
+
+	/// <summary>
+	/// Directory of an existing, hand-authored LikeC4 project to generate into and serve.
+	/// Defaults to <see langword="null"/>, in which case <see cref="OutputDirectory"/> is itself the
+	/// LikeC4 project root.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// When set, the LikeC4 server serves this directory rather than <see cref="OutputDirectory"/>, so
+	/// the project's own <c>likec4.config.json</c>, <c>.c4</c> sources and views are all in play, and
+	/// the generated model joins them as one more file in the project. Unless
+	/// <see cref="OutputDirectory"/> was set explicitly, generated output is written to
+	/// <c>.aspirec4/</c> beneath this directory, keeping it out of the hand-curated files.
+	/// </para>
+	/// <para>
+	/// <see cref="GenerateConfigFile"/> is ignored when the project already contains a
+	/// <c>likec4.config.json</c>: the project's own config always wins and is never overwritten.
+	/// </para>
+	/// <para>
+	/// Use <see cref="AspireC4DiagramOptionsExtensions.WithLikeC4ProjectFolder"/> to set this; that
+	/// method validates the directory exists at call time. Pair it with
+	/// <see cref="AspireC4ResourceBuilderExtensions.WithLikeC4Element{T}"/> to attach Aspire runtime
+	/// state to elements the project already declares.
+	/// </para>
+	/// </remarks>
+	public string? ProjectDirectory { get; set; }
 
 	/// <summary>
 	/// Name of the generated <c>.c4</c> file (without extension).

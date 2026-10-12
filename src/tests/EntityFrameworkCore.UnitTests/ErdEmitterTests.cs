@@ -263,6 +263,55 @@ public sealed class ErdEmitterTests
 	}
 
 	[Test]
+	public async Task Generate_MultipleContexts_PinsTheLabelColourAlongsideEachContextFill()
+	{
+		// A classDef that sets a fill but not a colour leaves the label to the active Mermaid theme,
+		// which under the dark theme is near-white and illegible on these pale fills.
+		// Arrange
+		EfModel model = new()
+		{
+			Contexts =
+			[
+				new EfContext
+				{
+					Name = "FirstDbContext",
+					TypeName = "N.FirstDbContext",
+					Tables =
+					[
+						new EfTable
+						{
+							Name = "A",
+							ClrTypeName = "N.A",
+							Columns = [CreateColumn("Id")],
+						},
+					],
+				},
+				new EfContext
+				{
+					Name = "SecondDbContext",
+					TypeName = "N.SecondDbContext",
+					Tables =
+					[
+						new EfTable
+						{
+							Name = "B",
+							ClrTypeName = "N.B",
+							Columns = [CreateColumn("Id")],
+						},
+					],
+				},
+			],
+		};
+
+		// Act
+		var body = Body(MermaidGenerator.Generate(model, CreateOptions()));
+
+		// Assert
+		await Assert.That(body).Contains("classDef FirstDbContext fill:#dbeafe,stroke:#3b82f6,color:#1f2937");
+		await Assert.That(body).Contains("classDef SecondDbContext fill:#dcfce7,stroke:#22c55e,color:#1f2937");
+	}
+
+	[Test]
 	public async Task Generate_WithSubgraphsDisabled_EmitsFlatOutput()
 	{
 		// Arrange

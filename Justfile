@@ -285,7 +285,7 @@ erd-vendor target="--embed":
 # Drive the interactive viewer in a real browser and assert it renders, lays out, searches and
 # animates. Takes a generated model JSON. Requires: bunx playwright install chromium
 [group('Diagrams')]
-erd-check model="src/src/TestAppHost/erd/gen/schema.gen.json":
+erd-check model="src/src/TestAppHost/.aspirec4/erd/schema.gen.json":
     bun scripts/erd-vendor.mts artifacts/erd-viewer-check
     bun scripts/erd-viewer-check.mts "{{ model }}"
 

@@ -136,6 +136,56 @@ public sealed class TestAppHostFixture : TUnit.Aspire.AspireFixture<Projects.Tes
 		return null;
 	}
 
+	/// <summary>
+	/// Reads the parent the dashboard would nest a resource under.
+	/// </summary>
+	/// <remarks>
+	/// Read from the published snapshot rather than from the resource's annotations: the dashboard
+	/// renders the snapshot, and a later update that replaces the property collection wholesale drops
+	/// the parent without touching the annotation the builder added.
+	/// </remarks>
+	/// <returns>The parent resource name, or <see langword="null"/> when the snapshot carries none.</returns>
+	public async Task<string?> GetDashboardParentAsync(string resourceName, CancellationToken cancellationToken)
+	{
+		// Aspire's own KnownProperties.Resource.ParentName, which is internal to Aspire.Hosting.
+		const string parentNameProperty = "resource.parentName";
+
+		if (_app is null)
+			return null;
+
+		var notifications = _app.Services.GetRequiredService<ResourceNotificationService>();
+
+		using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+		cts.CancelAfter(TimeSpan.FromSeconds(30));
+
+		string? parent = null;
+
+		try
+		{
+			await foreach (var evt in notifications.WatchAsync(cts.Token))
+			{
+				if (!evt.Resource.Name.Equals(resourceName, StringComparison.OrdinalIgnoreCase))
+					continue;
+
+				parent =
+					evt.Snapshot.Properties.FirstOrDefault(p =>
+						p.Name.Equals(parentNameProperty, StringComparison.Ordinal)
+					)?.Value as string;
+
+				// The resource publishes more than once — initial state, then whatever the lifecycle
+				// hook forwards onto it — and it is the last word that the dashboard draws.
+				if (evt.Snapshot.State?.Text == KnownResourceStates.Running)
+					return parent;
+			}
+		}
+		catch (OperationCanceledException)
+		{
+			// Fall through: the resource never reached Running.
+		}
+
+		return parent;
+	}
+
 	/// <summary>Directory containing the copied image aliases (svg/png assets).</summary>
 	public string ImagesDirectory => Path.Combine(AppContext.BaseDirectory, "likec4", "images");
 
@@ -167,7 +217,11 @@ public sealed class TestAppHostFixture : TUnit.Aspire.AspireFixture<Projects.Tes
 	{
 		_app = app;
 
-		const string aspireC4ResourceName = AspireC4DistributedApplicationBuilderExtensions.AspireC4ResourceName;
+		// TestAppHost registers the ER diagram too, so the architecture diagram is nested under the
+		// shared parent row and carries the grouping suffix.
+		const string aspireC4ResourceName =
+			AspireC4DistributedApplicationBuilderExtensions.AspireC4ResourceName
+			+ ApplicationModel.AspireC4DiagramGrouping.LikeC4ResourceSuffix;
 
 		var notificationService = app.Services.GetRequiredService<ResourceNotificationService>();
 

@@ -224,6 +224,41 @@ sealed partial class AspireC4LifecycleHook
 	/// This makes the outer <see cref="AspireC4Resource"/> the single useful dashboard entry —
 	/// the inner server resource is always kept hidden.
 	/// </summary>
+	/// <summary>Name of the "LikeC4 Version" property shown on the diagram's dashboard row.</summary>
+	const string LikeC4VersionProperty = "LikeC4 Version";
+
+	/// <summary>
+	/// Adds or updates the LikeC4 version on a snapshot's properties, leaving every other property in
+	/// place.
+	/// </summary>
+	/// <remarks>
+	/// Replacing the collection instead would discard what Aspire itself puts there — in particular
+	/// <c>resource.parentName</c>, which is what the dashboard builds its resource tree from. Dropping
+	/// it leaves the <see cref="ResourceRelationshipAnnotation"/> intact, so the application model and
+	/// every unit test still look correct while the row quietly unnests itself in the dashboard.
+	/// </remarks>
+	ImmutableArray<ResourcePropertySnapshot> WithLikeC4Version(ImmutableArray<ResourcePropertySnapshot> properties)
+	{
+		if (_resolvedLikeC4Version is not { } version)
+		{
+			return properties;
+		}
+
+		ResourcePropertySnapshot property = new(LikeC4VersionProperty, version);
+
+		// Forwarding runs on every notification from the inner resource, so this has to be an upsert:
+		// appending unconditionally would grow the row a duplicate property per state change.
+		for (var i = 0; i < properties.Length; i++)
+		{
+			if (properties[i].Name.Equals(LikeC4VersionProperty, StringComparison.Ordinal))
+			{
+				return properties.SetItem(i, property);
+			}
+		}
+
+		return properties.Add(property);
+	}
+
 	async Task ForwardInnerResourceStateAsync(AspireC4Resource outerResource, CancellationToken cancellationToken)
 	{
 		var innerResource = outerResource.InnerResource;
@@ -237,12 +272,6 @@ sealed partial class AspireC4LifecycleHook
 				if (notification.Resource.Name != innerResource.Name)
 					continue;
 
-				var properties = ImmutableArray<ResourcePropertySnapshot>.Empty;
-				if (_resolvedLikeC4Version is { } version)
-				{
-					properties = properties.Add(new ResourcePropertySnapshot("LikeC4 Version", version));
-				}
-
 				await resourceNotificationService.PublishUpdateAsync(
 					outerResource,
 					s =>
@@ -250,7 +279,7 @@ sealed partial class AspireC4LifecycleHook
 						{
 							State = notification.Snapshot.State,
 							Urls = notification.Snapshot.Urls,
-							Properties = properties,
+							Properties = WithLikeC4Version(s.Properties),
 						}
 				);
 			}

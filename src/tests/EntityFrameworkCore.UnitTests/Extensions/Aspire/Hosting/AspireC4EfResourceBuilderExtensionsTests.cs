@@ -1,4 +1,5 @@
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.AspireC4.ApplicationModel;
 using Aspire.Hosting.AspireC4.EntityFrameworkCore.Annotations;
 using Aspire.Hosting.AspireC4.EntityFrameworkCore.ApplicationModel;
 
@@ -12,6 +13,10 @@ public sealed class AspireC4EfResourceBuilderExtensionsTests
 
 	static AspireC4EfResource GetDiagram(IDistributedApplicationBuilder builder) =>
 		builder.Resources.OfType<AspireC4EfResource>().Single();
+
+	/// <summary>The resource the dashboard nests this one under, if any.</summary>
+	static IResource? GetParent(IResource resource) =>
+		resource.Annotations.OfType<ResourceRelationshipAnnotation>().LastOrDefault(a => a.Type == "Parent")?.Resource;
 
 	// Tests
 
@@ -117,6 +122,148 @@ public sealed class AspireC4EfResourceBuilderExtensionsTests
 		// Assert
 		await Assert.That(image.Image).IsEqualTo("d2lang/d2");
 		await Assert.That(image.Tag).IsEqualTo(D2ServerResource.DefaultTag);
+	}
+
+	[Test]
+	public async Task WithEntityFrameworkDiagram_NestsBothDiagramsUnderASharedParent()
+	{
+		// Arrange
+		var appBuilder = CreateAppBuilder();
+
+		// Act
+		var c4 = appBuilder.AddAspireC4();
+		c4.WithEntityFrameworkDiagram();
+		var group = appBuilder.Resources.OfType<AspireC4DiagramGroupResource>().Single();
+
+		// Assert
+		await Assert.That(group.Name).IsEqualTo("aspirec4");
+		await Assert.That(c4.Resource.Name).IsEqualTo("aspirec4-likec4");
+		await Assert.That(GetParent(c4.Resource)).IsSameReferenceAs(group);
+		await Assert.That(GetParent(GetDiagram(appBuilder))).IsSameReferenceAs(group);
+	}
+
+	[Test]
+	public async Task WithEntityFrameworkDiagram_NestsTheSidecarUnderTheDiagram()
+	{
+		// The sidecar is an implementation detail of the diagram, not a peer row in the dashboard.
+		// Arrange
+		var appBuilder = CreateAppBuilder();
+
+		// Act
+		appBuilder.AddAspireC4().WithEntityFrameworkDiagram();
+		var sidecar = appBuilder.Resources.OfType<ErdViewerServerResource>().Single();
+
+		// Assert
+		await Assert.That(GetParent(sidecar)).IsSameReferenceAs(GetDiagram(appBuilder));
+	}
+
+	[Test]
+	public async Task WithEntityFrameworkDiagram_WhenTheArchitectureDiagramIsHidden_AddsNoGroup()
+	{
+		// Only the ER diagram is left on the dashboard, and a parent with one child is just noise.
+		// Arrange
+		var appBuilder = CreateAppBuilder();
+
+		// Act
+		var c4 = appBuilder.AddAspireC4(configure: options => options.HideFromDashboard = true);
+		c4.WithEntityFrameworkDiagram();
+
+		// Assert
+		await Assert.That(appBuilder.Resources.OfType<AspireC4DiagramGroupResource>()).IsEmpty();
+		await Assert.That(c4.Resource.Name).IsEqualTo("aspirec4");
+		await Assert.That(GetParent(GetDiagram(appBuilder))).IsNull();
+	}
+
+	[Test]
+	public async Task WithLocalD2CLI_NestsTheReplacementSidecarUnderTheDiagram()
+	{
+		// Arrange
+		var appBuilder = CreateAppBuilder();
+
+		// Act
+		appBuilder
+			.AddAspireC4()
+			.WithEntityFrameworkDiagram(configure: o => o.Renderer = ErdRenderer.D2)
+			.WithLocalD2CLI();
+		var local = appBuilder.Resources.OfType<D2LocalServerResource>().Single();
+
+		// Assert
+		await Assert.That(GetParent(local)).IsSameReferenceAs(GetDiagram(appBuilder));
+	}
+
+	[Test]
+	public async Task WithEntityFrameworkDiagram_WithTheLegacyLayout_KeepsTheDiagramsFlat()
+	{
+		// The whole point of the legacy layout is that existing resource names keep working.
+		// Arrange
+		var appBuilder = CreateAppBuilder();
+
+		// Act
+		var c4 = appBuilder.AddAspireC4(configure: options => options.WithLegacyLayout());
+		c4.WithEntityFrameworkDiagram();
+
+		// Assert
+		await Assert.That(appBuilder.Resources.OfType<AspireC4DiagramGroupResource>()).IsEmpty();
+		await Assert.That(c4.Resource.Name).IsEqualTo("aspirec4");
+		await Assert.That(GetDiagram(appBuilder).Name).IsEqualTo("aspirec4-er");
+		await Assert.That(GetParent(GetDiagram(appBuilder))).IsNull();
+	}
+
+	[Test]
+	public async Task WithEntityFrameworkDiagram_WithTheLegacyLayout_LeavesTheSidecarFlat()
+	{
+		// Arrange
+		var appBuilder = CreateAppBuilder();
+
+		// Act
+		appBuilder.AddAspireC4(configure: options => options.WithLegacyLayout()).WithEntityFrameworkDiagram();
+		var sidecar = appBuilder.Resources.OfType<ErdViewerServerResource>().Single();
+
+		// Assert
+		await Assert.That(GetParent(sidecar)).IsNull();
+	}
+
+	[Test]
+	public async Task WithEntityFrameworkDiagram_WithTheLegacyLayout_UsesThePre136OutputDirectory()
+	{
+		// One switch on the architecture diagram governs both diagrams' paths.
+		// Arrange
+		var appBuilder = CreateAppBuilder();
+
+		// Act
+		appBuilder.AddAspireC4(configure: options => options.WithLegacyLayout()).WithEntityFrameworkDiagram();
+
+		// Assert
+		await Assert.That(GetDiagram(appBuilder).OutputDirectory).EndsWith(Path.Combine("erd", "gen"));
+	}
+
+	[Test]
+	public async Task WithEntityFrameworkDiagram_WithTheLegacyLayoutAndAnExplicitOutputDirectory_HonoursTheExplicitOne()
+	{
+		// Arrange
+		var appBuilder = CreateAppBuilder();
+
+		// Act
+		appBuilder
+			.AddAspireC4(configure: options => options.WithLegacyLayout())
+			.WithEntityFrameworkDiagram(configure: options => options.OutputDirectory = "./schema/");
+
+		// Assert
+		await Assert.That(GetDiagram(appBuilder).OutputDirectory).EndsWith("schema");
+	}
+
+	[Test]
+	public async Task WithEntityFrameworkDiagram_ByDefault_UsesTheAspireC4Root()
+	{
+		// Guards the legacy switch against becoming the default by accident.
+		// Arrange
+		var appBuilder = CreateAppBuilder();
+
+		// Act
+		appBuilder.AddAspireC4().WithEntityFrameworkDiagram();
+
+		// Assert
+		await Assert.That(GetDiagram(appBuilder).OutputDirectory).EndsWith(Path.Combine(".aspirec4", "erd"));
 	}
 
 	[Test]

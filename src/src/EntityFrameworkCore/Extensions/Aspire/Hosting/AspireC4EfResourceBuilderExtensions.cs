@@ -61,6 +61,28 @@ public static class AspireC4EfResourceBuilderExtensions
 			.Configure(options => configure?.Invoke(options))
 			.BindConfiguration(AspireC4EfDiagramOptions.SectionName);
 
+		// The architecture diagram owns the choice of layout for the whole integration, so the ER
+		// diagram follows it rather than exposing a second switch that could disagree. Applied after
+		// the options are registered, and only to a default value, so an OutputDirectory set through
+		// either the callback or configuration still wins.
+		if (builder.Resource.UsesLegacyLayout)
+		{
+			if (AspireC4EfDiagramOptions.IsDefaultOutputDirectory(snapshot.OutputDirectory))
+			{
+				snapshot.OutputDirectory = AspireC4EfDiagramOptions.LegacyOutputDirectory;
+			}
+
+			// PostConfigure runs after every Configure and after configuration binding, so this sees
+			// the final value and the runtime options cannot drift from the snapshot above.
+			services.PostConfigure<AspireC4EfDiagramOptions>(static options =>
+			{
+				if (AspireC4EfDiagramOptions.IsDefaultOutputDirectory(options.OutputDirectory))
+				{
+					options.OutputDirectory = AspireC4EfDiagramOptions.LegacyOutputDirectory;
+				}
+			});
+		}
+
 		services.AddEventingSubscriber<AspireC4EfLifecycleHook>();
 
 		var outputDirectory = ResolveOutputDirectory(
@@ -88,7 +110,7 @@ public static class AspireC4EfResourceBuilderExtensions
 			_ => null,
 		};
 
-		builder
+		var diagram = builder
 			.ApplicationBuilder.AddResource(
 				new AspireC4EfResource(DefaultResourceName)
 				{
@@ -111,6 +133,20 @@ public static class AspireC4EfResourceBuilderExtensions
 					Properties = [],
 				}
 			);
+
+		// This is the second diagram, so the architecture diagram and this one now nest under a shared
+		// parent instead of sitting in the dashboard as two unrelated rows.
+		if (AspireC4DiagramGrouping.EnsureGroup(builder) is { } group)
+		{
+			diagram.WithParentRelationship(group);
+		}
+
+		// The sidecar is an implementation detail of this diagram rather than a peer of it. The legacy
+		// layout leaves it flat, as it was before 13.6.
+		if (inner is not null && !builder.Resource.UsesLegacyLayout)
+		{
+			builder.ApplicationBuilder.CreateResourceBuilder(inner).WithParentRelationship(diagram.Resource);
+		}
 
 		return builder;
 	}
@@ -220,6 +256,13 @@ public static class AspireC4EfResourceBuilderExtensions
 			.ExcludeFromLikeC4()
 			.ExcludeFromManifest();
 
+		// Replaces the container, so it inherits the container's place under the diagram row — or stays
+		// flat, as the container did, when the legacy layout is in force.
+		if (!builder.Resource.UsesLegacyLayout)
+		{
+			builder.ApplicationBuilder.CreateResourceBuilder(local).WithParentRelationship(diagram);
+		}
+
 		diagram.InnerResource = local;
 
 		return builder;
@@ -324,8 +367,14 @@ public static class AspireC4EfResourceBuilderExtensions
 		};
 #pragma warning restore IDE0072 // Add missing cases
 
+	/// <summary>
+	/// Resolves the configured output directory to an absolute path without a trailing separator, so it
+	/// compares and combines consistently however it was written — matching the architecture diagram.
+	/// </summary>
 	static string ResolveOutputDirectory(string appHostDirectory, string outputDirectory) =>
-		Path.IsPathRooted(outputDirectory)
-			? outputDirectory
-			: Path.GetFullPath(Path.Combine(appHostDirectory, outputDirectory));
+		Path.TrimEndingDirectorySeparator(
+			Path.IsPathRooted(outputDirectory)
+				? outputDirectory
+				: Path.GetFullPath(Path.Combine(appHostDirectory, outputDirectory))
+		);
 }

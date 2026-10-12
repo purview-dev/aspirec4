@@ -10,6 +10,22 @@ AspireC4 integrates with the Aspire dashboard so the diagram is easy to reach an
 - The **LikeC4 Version** property, resolved from the pinned tag or the startup version check.
 - The server's console logs, relayed onto the outer resource's Console tab.
 
+## Grouping multiple diagrams
+
+With only the architecture diagram registered, `aspirec4` is a single flat row. Registering a second diagram — `WithEntityFrameworkDiagram()` — nests both under a shared parent that takes over the `aspirec4` name:
+
+```text
+aspirec4                 # parent row, added only when there is more than one diagram
+├── aspirec4-likec4      # the architecture diagram, renamed as it is nested
+└── aspirec4-er          # the ER diagram, with its own sidecar nested beneath it
+```
+
+The parent runs nothing; it exists so the diagrams read as one feature rather than unrelated rows. It is not created when there is only one diagram to show, including when `HideFromDashboard` was set in the `AddAspireC4()` callback — a parent with one child is just an extra click.
+
+The grouping decision is made when the builder runs. Setting `HideFromDashboard` through configuration rather than the callback therefore leaves the parent in place.
+
+Grouping and the `-likec4` rename arrived in 13.6. `WithLegacyLayout()` keeps the flat `aspirec4` / `aspirec4-er` pair for an upgrade that changes nothing — see [Migration](Migration.md).
+
 ## Hiding the sidecar
 
 When `HideFromDashboard` is set (via `WithHideFromDashboard(displayName)`), the `aspirec4` resource is also hidden and the diagram is instead surfaced on every **project** resource as:

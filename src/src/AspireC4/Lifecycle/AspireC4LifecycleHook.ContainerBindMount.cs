@@ -1,4 +1,5 @@
 using Aspire.Hosting.AspireC4.ApplicationModel;
+using Aspire.Hosting.AspireC4.LikeC4.Runtime;
 
 namespace Aspire.Hosting.AspireC4.Lifecycle;
 
@@ -23,12 +24,15 @@ sealed partial class AspireC4LifecycleHook
 			opts.FormatGeneratedFile,
 			opts.DisableHMR
 		);
-		var outputDir = Path.GetFullPath(opts.OutputDirectory);
+		var (outputDir, serveDir) = LikeC4ProjectLayout.Resolve(Environment.CurrentDirectory, opts);
 
-		// Collect all host-side directory paths that must be visible inside the container.
+		// Collect all host-side directory paths that must be visible inside the container. The served
+		// directory is listed separately: with a hand-authored project it is an ancestor of the output
+		// directory, and with no project it is simply the same path.
 		List<string> allPaths =
 		[
 			outputDir,
+			serveDir,
 			.. opts.AdditionalDSLFolders.Select(Path.GetFullPath),
 			.. opts.ImageAliases.Values.Select(Path.GetFullPath),
 		];
@@ -45,9 +49,9 @@ sealed partial class AspireC4LifecycleHook
 			)
 		);
 
-		// Compute the container path for the output directory: /data/{rel-from-ancestor-to-outputDir}
-		var relOutputDir = Path.GetRelativePath(commonAncestor, outputDir).Replace('\\', '/');
-		var servePath = $"{LikeC4ServerResource.WorkspacePath}/{relOutputDir}";
+		// Compute the container path for the served project root: /data/{rel-from-ancestor-to-serveDir}
+		var relServeDir = Path.GetRelativePath(commonAncestor, serveDir).Replace('\\', '/');
+		var servePath = $"{LikeC4ServerResource.WorkspacePath}/{relServeDir}";
 		// ContainerServePath is read by the WithArgs callback registered at configure time in AddAspireC4.
 		workspaceOptions.Value.ContainerServePath = servePath;
 
