@@ -93,6 +93,23 @@ try {
 			const defined = await page.locator("svg.erd-markers marker").count();
 			check("every marker is defined", defined === 4, `${defined} markers`);
 
+			// A self-reference drawn with the default edge runs behind its own card, leaving only a
+			// stub visible. It has to arc clear of the node to read as a relationship at all.
+			const selfLoop = await page.evaluate(() => {
+				const edge = document.querySelector('[data-id*="categories.ParentCategoryId"]');
+				const node = document.querySelector('[data-id="categories"]');
+				if (!edge || !node) return null;
+
+				const path = (edge.querySelector("path") as SVGPathElement).getBoundingClientRect();
+				return { overhang: Math.round(path.right - node.getBoundingClientRect().right) };
+			});
+
+			check(
+				"self-referencing edge clears its own card",
+				(selfLoop?.overhang ?? 0) > 20,
+				`${selfLoop?.overhang ?? "not found"}px beyond the node`,
+			);
+
 			// ELK ran if the nodes are not all stacked at the origin.
 			const xs = await page.locator(".react-flow__node").evaluateAll((els) =>
 				els.map((e) => (e as HTMLElement).style.transform),

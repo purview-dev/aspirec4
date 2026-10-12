@@ -70,6 +70,9 @@ function buildEdges(tables, colourOf) {
 
 			edges.push({
 				id: `${table.name}.${fk.columns.join("_")}->${fk.principalTable}`,
+				// Edges render below nodes, which would clip a self-loop's arc and label against the
+				// neighbouring card it has to reach around.
+				...(fk.principalTable === table.name ? { type: "selfLoop", zIndex: 5 } : {}),
 				// Drawn principal -> dependent so the dash animation, which runs along the path
 				// direction, flows toward the many end. The dependent is the many side unless the
 				// foreign key is unique.
@@ -160,7 +163,40 @@ function EntityNode({ data }) {
 	);
 }
 
+/**
+ * A relationship from a table to itself, such as a parent category.
+ *
+ * The default edge runs from the node's bottom handle to its own top handle, which passes straight
+ * behind the card and leaves only a stub visible. This arcs clear of the right-hand edge instead.
+ */
+function SelfLoopEdge({ sourceX, sourceY, targetX, targetY, style, label }) {
+	// A cubic bezier peaks at roughly three quarters of its control offset, so the reach has to
+	// exceed half the card width by a comfortable margin for the arc to clear it.
+	const reach = 220;
+	const d = `M ${sourceX},${sourceY} C ${sourceX + reach},${sourceY + 24} ${targetX + reach},${targetY - 24} ${targetX},${targetY}`;
+
+	return h(
+		React.Fragment,
+		null,
+		h("path", { className: "react-flow__edge-path", d, style, fill: "none" }),
+		label
+			? h(
+					"text",
+					{
+						className: "self-loop-label",
+						x: Math.max(sourceX, targetX) + reach * 0.72,
+						y: (sourceY + targetY) / 2,
+						dominantBaseline: "middle",
+						textAnchor: "middle",
+					},
+					label,
+				)
+			: null,
+	);
+}
+
 const nodeTypes = { entity: EntityNode, context: ContextNode };
+const edgeTypes = { selfLoop: SelfLoopEdge };
 
 const entitySize = (table) => ({ width: 240, height: 48 + (table.columns?.length ?? 0) * 22 });
 
@@ -312,6 +348,7 @@ function Diagram({ model }) {
 			onNodesChange,
 			onEdgesChange,
 			nodeTypes,
+			edgeTypes,
 			fitView: true,
 			// Padding keeps the top-left entity clear of the floating toolbar.
 			fitViewOptions: { padding: 0.12 },
