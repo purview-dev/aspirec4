@@ -135,8 +135,9 @@ public static class AspireC4EfResourceBuilderExtensions
 			);
 
 		// This is the second diagram, so the architecture diagram and this one now nest under a shared
-		// parent instead of sitting in the dashboard as two unrelated rows.
-		if (AspireC4DiagramGrouping.EnsureGroup(builder) is { } group)
+		// parent instead of sitting in the dashboard as two unrelated rows — unless this diagram is
+		// hidden, which would leave the parent with a single visible child and no reason to exist.
+		if (!snapshot.HideFromDashboard && AspireC4DiagramGrouping.EnsureGroup(builder) is { } group)
 		{
 			diagram.WithParentRelationship(group);
 		}

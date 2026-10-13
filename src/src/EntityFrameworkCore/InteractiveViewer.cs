@@ -47,9 +47,21 @@ public static class InteractiveViewer
 		renderer == ErdRenderer.Mermaid ? ["mermaid.js"] : ["bundle.js", "reactflow.css"];
 
 	/// <summary>
-	/// Writes the viewer's dependencies into <c>&lt;directory&gt;/vendor</c>, skipping any already
-	/// present so a locally rebuilt bundle is not overwritten.
+	/// Names the file recording which build of the embedded dependencies is in <c>vendor/</c>.
 	/// </summary>
+	internal const string VendorStampFileName = ".aspirec4-vendor";
+
+	/// <summary>
+	/// Writes the viewer's dependencies into <c>&lt;directory&gt;/vendor</c>, skipping the write when
+	/// the directory already holds this build of them.
+	/// </summary>
+	/// <remarks>
+	/// The decision is made from a stamp holding a hash of the embedded assets rather than from the
+	/// files merely existing: the generated <c>app.js</c> imports named exports from
+	/// <c>vendor/bundle.js</c>, so a bundle left over from an earlier package version fails the import
+	/// and the viewer renders nothing. Hashing the embedded resources, rather than stamping the package
+	/// version, also refreshes the directory while the assets are being rebuilt in-repo.
+	/// </remarks>
 	/// <returns>The number of files written.</returns>
 	public static async Task<int> WriteVendorAssetsAsync(
 		string directory,
@@ -63,21 +75,25 @@ public static class InteractiveViewer
 
 		Directory.CreateDirectory(vendor);
 
+		var assets = VendorAssetsFor(renderer);
+		var stampPath = Path.Combine(vendor, VendorStampFileName);
+		var stamp = VendorStamp(assets);
+
+		if (
+			assets.All(name => File.Exists(Path.Combine(vendor, name)))
+			&& await MatchesAsync(stampPath, stamp, cancellationToken).ConfigureAwait(false)
+		)
+		{
+			return 0;
+		}
+
 		var written = 0;
 
-		foreach (var name in VendorAssetsFor(renderer))
+		foreach (var name in assets)
 		{
 			var path = Path.Combine(vendor, name);
 
-			if (File.Exists(path))
-			{
-				continue;
-			}
-
-			using var compressed =
-				typeof(InteractiveViewer).Assembly.GetManifestResourceStream($"{Prefix}viewer.vendor.{name}.gz")
-				?? throw new InvalidOperationException($"Embedded viewer dependency '{name}.gz' was not found.");
-
+			using var compressed = OpenVendorAsset(name);
 			using System.IO.Compression.GZipStream decompressed = new(
 				compressed,
 				System.IO.Compression.CompressionMode.Decompress
@@ -89,8 +105,53 @@ public static class InteractiveViewer
 			written++;
 		}
 
+		// Written last, so a run interrupted part-way through leaves a stamp that does not match and the
+		// next run rewrites rather than trusting a half-populated directory.
+		await File.WriteAllTextAsync(stampPath, stamp, cancellationToken).ConfigureAwait(false);
+
 		return written;
 	}
+
+	static async Task<bool> MatchesAsync(string stampPath, string stamp, CancellationToken cancellationToken)
+	{
+		if (!File.Exists(stampPath))
+		{
+			return false;
+		}
+
+		var existing = await File.ReadAllTextAsync(stampPath, cancellationToken).ConfigureAwait(false);
+
+		return string.Equals(existing.Trim(), stamp, StringComparison.Ordinal);
+	}
+
+	/// <summary>Hashes the embedded, still-compressed assets the given renderer depends on.</summary>
+	static string VendorStamp(string[] assets)
+	{
+		using var hash = System.Security.Cryptography.IncrementalHash.CreateHash(
+			System.Security.Cryptography.HashAlgorithmName.SHA256
+		);
+
+		foreach (var name in assets)
+		{
+			using var compressed = OpenVendorAsset(name);
+
+			hash.AppendData(System.Text.Encoding.UTF8.GetBytes(name));
+
+			var buffer = new byte[81920];
+			int read;
+
+			while ((read = compressed.Read(buffer, 0, buffer.Length)) > 0)
+			{
+				hash.AppendData(buffer, 0, read);
+			}
+		}
+
+		return Convert.ToHexStringLower(hash.GetHashAndReset());
+	}
+
+	static Stream OpenVendorAsset(string name) =>
+		typeof(InteractiveViewer).Assembly.GetManifestResourceStream($"{Prefix}viewer.vendor.{name}.gz")
+		?? throw new InvalidOperationException($"Embedded viewer dependency '{name}.gz' was not found.");
 
 	static string Read(string name)
 	{

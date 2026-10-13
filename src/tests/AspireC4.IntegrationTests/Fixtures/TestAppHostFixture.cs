@@ -137,6 +137,43 @@ public sealed class TestAppHostFixture : TUnit.Aspire.AspireFixture<Projects.Tes
 	}
 
 	/// <summary>
+	/// Waits for a resource to be hidden from the dashboard.
+	/// </summary>
+	/// <remarks>
+	/// Hiding is applied by a lifecycle hook watching notifications, not at build time, so this has to
+	/// wait rather than read one snapshot: the resource is briefly visible before the hook reacts.
+	/// </remarks>
+	/// <returns>
+	/// <see langword="true"/> once the resource reports a hidden snapshot, <see langword="false"/> if it
+	/// never does.
+	/// </returns>
+	public async Task<bool> WaitForHiddenAsync(string resourceName, CancellationToken cancellationToken)
+	{
+		if (_app is null)
+			return false;
+
+		var notifications = _app.Services.GetRequiredService<ResourceNotificationService>();
+
+		using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+		cts.CancelAfter(TimeSpan.FromSeconds(60));
+
+		try
+		{
+			await foreach (var evt in notifications.WatchAsync(cts.Token))
+			{
+				if (evt.Resource.Name.Equals(resourceName, StringComparison.OrdinalIgnoreCase) && evt.Snapshot.IsHidden)
+					return true;
+			}
+		}
+		catch (OperationCanceledException)
+		{
+			// Fall through: the resource stayed visible.
+		}
+
+		return false;
+	}
+
+	/// <summary>
 	/// Reads the parent the dashboard would nest a resource under.
 	/// </summary>
 	/// <remarks>

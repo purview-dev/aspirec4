@@ -105,6 +105,24 @@ public sealed class AspireC4HostTests(Fixtures.TestAppHostFixture fixture)
 
 	[Test]
 	[Timeout(120_000)]
+	public async Task StartAsync_WithEntityFrameworkDiagram_HidesTheViewerSidecarFromTheDashboard(
+		CancellationToken cancellationToken
+	)
+	{
+		// The ER diagram row forwards the sidecar's URLs and console output, so the sidecar is an
+		// implementation detail rather than a second row to nest under it.
+		// Arrange
+		// (app started by the shared fixture)
+
+		// Act
+		var hidden = await fixture.WaitForHiddenAsync("aspirec4-er-server", cancellationToken);
+
+		// Assert
+		await Assert.That(hidden).IsTrue();
+	}
+
+	[Test]
+	[Timeout(120_000)]
 	public async Task StartAsync_WithLikeC4Container_HttpEndpointReturnsSuccess(CancellationToken cancellationToken)
 	{
 		// Arrange

@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Aspire.Hosting.AspireC4.EntityFrameworkCore.Annotations;
 using Aspire.Hosting.AspireC4.EntityFrameworkCore.ApplicationModel;
 using Aspire.Hosting.AspireC4.EntityFrameworkCore.Models;
@@ -46,6 +47,22 @@ sealed partial class AspireC4EfLifecycleHook(
 				}
 
 				await WriteDiagramAsync(evt.Model, resource, ct).ConfigureAwait(false);
+
+				// The sidecar is an implementation detail: the diagram row forwards its URLs and its
+				// console output, so it is the single entry worth looking at. Matches how the LikeC4
+				// hook treats its own server resource.
+				if (resource.InnerResource is not null)
+				{
+					_ = Task.Run(() => KeepHiddenAsync(resource.InnerResource, ct), ct);
+					_ = Task.Run(() => ForwardInnerResourceLogsAsync(resource, ct), ct);
+				}
+
+				// Hiding the diagram too leaves the URL cross-linked onto the contributing projects as
+				// the only way in, which is the whole point of the option.
+				if (_options.HideFromDashboard)
+				{
+					_ = Task.Run(() => KeepHiddenAsync(resource, ct), ct);
+				}
 
 				// The descriptor is read from each project's build output, which may not exist on the
 				// very first run after a clean. Regenerating once projects start makes that self-healing.
@@ -132,16 +149,68 @@ sealed partial class AspireC4EfLifecycleHook(
 					snapshot with
 					{
 						State = KnownResourceStates.Running,
-						Properties =
-						[
-							new ResourcePropertySnapshot("Renderer", _options.Renderer.ToString()),
-							new ResourcePropertySnapshot("Output", directory),
-							new ResourcePropertySnapshot("Contexts", efModel.Contexts.Count),
-							new ResourcePropertySnapshot("Tables", tables),
-						],
+						Properties = WithDiagramProperties(
+							snapshot.Properties,
+							directory,
+							efModel.Contexts.Count,
+							tables
+						),
 					}
 			)
 			.ConfigureAwait(false);
+	}
+
+	/// <summary>
+	/// Adds or updates this diagram's properties on a snapshot, leaving every other property in place.
+	/// </summary>
+	/// <remarks>
+	/// Replacing the collection instead would discard what Aspire itself puts there — notably
+	/// <c>resource.parentName</c>, which is what the dashboard builds its resource tree from. Aspire
+	/// currently re-applies that one on each publish, so the nesting survives either way, but the
+	/// dependency is invisible and silent when it breaks: the
+	/// <see cref="ResourceRelationshipAnnotation"/> stays intact, so the application model and every
+	/// unit test still look correct while the row quietly unnests itself in the dashboard. The LikeC4
+	/// hook upserts for the same reason.
+	/// </remarks>
+	ImmutableArray<ResourcePropertySnapshot> WithDiagramProperties(
+		ImmutableArray<ResourcePropertySnapshot> properties,
+		string directory,
+		int contexts,
+		int tables
+	)
+	{
+		ResourcePropertySnapshot[] diagram =
+		[
+			new("Renderer", _options.Renderer.ToString()),
+			new("Output", directory),
+			new("Contexts", contexts),
+			new("Tables", tables),
+		];
+
+		// Regeneration republishes on every contributing project restart, so this has to be an upsert:
+		// appending unconditionally would grow the row a duplicate set per restart.
+		foreach (var property in diagram)
+		{
+			properties = Upsert(properties, property);
+		}
+
+		return properties;
+	}
+
+	static ImmutableArray<ResourcePropertySnapshot> Upsert(
+		ImmutableArray<ResourcePropertySnapshot> properties,
+		ResourcePropertySnapshot property
+	)
+	{
+		for (var i = 0; i < properties.Length; i++)
+		{
+			if (properties[i].Name.Equals(property.Name, StringComparison.Ordinal))
+			{
+				return properties.SetItem(i, property);
+			}
+		}
+
+		return properties.Add(property);
 	}
 
 	/// <summary>

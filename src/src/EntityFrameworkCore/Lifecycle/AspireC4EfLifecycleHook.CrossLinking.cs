@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Aspire.Hosting.AspireC4.EntityFrameworkCore.Annotations;
 using Aspire.Hosting.AspireC4.EntityFrameworkCore.ApplicationModel;
 using Aspire.Hosting.AspireC4.LikeC4.Annotations;
+using Microsoft.Extensions.Logging;
 
 namespace Aspire.Hosting.AspireC4.EntityFrameworkCore.Lifecycle;
 
@@ -45,6 +46,77 @@ sealed partial class AspireC4EfLifecycleHook
 				await resourceNotificationService
 					.PublishUpdateAsync(resource, snapshot => snapshot with { Urls = evt.Snapshot.Urls })
 					.ConfigureAwait(false);
+			}
+		}
+		catch (OperationCanceledException)
+		{
+			// Shutdown.
+		}
+	}
+
+	/// <summary>
+	/// Keeps a resource hidden from the dashboard for as long as the AppHost runs.
+	/// </summary>
+	/// <remarks>
+	/// Re-applied on every notification rather than set once: Aspire republishes the snapshot as the
+	/// resource moves through its lifecycle, and each of those updates would otherwise bring the row
+	/// back. The same approach the LikeC4 hook takes for its own sidecar.
+	/// </remarks>
+	async Task KeepHiddenAsync(IResource resource, CancellationToken cancellationToken)
+	{
+		try
+		{
+			await foreach (var evt in resourceNotificationService.WatchAsync(cancellationToken).ConfigureAwait(false))
+			{
+				if (evt.Resource.Name != resource.Name || evt.Snapshot.IsHidden)
+				{
+					continue;
+				}
+
+				await resourceNotificationService
+					.PublishUpdateAsync(resource, snapshot => snapshot with { IsHidden = true })
+					.ConfigureAwait(false);
+			}
+		}
+		catch (OperationCanceledException)
+		{
+			// Shutdown.
+		}
+	}
+
+	/// <summary>
+	/// Relays the hidden sidecar's console output onto the ER diagram's row.
+	/// </summary>
+	/// <remarks>
+	/// Hiding the sidecar removes the only place its logs were readable, so they are forwarded to the
+	/// row that replaced it — otherwise a d2 compile error or a viewer-server failure becomes invisible.
+	/// </remarks>
+	async Task ForwardInnerResourceLogsAsync(AspireC4EfResource resource, CancellationToken cancellationToken)
+	{
+		if (resource.InnerResource is null)
+		{
+			return;
+		}
+
+		try
+		{
+			var logger = resourceLoggerService.GetLogger(resource);
+
+			await foreach (
+				var batch in resourceLoggerService
+					.WatchAsync(resource.InnerResource)
+					.WithCancellation(cancellationToken)
+			)
+			{
+				foreach (var line in batch)
+				{
+					var level = line.IsErrorMessage ? LogLevel.Error : LogLevel.Information;
+
+					if (logger.IsEnabled(level))
+					{
+						logger.Log(level, "{Content}", line.Content);
+					}
+				}
 			}
 		}
 		catch (OperationCanceledException)
