@@ -17,9 +17,9 @@
       "rollForward": false
     },
     "purview.build": {
-      "version": "0.5.3",
+      "version": "0.5.4",
       "commands": [
-        "purview-build"
+        "dotnet-inspect"
       ],
       "rollForward": false
     }

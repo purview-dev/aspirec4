@@ -5,8 +5,8 @@
 		<RoslynAnalyzersVersion>5.9.0</RoslynAnalyzersVersion>
 		<!-- Floor set by Purview.Skills.Testing 1.0.6, which depends on TUnit.Assertions/TUnit.Core 1.75.0. -->
 		<TUnitVersion>1.75.0</TUnitVersion>
-		<PurviewSourceGenVersion>1.1.0</PurviewSourceGenVersion>
-		<PurviewTelemetryVersion>5.0.3</PurviewTelemetryVersion>
+		<PurviewSourceGenVersion>1.1.1</PurviewSourceGenVersion>
+		<PurviewTelemetryVersion>5.0.4</PurviewTelemetryVersion>
 		<AspireVersion>13.6.1</AspireVersion>
 	</PropertyGroup>
 	<ItemGroup>
@@ -15,7 +15,7 @@
 		<PackageVersion Include="Aspire.Hosting.JavaScript" Version="$(AspireVersion)" />
 		<PackageVersion Include="Aspire.Hosting.Azure.PostgreSQL" Version="$(AspireVersion)" />
 		<PackageVersion Include="Aspire.Hosting.Azure.Redis" Version="$(AspireVersion)" />
-		<PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.401" />
+		<PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.402" />
 		<PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="$(RoslynCompilerVersion)" />
 		<PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="$(RoslynAnalyzersVersion)" />
 		<PackageVersion Include="Purview.SourceGeneratorFramework" Version="$(PurviewSourceGenVersion)" />
@@ -25,14 +25,13 @@
 			Sample EF Core data projects only. Relational carries the fluent API the generator
 			interprets (ToTable, HasDefaultSchema, HasColumnName, HasColumnType).
 		-->
-		<PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.12" />
-		<PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.12" />
+		<PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.13" />
+		<PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.13" />
 		<PackageVersion Include="Bogus" Version="35.6.5" />
 		<PackageVersion Include="TUnit" Version="$(TUnitVersion)" />
 		<PackageVersion Include="TUnit.Aspire" Version="$(TUnitVersion)" />
 		<PackageVersion Include="TUnit.Core" Version="$(TUnitVersion)" />
 		<PackageVersion Include="TUnit.Mocks" Version="$(TUnitVersion)" />
-		<!-- The Agent Skills conformance rule set, shipped alongside Purview.BuildSdk. -->
 		<PackageVersion Include="Purview.Skills.Testing" Version="1.0.6" />
 	</ItemGroup>
 </Project>
