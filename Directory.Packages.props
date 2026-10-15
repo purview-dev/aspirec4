@@ -3,7 +3,8 @@
 		<CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
 		<RoslynCompilerVersion>5.9.0</RoslynCompilerVersion>
 		<RoslynAnalyzersVersion>5.9.0</RoslynAnalyzersVersion>
-		<TUnitVersion>1.74.0</TUnitVersion>
+		<!-- Floor set by Purview.Skills.Testing 1.0.6, which depends on TUnit.Assertions/TUnit.Core 1.75.0. -->
+		<TUnitVersion>1.75.0</TUnitVersion>
 		<PurviewSourceGenVersion>1.1.0</PurviewSourceGenVersion>
 		<PurviewTelemetryVersion>5.0.3</PurviewTelemetryVersion>
 		<AspireVersion>13.6.1</AspireVersion>
@@ -31,5 +32,7 @@
 		<PackageVersion Include="TUnit.Aspire" Version="$(TUnitVersion)" />
 		<PackageVersion Include="TUnit.Core" Version="$(TUnitVersion)" />
 		<PackageVersion Include="TUnit.Mocks" Version="$(TUnitVersion)" />
+		<!-- The Agent Skills conformance rule set, shipped alongside Purview.BuildSdk. -->
+		<PackageVersion Include="Purview.Skills.Testing" Version="1.0.6" />
 	</ItemGroup>
 </Project>

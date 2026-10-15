@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<ItemGroup>
+		<!-- The Agent Skills conformance rule set, shipped by Purview.BuildSdk. The rules live in the
+		     package so they are defined once rather than reimplemented here. -->
+		<PackageReference Include="Purview.Skills.Testing" />
+	</ItemGroup>
+</Project>

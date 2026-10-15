@@ -260,3 +260,40 @@ Relevant bundled skills in `.agents/skills/`:
   Roslyn generator work and tests.
 - `telemetry-sourcegenerator-*` — Purview.Telemetry.SourceGenerator usage (library telemetry).
 - Agents and prompts live in `.agents/agents/` and `.agents/prompts/`.
+
+## Agent skills
+
+Authored skills live in the repository-root `skills/` folder. **Nothing packs them into a NuGet
+package** - `Purview.BuildSdk` 1.0.6 removed skill packaging and the build-time `.agents/` mirror
+outright. The skills CLI clones the *git* repository and only discovers a root `skills/` folder, so
+that is the one delivery route.
+
+`.agents/skills/` is the CLI's install location for skills from **other** repositories, and is
+gitignored; `skills-lock.json` is the tracked record of what was installed there. This repository's
+own skills are never installed into it - that would leave two copies to drift apart. Read them at
+their authored path, `skills/<name>/SKILL.md`.
+
+```bash
+npx skills add purview-dev/aspirec4
+```
+
+| Skill | Answers |
+| -- | -- |
+| `skills/purview-aspirec4-quickstart/` | installing, `AddAspireC4`, what happens on startup, Docker sidecar versus local CLI |
+| `skills/purview-aspirec4-configuration/` | every `AspireC4DiagramOptions` property and its fluent method |
+| `skills/purview-aspirec4-resources/` | `WithLikeC4Details`, `WithLikeC4Reference`, `WithLikeC4Group`, and exclusion |
+| `skills/purview-aspirec4-validation/` | the `[LikeC4Registry]` class, severity levels, and the `ASPIREC4xxx` diagnostics |
+
+Every skill carries the `purview-aspirec4` prefix. Skills install into one flat directory per agent,
+shared with every skill a developer has installed from anywhere, so an unprefixed name collides and
+the loser is whichever installed second.
+
+The `.agents/skills/` content under `samples/typescript-app-host/` belongs to that sample and is not
+part of this repository's published set.
+
+`src/tests/Repository.UnitTests/SkillTests.cs` validates the authored skills on every test run
+through `Purview.Skills.Testing`. The `[InheritsTests]` attribute there is load-bearing - TUnit does
+not walk base types during discovery, so without it the run is green and nothing is checked.
+
+A relative link from one `SKILL.md` into another skill's folder is a rule violation: only a skill's
+own folder is installed with it. Name the other skill in prose instead.

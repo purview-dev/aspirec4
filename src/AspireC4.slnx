@@ -19,6 +19,7 @@
 	</Folder>
 	<Folder Name="/tests/">
 		<Project Path="tests/SharedTestingInfra/SharedTestingInfra.csproj" />
+		<Project Path="tests/Repository.UnitTests/Repository.UnitTests.csproj" />
 		<Project Path="tests/AspireC4.IntegrationTests/AspireC4.IntegrationTests.csproj" />
 		<Project Path="tests/AspireC4.UnitTests/AspireC4.UnitTests.csproj" />
 		<Project Path="tests/SourceGenerators.UnitTests/SourceGenerators.UnitTests.csproj" />
