@@ -295,7 +295,7 @@ public sealed class AspireC4EfResourceBuilderExtensionsTests
 
 		// Assert
 		await Assert.That(appBuilder.Resources.OfType<D2ServerResource>()).IsEmpty();
-		await Assert.That(GetDiagram(appBuilder).InnerResource!).IsTypeOf<D2LocalServerResource>();
+		await Assert.That(GetDiagram(appBuilder).InnerResource).IsTypeOf<D2LocalServerResource>();
 	}
 
 	[Test]

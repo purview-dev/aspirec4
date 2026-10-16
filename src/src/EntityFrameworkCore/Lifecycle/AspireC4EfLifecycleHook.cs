@@ -4,6 +4,7 @@ using Aspire.Hosting.AspireC4.EntityFrameworkCore.ApplicationModel;
 using Aspire.Hosting.AspireC4.EntityFrameworkCore.Models;
 using Aspire.Hosting.Eventing;
 using Aspire.Hosting.Lifecycle;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Aspire.Hosting.AspireC4.EntityFrameworkCore.Lifecycle;
@@ -27,6 +28,16 @@ sealed partial class AspireC4EfLifecycleHook(
 	/// <summary>The last written body, with the timestamp header stripped, used to skip no-op writes.</summary>
 	string? _lastRawBody;
 
+	/// <summary>
+	/// The number of contexts in the diagram last written.
+	/// </summary>
+	/// <remarks>
+	/// Used to refuse a regeneration that finds nothing. Replacing a good diagram with an empty one
+	/// loses information that cannot be recovered from, whereas keeping the previous file self-corrects
+	/// on the next successful read.
+	/// </remarks>
+	int _writtenContextCount;
+
 	/// <inheritdoc/>
 	public Task SubscribeAsync(
 		IDistributedApplicationEventing eventing,
@@ -46,7 +57,17 @@ sealed partial class AspireC4EfLifecycleHook(
 					return;
 				}
 
-				await WriteDiagramAsync(evt.Model, resource, ct).ConfigureAwait(false);
+				var contexts = await WriteDiagramAsync(evt.Model, resource, ct).ConfigureAwait(false);
+
+				// Backstop for the descriptor lookup. The diagram is built from each contributing
+				// project's build output, which may not exist yet, and the project watch below only
+				// fires when a project reaches Running — which never happens when the project runner
+				// itself fails. Retrying a bounded number of times lets the diagram converge on the
+				// real model instead of staying empty for the life of the application.
+				if (contexts == 0)
+				{
+					_ = Task.Run(() => RetryUntilModelFoundAsync(evt.Model, resource, ct), ct);
+				}
 
 				// The sidecar is an implementation detail: the diagram row forwards its URLs and its
 				// console output, so it is the single entry worth looking at. Matches how the LikeC4
@@ -75,14 +96,27 @@ sealed partial class AspireC4EfLifecycleHook(
 		return Task.CompletedTask;
 	}
 
-	internal async Task WriteDiagramAsync(
+	internal async Task<int> WriteDiagramAsync(
 		DistributedApplicationModel model,
 		AspireC4EfResource resource,
 		CancellationToken cancellationToken
 	)
 	{
 		var logger = resourceLoggerService.GetLogger(resource);
-		var efModel = LoadModel(model);
+		var efModel = LoadModel(model, logger);
+		var directory = ResolveOutputDirectory(resource);
+
+		// A pass that finds nothing must not replace a diagram that was already produced. The
+		// descriptor is read from a project's build output, which is briefly unreadable while that
+		// project is being rebuilt — and reading it a moment too early used to leave an empty diagram
+		// on disk for the rest of the run, because the next write is then skipped as a no-op.
+		if (efModel.Contexts.Count == 0 && _writtenContextCount > 0)
+		{
+			ErdLog.NoModelsFoundKeepingExisting(logger, directory);
+
+			return 0;
+		}
+
 		var files = ErdOutput.Create(efModel, _options);
 
 		// The first file is the diagram itself; its header carries a timestamp, so comparing the
@@ -93,12 +127,10 @@ sealed partial class AspireC4EfLifecycleHook(
 		{
 			ErdLog.Unchanged(logger);
 
-			return;
+			return efModel.Contexts.Count;
 		}
 
 		_lastRawBody = body;
-
-		var directory = ResolveOutputDirectory(resource);
 
 		Directory.CreateDirectory(directory);
 
@@ -118,6 +150,8 @@ sealed partial class AspireC4EfLifecycleHook(
 		}
 
 		var tables = efModel.Contexts.Sum(c => c.Tables.Count);
+
+		_writtenContextCount = efModel.Contexts.Count;
 
 		ErdLog.Generated(logger, _options.Renderer, efModel.Contexts.Count, tables);
 
@@ -158,6 +192,8 @@ sealed partial class AspireC4EfLifecycleHook(
 					}
 			)
 			.ConfigureAwait(false);
+
+		return efModel.Contexts.Count;
 	}
 
 	/// <summary>
@@ -229,7 +265,12 @@ sealed partial class AspireC4EfLifecycleHook(
 		: Path.GetFullPath(Path.Combine(resource.AppHostDirectory, _options.OutputDirectory));
 
 	/// <summary>Loads and merges the EF descriptors from every opted-in project resource.</summary>
-	internal static EfModel LoadModel(DistributedApplicationModel model)
+	/// <param name="model">The application model to read the opted-in projects from.</param>
+	/// <param name="logger">
+	/// Where to explain a project that produced no model, or <see langword="null"/> to stay silent. The
+	/// backstop probe passes <see langword="null"/> so a still-failing lookup is not logged per attempt.
+	/// </param>
+	internal static EfModel LoadModel(DistributedApplicationModel model, ILogger? logger = null)
 	{
 		List<EfModel> models = [];
 
@@ -243,10 +284,69 @@ sealed partial class AspireC4EfLifecycleHook(
 				continue;
 			}
 
-			models.Add(EfModelLoader.LoadFromProject(metadata.ProjectPath));
+			var projectModel = EfModelLoader.LoadFromProject(metadata.ProjectPath, out var diagnostics);
+
+			models.Add(projectModel);
+
+			// Reported per project rather than once for the whole diagram: which project produced no
+			// descriptor, and where the lookup looked, is the entire diagnosis.
+			if (logger is not null && projectModel.Contexts.Count == 0)
+			{
+				ErdLog.ProjectProducedNoModel(
+					logger,
+					diagnostics.ProjectPath,
+					diagnostics.OutputDirectory ?? "(none)",
+					diagnostics.AssembliesScanned,
+					diagnostics.DescriptorsFound
+				);
+			}
 		}
 
 		return EfModelLoader.Merge(models);
+	}
+
+	/// <summary>How many times the empty-model backstop re-reads the descriptors.</summary>
+	internal const int ModelRetryAttempts = 20;
+
+	/// <summary>How long the empty-model backstop waits between attempts.</summary>
+	internal static readonly TimeSpan ModelRetryDelay = TimeSpan.FromSeconds(3);
+
+	/// <summary>
+	/// Re-reads the descriptors until a model is found, for the case where nothing else will.
+	/// </summary>
+	/// <remarks>
+	/// The build output a descriptor is read from can appear after startup, and the project watch only
+	/// fires when a contributing project reaches <c>Running</c> — which never happens when the project
+	/// runner itself fails. Without this the diagram would stay empty for the life of the application.
+	/// </remarks>
+	async Task RetryUntilModelFoundAsync(
+		DistributedApplicationModel model,
+		AspireC4EfResource resource,
+		CancellationToken cancellationToken
+	)
+	{
+		try
+		{
+			for (var attempt = 0; attempt < ModelRetryAttempts; attempt++)
+			{
+				await Task.Delay(ModelRetryDelay, cancellationToken).ConfigureAwait(false);
+
+				// Probed silently: a still-failing lookup would otherwise repeat the per-project
+				// warning on every attempt.
+				if (LoadModel(model).Contexts.Count == 0)
+				{
+					continue;
+				}
+
+				await WriteDiagramAsync(model, resource, cancellationToken).ConfigureAwait(false);
+
+				return;
+			}
+		}
+		catch (OperationCanceledException)
+		{
+			// Shutdown.
+		}
 	}
 
 	async Task WatchProjectsAsync(

@@ -37,7 +37,7 @@ public sealed class AspireC4EfModelGeneratorTests
 
 	async Task<string> GenerateDescriptorAsync(string source, CancellationToken cancellationToken)
 	{
-		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
+		using var result = await GenerateAsync(source, cancellationToken: cancellationToken);
 
 		return result.GetSource(DescriptorHintName)?.ToString() ?? string.Empty;
 	}
@@ -51,7 +51,7 @@ public sealed class AspireC4EfModelGeneratorTests
 		const string Source = "namespace Sample;";
 
 		// Act
-		var result = await GenerateAsync(Source, cancellationToken: cancellationToken);
+		using var result = await GenerateAsync(Source, cancellationToken: cancellationToken);
 
 		// Assert
 		await Assert.That(result.Generated()).HasGeneratedSyntaxTree("AspireC4EfModelAttribute.g.cs");
@@ -328,7 +328,7 @@ public sealed class AspireC4EfModelGeneratorTests
 		var source = CreateContextSource(onModelCreating: "modelBuilder.ApplyConfigurationsFromAssembly(null);");
 
 		// Act
-		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
+		using var result = await GenerateAsync(source, cancellationToken: cancellationToken);
 
 		// Assert
 		await Assert.That(result).HasDiagnostic(DiagnosticLibrary.UninterpretableConfiguration);
@@ -346,7 +346,7 @@ public sealed class AspireC4EfModelGeneratorTests
 		);
 
 		// Act
-		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
+		using var result = await GenerateAsync(source, cancellationToken: cancellationToken);
 
 		// Assert
 		await Assert.That(result).HasDiagnostic(DiagnosticLibrary.NoPrimaryKeyDiscovered);
@@ -367,7 +367,7 @@ public sealed class AspireC4EfModelGeneratorTests
 			""";
 
 		// Act
-		var result = await GenerateAsync(Source, cancellationToken: cancellationToken);
+		using var result = await GenerateAsync(Source, cancellationToken: cancellationToken);
 
 		// Assert
 		await Assert.That(result).HasDiagnostic(DiagnosticLibrary.NoEntityTypesDiscovered);

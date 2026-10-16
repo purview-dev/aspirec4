@@ -35,4 +35,26 @@ static partial class ErdLog
 
 	[LoggerMessage(Level = LogLevel.Information, Message = "Wrote {Count} viewer dependency file(s).")]
 	public static partial void ViewerDependenciesWritten(ILogger logger, int count);
+
+	[LoggerMessage(
+		Level = LogLevel.Warning,
+		Message = "No Entity Framework Core models were found for project {ProjectPath} "
+			+ "(output directory: {OutputDirectory}, {AssembliesScanned} assembly(ies) read, "
+			+ "{DescriptorsFound} descriptor(s) found). Opt the project in with .WithEntityFrameworkModel(), "
+			+ "reference the AspireC4.EntityFrameworkCore package from it, and build it at least once."
+	)]
+	public static partial void ProjectProducedNoModel(
+		ILogger logger,
+		string projectPath,
+		string outputDirectory,
+		int assembliesScanned,
+		int descriptorsFound
+	);
+
+	[LoggerMessage(
+		Level = LogLevel.Warning,
+		Message = "No Entity Framework Core models were found on this pass; keeping the diagram already "
+			+ "written to {OutputDirectory} rather than replacing it with an empty one."
+	)]
+	public static partial void NoModelsFoundKeepingExisting(ILogger logger, string outputDirectory);
 }

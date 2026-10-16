@@ -93,6 +93,7 @@ public static class AspireC4EfResourceBuilderExtensions
 
 		// d2 serves itself. The interactive and Mermaid renderers write static files, which are served
 		// by a small web server so the dashboard has a real URL to link to; DBML has no viewer at all.
+#pragma warning disable IDE0072 // Add missing cases
 		IResource? inner = snapshot.Renderer switch
 		{
 			ErdRenderer.D2 => CreateServerResource(
@@ -109,6 +110,7 @@ public static class AspireC4EfResourceBuilderExtensions
 			).Resource,
 			_ => null,
 		};
+#pragma warning restore IDE0072 // Add missing cases
 
 		var diagram = builder
 			.ApplicationBuilder.AddResource(

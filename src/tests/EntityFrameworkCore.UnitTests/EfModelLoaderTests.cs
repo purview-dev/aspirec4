@@ -1,5 +1,6 @@
 using Aspire.Hosting.AspireC4.EntityFrameworkCore.D2;
 using Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Generators;
+using Aspire.Hosting.AspireC4.TestAppHost.SimpleData;
 
 namespace Aspire.Hosting.AspireC4.EntityFrameworkCore;
 
@@ -28,6 +29,29 @@ public sealed class EfModelLoaderTests
 	// Helpers
 
 	static AspireC4EfDiagramOptions CreateOptions() => new();
+
+	/// <summary>Creates a throwaway project directory with a <c>bin</c> folder to lay outputs out in.</summary>
+	static string CreateProject()
+	{
+		var root = Path.Combine(Path.GetTempPath(), $"aspirec4-{Guid.NewGuid():N}");
+		var projectPath = Path.Combine(root, "Sample.csproj");
+
+		Directory.CreateDirectory(Path.Combine(root, "bin"));
+		File.WriteAllText(projectPath, "<Project />");
+
+		return projectPath;
+	}
+
+	/// <summary>Copies an assembly into a directory with an explicit write time.</summary>
+	static void WriteAssembly(string directory, string sourceAssembly, DateTime writtenUtc)
+	{
+		Directory.CreateDirectory(directory);
+
+		var destination = Path.Combine(directory, Path.GetFileName(sourceAssembly));
+
+		File.Copy(sourceAssembly, destination, overwrite: true);
+		File.SetLastWriteTimeUtc(destination, writtenUtc);
+	}
 
 	// Tests
 
@@ -213,5 +237,130 @@ public sealed class EfModelLoaderTests
 		// Assert
 		await Assert.That(found).IsFalse();
 		await Assert.That(descriptor).IsNull();
+	}
+
+	[Test]
+	public async Task LoadFromProject_ProjectWithoutBinDirectory_ReportsThatNothingWasSearched()
+	{
+		// Arrange
+		var projectPath = Path.Combine(Path.GetTempPath(), $"aspirec4-{Guid.NewGuid():N}", "Sample.csproj");
+
+		// Act
+		var model = EfModelLoader.LoadFromProject(projectPath, out var diagnostics);
+
+		// Assert
+		await Assert.That(model.Contexts).IsEmpty();
+		await Assert.That(diagnostics.ProjectPath).IsEqualTo(projectPath);
+		await Assert.That(diagnostics.OutputDirectory).IsNull();
+		await Assert.That(diagnostics.AssembliesScanned).IsEqualTo(0);
+		await Assert.That(diagnostics.DescriptorsFound).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task LoadFromProject_OutputWithoutDescriptors_ReportsHowMuchWasRead()
+	{
+		// A build output that exists but carries no model is exactly what a stale, or not yet
+		// produced, build looks like — so the diagnostics have to say so rather than the caller
+		// guessing.
+		// Arrange
+		var projectPath = CreateProject();
+		var root = Path.GetDirectoryName(projectPath)!;
+		var output = Path.Combine(root, "bin", "Debug", "net10.0");
+		WriteAssembly(output, typeof(EfModelLoaderTests).Assembly.Location, DateTime.UtcNow);
+
+		try
+		{
+			// Act
+			var model = EfModelLoader.LoadFromProject(projectPath, out var diagnostics);
+
+			// Assert
+			await Assert.That(model.Contexts).IsEmpty();
+			await Assert.That(diagnostics.OutputDirectory).IsEqualTo(output);
+			await Assert.That(diagnostics.AssembliesScanned).IsEqualTo(1);
+			await Assert.That(diagnostics.DescriptorsFound).IsEqualTo(0);
+		}
+		finally
+		{
+			Directory.Delete(root, recursive: true);
+		}
+	}
+
+	[Test]
+	public async Task LoadFromProject_OutputWithDescriptor_ReportsTheDescriptorItFound()
+	{
+		// Arrange
+		var projectPath = CreateProject();
+		var root = Path.GetDirectoryName(projectPath)!;
+		var output = Path.Combine(root, "bin", "Debug", "net10.0");
+		WriteAssembly(output, typeof(BlogDbContext).Assembly.Location, DateTime.UtcNow);
+
+		try
+		{
+			// Act
+			var model = EfModelLoader.LoadFromProject(projectPath, out var diagnostics);
+
+			// Assert
+			await Assert.That(model.Contexts).IsNotEmpty();
+			await Assert.That(diagnostics.OutputDirectory).IsEqualTo(output);
+			await Assert.That(diagnostics.DescriptorsFound).IsEqualTo(1);
+		}
+		finally
+		{
+			Directory.Delete(root, recursive: true);
+		}
+	}
+
+	[Test]
+	public async Task FindOutputDirectory_DescriptorInOlderDirectory_WinsOverANewerBuild()
+	{
+		// The newest assembly under bin is not always the project's own output — satellite resource
+		// folders, ref assemblies and unrelated builds all live there — so a directory that actually
+		// carries the model is preferred even when it is older.
+		// Arrange
+		var projectPath = CreateProject();
+		var root = Path.GetDirectoryName(projectPath)!;
+		var newer = Path.Combine(root, "bin", "Debug", "net10.0");
+		var older = Path.Combine(root, "bin", "Release", "net10.0");
+		WriteAssembly(newer, typeof(EfModelLoaderTests).Assembly.Location, DateTime.UtcNow);
+		WriteAssembly(older, typeof(BlogDbContext).Assembly.Location, DateTime.UtcNow.AddDays(-1));
+
+		try
+		{
+			// Act
+			var result = EfModelLoader.FindOutputDirectory(projectPath);
+
+			// Assert
+			await Assert.That(result).IsEqualTo(older);
+		}
+		finally
+		{
+			Directory.Delete(root, recursive: true);
+		}
+	}
+
+	[Test]
+	public async Task FindOutputDirectory_CultureSatelliteFolder_IsNotTreatedAsBuildOutput()
+	{
+		// Satellite resource assemblies sit under a culture-named folder and are frequently the
+		// newest files in bin; reading one yields an empty diagram.
+		// Arrange
+		var projectPath = CreateProject();
+		var root = Path.GetDirectoryName(projectPath)!;
+		var output = Path.Combine(root, "bin", "Debug", "net10.0");
+		WriteAssembly(output, typeof(EfModelLoaderTests).Assembly.Location, DateTime.UtcNow.AddDays(-1));
+		WriteAssembly(Path.Combine(output, "de"), typeof(EfModelLoaderTests).Assembly.Location, DateTime.UtcNow);
+
+		try
+		{
+			// Act
+			var result = EfModelLoader.FindOutputDirectory(projectPath);
+
+			// Assert
+			await Assert.That(result).IsEqualTo(output);
+		}
+		finally
+		{
+			Directory.Delete(root, recursive: true);
+		}
 	}
 }

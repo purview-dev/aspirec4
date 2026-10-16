@@ -1,6 +1,6 @@
 using Purview.Skills.Testing;
 
-namespace Aspire.Hosting.AspireC4;
+namespace Aspire.Hosting.AspireC4.Repository;
 
 /// <summary>
 /// Runs the Agent Skills conformance rule set against this repository's authored skills in

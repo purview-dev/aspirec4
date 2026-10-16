@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.Json;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Testing;
 using Microsoft.Extensions.Configuration;
@@ -55,6 +56,118 @@ public sealed class TestAppHostFixture : TUnit.Aspire.AspireFixture<Projects.Tes
 
 	/// <summary>Path of the interactive viewer emitted beside the model.</summary>
 	public string ErViewerPath => Path.Combine(ErOutputDirectory, "index.html");
+
+	/// <summary>How long the ER model is given to gain its first context before a test fails.</summary>
+	/// <remarks>
+	/// The diagram is written from each contributing project's build output and regenerated once those
+	/// projects start, so an empty model right after startup is a transient the hook recovers from.
+	/// Asserting without waiting turns that transient into a spurious failure.
+	/// </remarks>
+	static readonly TimeSpan ErModelTimeout = TimeSpan.FromSeconds(30);
+
+	/// <summary>Reads the generated ER model, waiting until at least one context has been discovered.</summary>
+	/// <remarks>
+	/// Waiting here also keeps the negative assertions honest: a run that produced an empty model used
+	/// to satisfy <c>DoesNotContain</c> while failing the positive assertions, which pointed at the
+	/// wrong cause.
+	/// </remarks>
+	/// <exception cref="TimeoutException">
+	/// The model still had no contexts when <see cref="ErModelTimeout"/> elapsed.
+	/// </exception>
+	public async Task<string> ReadErModelAsync(CancellationToken cancellationToken)
+	{
+		using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+		cts.CancelAfter(ErModelTimeout);
+
+		string? lastContent = null;
+
+		try
+		{
+			while (true)
+			{
+				if (File.Exists(ErDiagramPath))
+				{
+					lastContent = await File.ReadAllTextAsync(ErDiagramPath, cts.Token);
+
+					if (CountContexts(lastContent) > 0)
+					{
+						return lastContent;
+					}
+				}
+
+				await Task.Delay(TimeSpan.FromMilliseconds(250), cts.Token);
+			}
+		}
+		catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+		{
+			var state = await GetResourceStateAsync("aspirec4-er", cancellationToken);
+			var logs = await GetResourceLogsAsync("aspirec4-er", cancellationToken);
+
+			throw new TimeoutException(
+				$"The ER diagram at '{ErDiagramPath}' had no contexts after {ErModelTimeout.TotalSeconds:0}s "
+					+ $"(the 'aspirec4-er' resource was '{state}'). The AppHost could not read an EF Core "
+					+ $"descriptor from a contributing project's build output.{Environment.NewLine}"
+					+ $"ER resource output:{Environment.NewLine}{logs}{Environment.NewLine}"
+					+ $"Last content:{Environment.NewLine}{lastContent}"
+			);
+		}
+	}
+
+	/// <summary>Counts the contexts in a generated ER model, treating unparseable content as none.</summary>
+	static int CountContexts(string json)
+	{
+		try
+		{
+			using var document = JsonDocument.Parse(json);
+
+			return document.RootElement.TryGetProperty("contexts", out var contexts) ? contexts.GetArrayLength() : 0;
+		}
+		catch (JsonException)
+		{
+			// Written mid-flight, or not a model at all.
+			return 0;
+		}
+	}
+
+	/// <summary>Reads the console output a resource has produced so far, for failure messages.</summary>
+	public async Task<string> GetResourceLogsAsync(string resourceName, CancellationToken cancellationToken)
+	{
+		var resource = GetResource(resourceName);
+
+		if (_app is null || resource is null)
+		{
+			return string.Empty;
+		}
+
+		var logger = _app.Services.GetRequiredService<ResourceLoggerService>();
+
+		using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+		cts.CancelAfter(TimeSpan.FromSeconds(5));
+
+		List<string> lines = [];
+
+		try
+		{
+			await foreach (var batch in logger.WatchAsync(resource).WithCancellation(cts.Token))
+			{
+				// The buffered backlog is replayed on subscription as the first batch, so one batch is
+				// the whole history. Live lines are not needed to explain a failure that already
+				// happened.
+				lines.AddRange(batch.Select(line => line.Content));
+
+				if (lines.Count > 0)
+				{
+					break;
+				}
+			}
+		}
+		catch (OperationCanceledException)
+		{
+			// No logs, or none yet.
+		}
+
+		return string.Join(Environment.NewLine, lines.TakeLast(20));
+	}
 
 	DistributedApplication? _app;
 

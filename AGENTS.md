@@ -194,6 +194,15 @@ Test authoring requirements (from the source-generator test authoring agent in `
 - Build dependencies/SUTs through `CreateXXX` helpers with optional parameters; never instantiate inside a test.
 - Pass a `CancellationToken` wherever a downstream method accepts one.
 
+### Integration tests and the project runner
+
+Run `AspireC4.IntegrationTests` through `just test-integration` or `just test`, **not** from an IDE test
+runner. Aspire's project-resource runner detects the IDE and fails with
+`run session could not be started: IDE returned ... 500 Internal Server Error`, so project resources such as
+`data-service` never start. The fixture only waits for the architecture diagram, so the suite still reports
+green; the missing ER diagram content is the only signal. The ER tests now fail with the descriptor
+diagnostics in that situation, but a broken project runner is still a runner problem, not a product one.
+
 ## Source generator work
 
 The generator in `src/src/SourceGenerators/` is built on `Purview.SourceGeneratorFramework`. Follow:

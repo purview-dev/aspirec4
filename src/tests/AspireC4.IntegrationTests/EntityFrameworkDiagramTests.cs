@@ -37,7 +37,7 @@ public sealed class EntityFrameworkDiagramTests(Fixtures.TestAppHostFixture fixt
 	public async Task StartAsync_WhenAppStarts_ModelContainsEveryDiscoveredContext(CancellationToken cancellationToken)
 	{
 		// Act
-		var json = await File.ReadAllTextAsync(fixture.ErDiagramPath, cancellationToken);
+		var json = await fixture.ReadErModelAsync(cancellationToken);
 		var names = Root(json)
 			.GetProperty("contexts")
 			.EnumerateArray()
@@ -55,7 +55,7 @@ public sealed class EntityFrameworkDiagramTests(Fixtures.TestAppHostFixture fixt
 	public async Task StartAsync_WhenAppStarts_ModelPreservesAdvancedMappings(CancellationToken cancellationToken)
 	{
 		// Act
-		var json = await File.ReadAllTextAsync(fixture.ErDiagramPath, cancellationToken);
+		var json = await fixture.ReadErModelAsync(cancellationToken);
 
 		// Assert — attribute renames, fluent renames and fluent column types all survive.
 		await Assert.That(json).Contains("product_id");
@@ -67,7 +67,7 @@ public sealed class EntityFrameworkDiagramTests(Fixtures.TestAppHostFixture fixt
 	public async Task StartAsync_WhenAppStarts_ModelOmitsExcludedProperties(CancellationToken cancellationToken)
 	{
 		// Act
-		var json = await File.ReadAllTextAsync(fixture.ErDiagramPath, cancellationToken);
+		var json = await fixture.ReadErModelAsync(cancellationToken);
 
 		// Assert — [NotMapped] and the fluent Ignore call.
 		await Assert.That(json).DoesNotContain("Initials");

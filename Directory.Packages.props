@@ -3,7 +3,6 @@
 		<CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
 		<RoslynCompilerVersion>5.9.0</RoslynCompilerVersion>
 		<RoslynAnalyzersVersion>5.9.0</RoslynAnalyzersVersion>
-		<!-- Floor set by Purview.Skills.Testing 1.0.6, which depends on TUnit.Assertions/TUnit.Core 1.75.0. -->
 		<TUnitVersion>1.75.0</TUnitVersion>
 		<PurviewSourceGenVersion>1.1.1</PurviewSourceGenVersion>
 		<PurviewTelemetryVersion>5.0.4</PurviewTelemetryVersion>

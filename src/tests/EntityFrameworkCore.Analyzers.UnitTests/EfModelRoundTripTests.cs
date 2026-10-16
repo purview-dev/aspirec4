@@ -61,7 +61,7 @@ public sealed class EfModelRoundTripTests
 	/// <summary>Runs the generator, emits the resulting compilation to a real assembly on disk.</summary>
 	async Task<string> EmitAssemblyAsync(string source, CancellationToken cancellationToken)
 	{
-		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
+		using var result = await GenerateAsync(source, cancellationToken: cancellationToken);
 
 		var path = Path.Combine(Path.GetTempPath(), $"aspirec4-roundtrip-{Guid.NewGuid():N}.dll");
 

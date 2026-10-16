@@ -20,6 +20,7 @@ public static class ErdOutput
 	static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web) { WriteIndented = true };
 
 	/// <summary>Produces every file for the configured renderer, primary document first.</summary>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0072:Add missing cases")]
 	public static IReadOnlyList<ErdFile> Create(EfModel model, AspireC4EfDiagramOptions options)
 	{
 		ArgumentNullException.ThrowIfNull(model);

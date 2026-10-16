@@ -176,6 +176,12 @@ Mocking uses TUnit.Mocks (`.Returns(...)` API); NSubstitute is not referenced.
 
 Integration tests require Docker to be running. They pull `ghcr.io/likec4/likec4` on first run.
 
+Run them with `just test-integration` (or `just test`) rather than from an IDE test runner. Aspire's
+project-resource runner detects the IDE and fails with
+`run session could not be started: IDE returned ... 500 Internal Server Error`, leaving project resources such
+as `data-service` unstarted. The ER diagram is built from each contributing project's build output, so that
+surfaces as an empty ER model rather than as a runner error.
+
 ## See also
 
 - [Release Flow](Release-Flow.md)
