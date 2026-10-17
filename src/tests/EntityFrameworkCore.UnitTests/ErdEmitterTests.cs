@@ -137,7 +137,7 @@ public sealed class ErdEmitterTests
 						varchar? Summary
 						int BlogId FK
 					}
-					Blogs ||--|{ Posts : "Blog"
+					Blogs ||--|{ Posts : "Blog → ?"
 				""".ReplaceLineEndings("\n")
 			);
 	}

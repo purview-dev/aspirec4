@@ -162,6 +162,25 @@ builder.AddAspireC4().WithEntityFrameworkDiagram().WithLocalD2CLI();
 d2 ships as a Go binary, so it must be on `PATH`; there is no npm fallback. Call `WithLocalD2CLI()`
 **after** `WithEntityFrameworkDiagram()`.
 
+## Using the viewer
+
+The interactive viewer is for reading a schema, not just looking at one.
+
+- **Search** — `/` or `Ctrl`/`Cmd`+`K` focuses the field; it matches table *and* column names. `Enter`
+  walks the matches, `Shift`+`Enter` walks back, `Esc` clears.
+- **Relationships** are labelled with the relationship's name in both directions (`Blog ⇄ Posts`); a
+  direction the model does not declare shows as `?`. With no navigation at all it falls back to the
+  foreign key's constraint name, then its columns. Edges come from the model, so nothing can be
+  connected by hand.
+- **Layout** — drag a table and the box around its `DbContext` follows it, growing or shrinking to wrap
+  its tables. The arrangement is remembered per model, so a reload keeps it; a regenerated diagram
+  whose model has changed falls back to a fresh layout.
+- **View** — the toolbar's `View` control chooses `Columns` (the default) or `Names`, which collapses
+  each table to its header for reading a large schema at a glance.
+- **Settings** — the toolbar's *Settings* button holds the theme (`Auto`/`Light`/`Dark`), the edge
+  animation speed (or off), the background pattern and a motion override.
+- **Export** — `PNG` or `SVG` of the whole diagram at its natural size, honouring the current theme.
+
 ## Related skills
 
 `purview-aspirec4-quickstart` for installing AspireC4 and running the architecture diagram,

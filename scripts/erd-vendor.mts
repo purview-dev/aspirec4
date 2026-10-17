@@ -61,6 +61,7 @@ export {
 	Controls,
 	Handle,
 	MiniMap,
+	NodeResizer,
 	Position,
 	ReactFlow,
 	ReactFlowProvider,

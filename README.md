@@ -276,9 +276,23 @@ a match is marked on the card, so a hit on a column is visible without hunting f
 shows your position in the results; `Enter` travels to the next match and `Shift`+`Enter` to the
 previous, bringing each into view. `Esc` clears.
 
-**Theme** is `Auto`, `Light` or `Dark`. `Auto` follows the operating system and is the default; a
-pinned choice is remembered across reloads and is applied before the page paints, so there is no flash
-of the wrong theme. The Mermaid preview shares the setting — pinning a theme in one applies it to both.
+**Relationships** are labelled with the relationship's name in both directions — `Blog ⇄ Posts` — so a
+direction the model does not declare shows as `?` rather than being hidden. Where neither navigation
+exists it falls back to the foreign key's constraint name, then its columns. Edges are drawn from the
+model, so nothing can be connected by hand: the handles are anchors, not a drawing surface.
+
+**Layout.** Drag a table and the box around its `DbContext` follows, growing or shrinking to wrap its
+tables; the arrangement is remembered per model, so a reload keeps it and a regenerated diagram (whose
+model has changed) falls back to a fresh layout.
+
+**View** (the toolbar's `View` control) chooses how much of each table is drawn: `Columns` (the
+default — every column with its type and key badges) or `Names` (the table name alone, for reading a
+large schema at a glance).
+
+**Settings** (the toolbar's *Settings* button) holds the theme (`Auto`, the default, following the
+operating system; `Light`; `Dark`), the edge animation speed (or off), the background pattern, and a
+motion override. A pinned theme is applied before the page paints, so there is no flash of the wrong
+theme. The Mermaid preview shares the theme — pinning it in one applies it to both.
 
 **Export** writes `PNG` or `SVG` of the *whole* diagram at its natural size, not a capture of the
 window, so nothing scrolled out of view is lost. PNG is rendered at 2× for printing and zooming. Both

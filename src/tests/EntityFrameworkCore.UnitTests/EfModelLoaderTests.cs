@@ -114,7 +114,7 @@ public sealed class EfModelLoaderTests
 		await Assert.That(dsl).Contains("Id: int {constraint: primary_key}");
 		await Assert.That(dsl).Contains("Email: varchar(256)? {constraint: unique}");
 		await Assert.That(dsl).Contains("UserId: int {constraint: foreign_key}");
-		await Assert.That(dsl).Contains("app.Orders.UserId -> app.Users.Id: \"User\"");
+		await Assert.That(dsl).Contains("app.Orders.UserId -> app.Users.Id: \"User → ?\"");
 	}
 
 	[Test]

@@ -355,6 +355,29 @@ public sealed class SampleDataModelTests
 	}
 
 	[Test]
+	public async Task ComplexSample_NamesTheRelationshipWithBothNavigations()
+	{
+		// The relationship is named by both navigation properties, not just the dependent one.
+		// Act
+		var foreignKey = Table(LoadComplex(), "ValueOrders").ForeignKeys.Single();
+
+		// Assert
+		await Assert.That(foreignKey.NavigationName).IsEqualTo("Customer");
+		await Assert.That(foreignKey.PrincipalNavigationName).IsEqualTo("Orders");
+		await Assert.That(EfRelationshipName.Label(foreignKey)).IsEqualTo("Customer ⇄ Orders");
+	}
+
+	[Test]
+	public async Task ComplexSample_RendersTheRelationshipName()
+	{
+		// Act
+		var dsl = D2DSLGenerator.Generate(D2ModelBuilder.Build(LoadComplex(), CreateOptions()), CreateOptions());
+
+		// Assert
+		await Assert.That(dsl).Contains("Customer ⇄ Orders");
+	}
+
+	[Test]
 	public async Task ComplexSample_FlattensComplexValueObjectMembers()
 	{
 		// A complex value object becomes columns on its owning table, each carrying the complex type.

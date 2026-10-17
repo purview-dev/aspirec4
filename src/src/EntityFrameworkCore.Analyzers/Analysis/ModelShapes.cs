@@ -64,6 +64,8 @@ sealed class ForeignKeyShape
 
 	public string? NavigationName { get; set; }
 
+	public string? PrincipalNavigationName { get; set; }
+
 	/// <summary>Set once the dependent columns are known to be a primary key or unique index.</summary>
 	public bool IsUnique { get; set; }
 

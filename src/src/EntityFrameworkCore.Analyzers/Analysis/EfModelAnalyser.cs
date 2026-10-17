@@ -184,7 +184,7 @@ static class EfModelAnalyser
 		}
 
 		ApplyPrimaryKeys(entity, table, config);
-		ApplyForeignKeys(table, navigations, entities);
+		ApplyForeignKeys(entity, table, navigations, entities);
 
 		if (!table.Columns.Any(c => c.IsPrimaryKey))
 		{
@@ -387,6 +387,7 @@ static class EfModelAnalyser
 	}
 
 	static void ApplyForeignKeys(
+		INamedTypeSymbol dependent,
 		TableShape table,
 		List<IPropertySymbol> navigations,
 		Dictionary<INamedTypeSymbol, string> entities
@@ -426,6 +427,7 @@ static class EfModelAnalyser
 			{
 				PrincipalEntity = target.ToDisplayString(),
 				NavigationName = navigation.Name,
+				PrincipalNavigationName = PrincipalNavigation(target, dependent),
 				// A foreign key that is also the whole key, or is uniquely indexed, can only match one
 				// principal row — that is what makes a relationship one-to-one rather than one-to-many.
 				IsUnique = (column.IsPrimaryKey && isSingleColumnKey) || column.IsUnique,
@@ -435,6 +437,26 @@ static class EfModelAnalyser
 			foreignKey.Columns.Add(column.Name);
 			table.ForeignKeys.Add(foreignKey);
 		}
+	}
+
+	/// <summary>
+	/// The principal-side navigation: a collection on the principal whose element is the dependent.
+	/// </summary>
+	static string? PrincipalNavigation(INamedTypeSymbol principal, INamedTypeSymbol dependent)
+	{
+		foreach (var property in principal.GetMembers().OfType<IPropertySymbol>())
+		{
+			if (
+				IsCollection(property.Type)
+				&& property.Type is INamedTypeSymbol { IsGenericType: true } generic
+				&& SymbolEqualityComparer.Default.Equals(generic.TypeArguments[0], dependent)
+			)
+			{
+				return property.Name;
+			}
+		}
+
+		return null;
 	}
 
 	/// <summary>

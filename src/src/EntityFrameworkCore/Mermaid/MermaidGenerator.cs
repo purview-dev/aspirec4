@@ -171,7 +171,7 @@ public static class MermaidGenerator
 				}
 
 				// The label carries the column names, because Mermaid cannot attach an edge to a row.
-				var label = foreignKey.NavigationName ?? string.Join(", ", foreignKey.Columns);
+				var label = EfRelationshipName.Label(foreignKey);
 
 				sb.Append('\t')
 					.Append(Identifier(foreignKey.PrincipalTable))

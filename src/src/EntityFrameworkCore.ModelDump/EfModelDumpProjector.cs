@@ -122,6 +122,8 @@ public static class EfModelDumpProjector
 					PrincipalTable = fk.PrincipalEntityType.GetTableName() ?? fk.PrincipalEntityType.ClrType.Name,
 					PrincipalColumns = [.. fk.PrincipalKey.Properties.Select(p => p.GetColumnName())],
 					NavigationName = fk.DependentToPrincipal?.Name,
+					PrincipalNavigationName = fk.PrincipalToDependent?.Name,
+					ConstraintName = fk.GetConstraintName(),
 					IsUnique = fk.IsUnique,
 					IsRequired = fk.IsRequired,
 				}),
@@ -351,6 +353,10 @@ public static class EfModelDumpProjector
 		public required List<string> PrincipalColumns { get; init; }
 
 		public string? NavigationName { get; init; }
+
+		public string? PrincipalNavigationName { get; init; }
+
+		public string? ConstraintName { get; init; }
 
 		public bool IsUnique { get; init; }
 

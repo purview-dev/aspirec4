@@ -369,7 +369,7 @@ static class EfModelMetadataReader
 		}
 
 		ApplyPrimaryKeys(entity, table);
-		ApplyForeignKeys(table, navigations, entities);
+		ApplyForeignKeys(entity, table, navigations, entities);
 
 		var keyColumns = table.Columns.Where(c => c.IsPrimaryKey).ToList();
 
@@ -490,7 +490,12 @@ static class EfModelMetadataReader
 		}
 	}
 
-	static void ApplyForeignKeys(TableShape table, List<PropertyInfo> navigations, Dictionary<Type, string> entities)
+	static void ApplyForeignKeys(
+		Type dependent,
+		TableShape table,
+		List<PropertyInfo> navigations,
+		Dictionary<Type, string> entities
+	)
 	{
 		// Only a single-column primary key constrains its own column to one row. A column that is
 		// merely part of a composite key does not, so a join table renders as one-to-many on both sides.
@@ -525,12 +530,29 @@ static class EfModelMetadataReader
 				{
 					PrincipalEntity = target.FullName ?? target.Name,
 					NavigationName = navigation.Name,
+					PrincipalNavigationName = PrincipalNavigation(target, dependent),
 					IsUnique = (column.IsPrimaryKey && isSingleColumnKey) || column.IsUnique,
 					IsRequired = !column.IsNullable,
 					Columns = [column.Name],
 				}
 			);
 		}
+	}
+
+	/// <summary>
+	/// The principal-side navigation: a collection on the principal whose element is the dependent.
+	/// </summary>
+	static string? PrincipalNavigation(Type principal, Type dependent)
+	{
+		foreach (var property in principal.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+		{
+			if (IsCollection(property.PropertyType) && property.PropertyType.GetGenericArguments()[0] == dependent)
+			{
+				return property.Name;
+			}
+		}
+
+		return null;
 	}
 
 	/// <summary>
@@ -889,6 +911,7 @@ static class EfModelMetadataReader
 					PrincipalTable = fk.PrincipalEntity,
 					PrincipalColumns = fk.PrincipalColumns,
 					NavigationName = fk.NavigationName,
+					PrincipalNavigationName = fk.PrincipalNavigationName,
 					IsUnique = fk.IsUnique,
 					IsRequired = fk.IsRequired,
 				}),
@@ -946,6 +969,8 @@ static class EfModelMetadataReader
 		public IReadOnlyList<string> PrincipalColumns { get; set; } = [];
 
 		public string? NavigationName { get; init; }
+
+		public string? PrincipalNavigationName { get; init; }
 
 		public bool IsUnique { get; init; }
 

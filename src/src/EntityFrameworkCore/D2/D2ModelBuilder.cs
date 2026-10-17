@@ -152,7 +152,7 @@ public static class D2ModelBuilder
 							SourceColumn = foreignKey.Columns[i],
 							TargetTable = targetPath,
 							TargetColumn = foreignKey.PrincipalColumns[i],
-							Label = foreignKey.NavigationName,
+							Label = EfRelationshipName.Label(foreignKey),
 						};
 
 						// Composite keys and multiple navigations can describe the same column pair.

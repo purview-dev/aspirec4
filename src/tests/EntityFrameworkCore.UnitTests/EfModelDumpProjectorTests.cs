@@ -103,6 +103,17 @@ public sealed class EfModelDumpProjectorTests
 		await Assert.That(status.DomainTypeKind).IsEqualTo(EfDomainTypeKind.Enum);
 		await Assert.That(status.StoreType).IsEqualTo("int");
 	}
+
+	[Test]
+	public async Task Project_CapturesTheRelationshipName()
+	{
+		// Act
+		var foreignKey = Table(Project(), "DumpOrders").ForeignKeys.Single();
+
+		// Assert — the constraint name is visible only to the dump path, which built the model.
+		await Assert.That(foreignKey.NavigationName).IsEqualTo("Customer");
+		await Assert.That(foreignKey.ConstraintName).IsNotNull();
+	}
 }
 
 /// <summary>A value object, wrapping an <c>int</c>.</summary>

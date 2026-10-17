@@ -113,6 +113,20 @@ public sealed class EfModelMetadataReaderTests
 	}
 
 	[Test]
+	public async Task ReadFromAssembly_NamesTheRelationshipWithBothNavigations()
+	{
+		// The inverse navigation is found from the collection on the principal, so the relationship is
+		// named by both ends even without a built model.
+		// Act
+		var foreignKey = Table(Context(Read(typeof(SalesDbContext)), "ValueObjectDbContext"), "ValueOrders")
+			.ForeignKeys.Single();
+
+		// Assert
+		await Assert.That(foreignKey.NavigationName).IsEqualTo("Customer");
+		await Assert.That(foreignKey.PrincipalNavigationName).IsEqualTo("Orders");
+	}
+
+	[Test]
 	public async Task ReadFromAssembly_FlattensComplexValueObjectMembers()
 	{
 		// A complex value object becomes columns on its owning table, each carrying the complex type.

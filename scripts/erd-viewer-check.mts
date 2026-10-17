@@ -74,6 +74,27 @@ const check = (name: string, ok: boolean, detail = "") => {
 	if (!ok) failures.push(name);
 };
 
+/** Opens the viewer's settings popover, if it is not already open. */
+const openSettings = async (page: any) => {
+	if ((await page.locator(".settings-panel").count()) === 0) {
+		await page.click(".settings > button");
+	}
+};
+
+/** Picks one option from a segmented control, e.g. the toolbar's View → Names. */
+const chooseIn = async (page: any, group: string, option: string) => {
+	await page.locator(`${group} button`, { hasText: option }).first().click();
+};
+
+/** Picks one option from a settings row, e.g. Theme → Dark, opening the popover if needed. */
+const choose = async (page: any, group: string, option: string) => {
+	await openSettings(page);
+	await chooseIn(page, `.settings-panel [aria-label="${group}"]`, option);
+};
+
+/** The toolbar's View control, which is not behind the settings popover. */
+const VIEW = '[aria-label="View"]';
+
 const browser = await chromium.launch();
 
 try {
@@ -249,6 +270,107 @@ try {
 
 			check("the toolbar covers nothing on the initial fit", covered.length === 0, covered.join(", "));
 
+			// ── Auto-sizing and remembered arrangement ────────────────────────────────────────
+
+			// A card is measured from its content, so nothing is truncated: a long column name or
+			// store type widens its own card instead of being cut off.
+			const truncated = await page.locator(".entity .col-name").evaluateAll((els) =>
+				els
+					.filter((e) => (e as HTMLElement).scrollWidth > (e as HTMLElement).clientWidth + 1)
+					.map((e) => e.textContent ?? "?"),
+			);
+
+			check("no column name is truncated", truncated.length === 0, truncated.slice(0, 3).join(", "));
+
+			// A table's offset within its context box, which is what a remembered arrangement has to
+			// preserve — and what a reload must reproduce.
+			const offsetInContext = (target: any, id: string) =>
+				target.evaluate((wanted: string) => {
+					const node = document.querySelector(`.react-flow__node-entity[data-id="${wanted}"]`);
+					if (!node) return null;
+
+					const n = (node as HTMLElement).getBoundingClientRect();
+					const context = [...document.querySelectorAll(".react-flow__node-context")].find((c) => {
+						const box = (c as HTMLElement).getBoundingClientRect();
+
+						return (
+							n.left >= box.left - 1 &&
+							n.right <= box.right + 1 &&
+							n.top >= box.top - 1 &&
+							n.bottom <= box.bottom + 1
+						);
+					});
+
+					if (!context) return null;
+
+					const box = (context as HTMLElement).getBoundingClientRect();
+
+					return { x: Math.round(n.left - box.left), y: Math.round(n.top - box.top) };
+				}, id);
+
+			const card = page.locator(".react-flow__node-entity").first();
+			const draggedId = (await card.getAttribute("data-id"))!;
+			const start = (await card.boundingBox())!;
+
+			await page.mouse.move(start.x + 40, start.y + 12);
+			await page.mouse.down();
+			await page.mouse.move(start.x + 40, start.y + 170, { steps: 12 });
+			await page.mouse.up();
+			await page.waitForTimeout(250);
+
+			const before = await offsetInContext(page, draggedId);
+
+			check("a table can be dragged", (before?.y ?? 0) > 40, `offset ${before?.y ?? "?"}px in its context`);
+
+			check(
+				"the context box follows the table it holds",
+				before !== null,
+				before === null ? `table ${draggedId} left its context` : "still inside",
+			);
+
+			await page.reload({ waitUntil: "networkidle" });
+			await page.waitForSelector(".entity", { timeout: 20000 });
+
+			const after = await offsetInContext(page, draggedId);
+
+			check(
+				"the arrangement survives a reload",
+				before !== null && after !== null && Math.abs(after.y - before.y) < 6,
+				`${before?.y ?? "?"}px → ${after?.y ?? "?"}px`,
+			);
+
+			// ── Table display ─────────────────────────────────────────────────────────────────
+
+			const columnRows = await page.locator(".entity .col").count();
+
+			check("columns mode shows every column", columnRows > 0, `${columnRows} rows`);
+
+			await chooseIn(page, VIEW, "Names");
+			await page.waitForTimeout(500);
+
+			const collapsed = await page.locator(".entity .col").count();
+			const headers = await page.locator(".entity header").count();
+
+			check(
+				"names mode collapses a table to its header",
+				collapsed === 0 && headers > 0,
+				`${headers} headers, ${collapsed} rows`,
+			);
+
+			await page.reload({ waitUntil: "networkidle" });
+			await page.waitForSelector(".entity", { timeout: 20000 });
+
+			check(
+				"the table display is remembered",
+				(await page.locator(".entity .col").count()) === 0,
+				"still collapsed after reload",
+			);
+
+			await chooseIn(page, VIEW, "Columns");
+			await page.waitForTimeout(500);
+
+			check("columns mode restores the columns", (await page.locator(".entity .col").count()) > 0);
+
 			// ── Search ────────────────────────────────────────────────────────────────────────
 			//
 			// Search is the only way into a schema too large to read at a glance, so it is checked as
@@ -379,7 +501,7 @@ try {
 				return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
 			};
 
-			await page.click('[data-theme-option="dark"]');
+			await choose(page, "Theme", "Dark");
 			await page.waitForTimeout(200);
 
 			check(
@@ -405,12 +527,16 @@ try {
 				(await page.evaluate(() => document.documentElement.dataset.theme)) === "dark" &&
 					(await luminance()) < 0.3,
 			);
+			await openSettings(page);
+
 			check(
 				"the dark button is still the pressed one",
-				(await page.locator('[data-theme-option="dark"][aria-pressed="true"]').count()) === 1,
+				(
+					await page.locator('.settings-panel [aria-label="Theme"] button[aria-pressed="true"]').innerText()
+				) === "Dark",
 			);
 
-			await page.click('[data-theme-option="auto"]');
+			await choose(page, "Theme", "Auto");
 			await page.waitForTimeout(200);
 
 			check(
@@ -441,7 +567,7 @@ try {
 
 			check("a dark desktop gets the dark theme unasked", (await darkDesktopLuminance()) < 0.3);
 
-			await darkPage.click('[data-theme-option="light"]');
+			await choose(darkPage, "Theme", "Light");
 			await darkPage.waitForTimeout(200);
 
 			check("light overrides a dark desktop", (await darkDesktopLuminance()) > 0.7);

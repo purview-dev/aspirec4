@@ -16,6 +16,21 @@ public sealed record EfForeignKey
 	public string? NavigationName { get; init; }
 
 	/// <summary>
+	/// The principal-side navigation property, when the model declares one — the other half of the
+	/// relationship's name.
+	/// </summary>
+	public string? PrincipalNavigationName { get; init; }
+
+	/// <summary>
+	/// The foreign key's constraint name, when the model gives it one.
+	/// </summary>
+	/// <remarks>
+	/// Only the build-time dump can see this: EF produces it while building the model, which the other
+	/// readers never do.
+	/// </remarks>
+	public string? ConstraintName { get; init; }
+
+	/// <summary>
 	/// Whether the dependent side is constrained to at most one row, making this one-to-one rather than
 	/// one-to-many.
 	/// </summary>

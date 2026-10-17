@@ -35,16 +35,12 @@
 				--wash-strong: light-dark(rgb(0 0 0 / 11%), rgb(255 255 255 / 11%));
 
 				/*
-				 * Card metrics are fixed rather than content-derived, because the layout has to know
-				 * the size of a card before one exists. ELK is given a box per table and React Flow
-				 * drops the card into it; if the card is taller than the box, it eats the gap to its
-				 * neighbour and the container's own padding. The error compounds per row, so the
-				 * tallest tables end up the most crowded.
-				 *
-				 * ENTITY_WIDTH, ENTITY_HEADER_HEIGHT and ENTITY_ROW_HEIGHT in app.js mirror these
-				 * three values. Change one, change the other.
+				 * Card metrics. The height is fixed per row; the width is measured per card in app.js
+				 * and applied inline, so a long column name or store type widens its own card rather
+				 * than being truncated. app.js mirrors these values when it measures and lays out, so
+				 * change one, change the other.
 				 */
-				--entity-width: 248px;
+				--entity-min-width: 200px;
 				--entity-header-height: 36px;
 				--entity-row-height: 28px;
 			}
@@ -198,6 +194,44 @@
 				gap: 2px;
 			}
 
+			/* The settings popover hangs off the toolbar, so the toolbar must be its positioning context. */
+			.settings {
+				position: relative;
+			}
+
+			.settings-panel {
+				position: absolute;
+				z-index: 20;
+				top: calc(100% + 8px);
+				right: 0;
+				display: grid;
+				gap: 9px;
+				min-width: 260px;
+				padding: 11px;
+				border: 1px solid var(--line);
+				border-radius: 3px;
+				background: var(--panel);
+				box-shadow: 0 8px 28px rgb(0 0 0 / 22%);
+			}
+
+			.settings-row {
+				display: flex;
+				gap: 12px;
+				align-items: center;
+				justify-content: space-between;
+			}
+
+			.settings-row .settings-label {
+				color: var(--muted);
+				font-size: 11px;
+			}
+
+			/* Applies to the toolbar's View control as well as the settings popover's rows. */
+			.segmented button {
+				min-width: 30px;
+				text-align: center;
+			}
+
 			.search button.clear {
 				padding: 2px 5px;
 				font-size: 13px;
@@ -227,7 +261,8 @@
 
 			/* Catalogue cards: squarer than the container, held by a rule rather than a shadow. */
 			.entity {
-				width: var(--entity-width);
+				min-width: var(--entity-min-width);
+				height: 100%;
 				border: 1px solid var(--line);
 				border-radius: 3px;
 				background: var(--panel);
@@ -297,10 +332,8 @@
 				min-width: 0;
 			}
 
-			/* The card is a fixed width, so an unusually long name gives way rather than widening it. */
+			/* The card is measured to fit its content, so a long name widens it rather than being cut. */
 			.entity .col .col-name {
-				overflow: hidden;
-				text-overflow: ellipsis;
 				white-space: nowrap;
 			}
 
@@ -333,6 +366,19 @@
 
 			.badge.uk {
 				color: var(--uk);
+			}
+
+			/* React Flow's resize handles, tinted to match rather than left as its light default. */
+			.entity-resize-line {
+				border-color: var(--accent);
+			}
+
+			.entity-resize-handle {
+				width: 8px;
+				height: 8px;
+				border: 1px solid var(--panel);
+				border-radius: 2px;
+				background: var(--accent);
 			}
 
 			/* React Flow's own chrome defaults to light; without this it floats white over the dark theme. */
@@ -397,7 +443,7 @@
 			 */
 			.react-flow__edge.flowing .react-flow__edge-path {
 				stroke-dasharray: 9 4;
-				animation: dash 0.9s linear infinite;
+				animation: var(--edge-animation, dash 0.9s linear infinite);
 			}
 
 			@keyframes dash {
@@ -406,10 +452,15 @@
 				}
 			}
 
+			/* The OS preference, unless the viewer's own override has spoken. */
 			@media (prefers-reduced-motion: reduce) {
-				.react-flow__edge.flowing .react-flow__edge-path {
+				:root:not([data-motion="allow"]) .react-flow__edge.flowing .react-flow__edge-path {
 					animation: none;
 				}
+			}
+
+			:root[data-motion="reduce"] .react-flow__edge.flowing .react-flow__edge-path {
+				animation: none;
 			}
 		</style>
 		<script>
@@ -423,10 +474,11 @@
 			 * inability to read one both end up meaning "follow the system".
 			 */
 			try {
-				const stored = localStorage.getItem("aspirec4-erd-theme");
+				const raw = localStorage.getItem("aspirec4-erd-settings");
+				const theme = raw ? JSON.parse(raw).theme : null;
 
-				if (stored === "light" || stored === "dark") {
-					document.documentElement.dataset.theme = stored;
+				if (theme === "light" || theme === "dark") {
+					document.documentElement.dataset.theme = theme;
 				}
 			} catch {
 				/* no stored preference available */
