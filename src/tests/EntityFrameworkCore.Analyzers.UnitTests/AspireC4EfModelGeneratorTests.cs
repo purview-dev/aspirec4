@@ -227,6 +227,52 @@ public sealed class AspireC4EfModelGeneratorTests
 	}
 
 	[Test]
+	public async Task RunGenerator_WithScalarValueObjectKey_ShowsTheValueObjectAndResolvesTheRelationship(
+		CancellationToken cancellationToken
+	)
+	{
+		// A strongly-typed identifier is a struct wrapping a Value member. Its primitive is only known
+		// to a value converter, so the domain type is shown — and its foreign keys still resolve.
+		// Arrange
+		var source = CreateContextSource(
+			entities: "public readonly record struct UserId { public int Value { get; init; } } "
+				+ "public class User { public UserId Id { get; set; } } "
+				+ "public class Order { public int Id { get; set; } public UserId UserId { get; set; } "
+				+ "public User User { get; set; } }",
+			sets: "public DbSet<User> Users { get; set; } public DbSet<Order> Orders { get; set; }"
+		);
+
+		// Act
+		var descriptor = await GenerateDescriptorAsync(source, cancellationToken);
+
+		// Assert — the domain type is beside the real database type, and the relationship still resolves.
+		await Assert.That(descriptor).Contains("\\\"name\\\":\\\"Id\\\",\\\"storeType\\\":\\\"int\\\"");
+		await Assert.That(descriptor).Contains("\\\"domainTypeName\\\":\\\"UserId\\\"");
+		await Assert.That(descriptor).Contains("\\\"domainTypeKind\\\":\\\"ValueObject\\\"");
+		await Assert.That(descriptor).Contains("\\\"principalTable\\\":\\\"Users\\\"");
+	}
+
+	[Test]
+	public async Task RunGenerator_WithEnumProperty_MarksItAsAnEnum(CancellationToken cancellationToken)
+	{
+		// An enum is a domain type too: the emitted descriptor carries its name and its kind, so the
+		// AppHost can show the type and mark it.
+		// Arrange
+		var source = CreateContextSource(
+			entities: "public enum Status { Draft, Active } "
+				+ "public class User { public int Id { get; set; } public Status Status { get; set; } }"
+		);
+
+		// Act
+		var descriptor = await GenerateDescriptorAsync(source, cancellationToken);
+
+		// Assert
+		await Assert.That(descriptor).Contains("\\\"name\\\":\\\"Status\\\",\\\"storeType\\\":\\\"int\\\"");
+		await Assert.That(descriptor).Contains("\\\"domainTypeName\\\":\\\"Status\\\"");
+		await Assert.That(descriptor).Contains("\\\"domainTypeKind\\\":\\\"Enum\\\"");
+	}
+
+	[Test]
 	public async Task RunGenerator_WithCollectionNavigation_DoesNotProduceForeignKeyOnPrincipal(
 		CancellationToken cancellationToken
 	)

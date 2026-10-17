@@ -22,14 +22,22 @@ static partial class ErdLog
 	)]
 	public static partial void Generated(ILogger logger, ErdRenderer renderer, int contexts, int tables);
 
+	[LoggerMessage(
+		Level = LogLevel.Information,
+		Message = "{Approximate} of {Total} context(s) were recovered from assembly metadata rather than "
+			+ "a source-generated descriptor, so configuration applied only in OnModelCreating is not "
+			+ "shown. Reference the AspireC4.EntityFrameworkCore package from the owning project for full "
+			+ "fidelity."
+	)]
+	public static partial void ApproximateContexts(ILogger logger, int approximate, int total);
+
 	[LoggerMessage(Level = LogLevel.Information, Message = "ER diagram unchanged; nothing written.")]
 	public static partial void Unchanged(ILogger logger);
 
 	[LoggerMessage(
 		Level = LogLevel.Warning,
-		Message = "No Entity Framework Core models were found. Opt a project in with "
-			+ ".WithEntityFrameworkModel(), reference the AspireC4.EntityFrameworkCore package from it, "
-			+ "and build it at least once."
+		Message = "No Entity Framework Core models were found. Ensure at least one project resource that "
+			+ "owns a DbContext has been built at least once."
 	)]
 	public static partial void NoModelsFound(ILogger logger);
 
@@ -40,8 +48,8 @@ static partial class ErdLog
 		Level = LogLevel.Warning,
 		Message = "No Entity Framework Core models were found for project {ProjectPath} "
 			+ "(output directory: {OutputDirectory}, {AssembliesScanned} assembly(ies) read, "
-			+ "{DescriptorsFound} descriptor(s) found). Opt the project in with .WithEntityFrameworkModel(), "
-			+ "reference the AspireC4.EntityFrameworkCore package from it, and build it at least once."
+			+ "{DescriptorsFound} descriptor(s) found). Ensure the project has been built at least once; "
+			+ "add the AspireC4.EntityFrameworkCore package to a project you own for full fidelity."
 	)]
 	public static partial void ProjectProducedNoModel(
 		ILogger logger,

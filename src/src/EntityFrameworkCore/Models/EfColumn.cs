@@ -12,6 +12,20 @@ public sealed record EfColumn
 	/// <summary>The CLR type name of the backing property.</summary>
 	public string? ClrTypeName { get; init; }
 
+	/// <summary>
+	/// The domain type backing this column, when its declared type is not a primitive — a scalar value
+	/// object, a complex value object, or an enum.
+	/// </summary>
+	/// <remarks>
+	/// The database type stays in <see cref="StoreType"/>; this is shown alongside it according to
+	/// <c>AspireC4EfDiagramOptions.DomainTypeDisplay</c>. Both are always present, so a consumer can
+	/// surface the database definition even when the domain type is the headline.
+	/// </remarks>
+	public string? DomainTypeName { get; init; }
+
+	/// <summary>Which of the three <see cref="DomainTypeName"/> is, when one is present.</summary>
+	public EfDomainTypeKind? DomainTypeKind { get; init; }
+
 	/// <summary>Whether the column is nullable.</summary>
 	public bool IsNullable { get; init; }
 

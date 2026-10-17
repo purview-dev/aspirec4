@@ -37,6 +37,17 @@ static class EfTypes
 		public const string Comment = "Comment";
 	}
 
+	/// <summary>
+	/// The values emitted for a column's <c>domainTypeKind</c>, matching the AppHost's
+	/// <c>EfDomainTypeKind</c> member names.
+	/// </summary>
+	public static class DomainTypeKinds
+	{
+		public const string ValueObject = "ValueObject";
+		public const string ComplexValueObject = "ComplexValueObject";
+		public const string Enum = "Enum";
+	}
+
 	/// <summary>Fluent builder members the analyser interprets.</summary>
 	public static class Fluent
 	{

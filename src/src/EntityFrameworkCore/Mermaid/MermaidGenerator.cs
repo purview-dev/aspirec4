@@ -132,10 +132,23 @@ public static class MermaidGenerator
 			sb.Append(' ').Append(string.Join(", ", keys));
 		}
 
-		// Mermaid renders a quoted trailing string as the attribute's comment.
+		// Mermaid renders a quoted trailing string as the attribute's comment; the value type and the
+		// column's own comment share it.
+		List<string> notes = [];
+
+		if (EfColumnTypeDisplay.Annotation(column, options) is { } annotation)
+		{
+			notes.Add(annotation);
+		}
+
 		if (!string.IsNullOrWhiteSpace(column.Comment))
 		{
-			sb.Append(' ').Append(Quote(column.Comment));
+			notes.Add(column.Comment);
+		}
+
+		if (notes.Count > 0)
+		{
+			sb.Append(' ').Append(Quote(string.Join(" — ", notes)));
 		}
 
 		sb.AppendLine();
@@ -245,17 +258,10 @@ public static class MermaidGenerator
 
 	static string StoreType(EfColumn column, AspireC4EfDiagramOptions options)
 	{
-		var type = column.StoreType;
-
-		if (column.MaxLength is > 0 && !type.Contains('(', StringComparison.Ordinal))
-		{
-			type = $"{type}({column.MaxLength.Value.ToString(CultureInfo.InvariantCulture)})";
-		}
-
 		// Mermaid's attribute-type grammar permits letters, digits, hyphens, underscores, parentheses
 		// and square brackets — but not commas. decimal(18,2) would fail to parse, so the separator is
 		// rewritten rather than the precision dropped.
-		type = type.Replace(",", "_", StringComparison.Ordinal);
+		var type = EfColumnTypeDisplay.Primary(column, options).Replace(",", "_", StringComparison.Ordinal);
 
 		if (options.ShowNullability && column.IsNullable && !column.IsPrimaryKey)
 		{

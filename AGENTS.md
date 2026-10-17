@@ -20,7 +20,7 @@ generates live [LikeC4](https://likec4.dev) architecture diagrams from the Aspir
 |---|---|
 | `src/src/AspireC4/` | Aspire integration library (`Aspire.Hosting.AspireC4`): lifecycle hook, Docker/CLI server resources, model builder, DSL generator, dashboard integration |
 | `src/src/SourceGenerators/` | Roslyn `netstandard2.0` incremental source generator (registry + DSL strict validation) |
-| `src/src/EntityFrameworkCore/` | AppHost-side EF Core → d2 ER diagram library (`AspireC4.Hosting.EntityFrameworkCore`): descriptor reader, d2 model builder, d2 DSL generator, sidecar resources, lifecycle hook |
+| `src/src/EntityFrameworkCore/` | AppHost-side EF Core → d2 ER diagram library (`AspireC4.Hosting.EntityFrameworkCore`): descriptor and metadata readers, d2 model builder, d2 DSL generator, sidecar resources, lifecycle hook |
 | `src/src/EntityFrameworkCore.Analyzers/` | Roslyn `netstandard2.0` generator packed as the analyzer-only `AspireC4.EntityFrameworkCore` package, referenced by *service* projects |
 | `src/src/TestAppHost/` | C# sample AppHost used by integration tests and manual runs |
 | `src/src/TestAppHost.SimpleData/` | Sample EF Core model: one `DbContext`, convention-only configuration |
@@ -225,14 +225,44 @@ Diagnostic IDs are allocated across two generators and must stay unique:
 
 When adding a diagnostic, update the owning generator's release-tracking files.
 
-### EF Core model generator
+### EF Core model discovery
 
-`src/src/EntityFrameworkCore.Analyzers/` runs in the **service** project (where the `DbContext` lives),
-not the AppHost — `OnModelCreating` is a method body and is absent from assembly metadata, so the model
-cannot be recovered from a referenced assembly. It emits the discovered model as
-`[assembly: AspireC4EfModel("<json>")]`; the AppHost reads it back with `System.Reflection.Metadata`
-(metadata-only, never loading or executing the assembly). The generator must stay pure — `AddSource`
-only, never writing files, or compiler determinism and caching break.
+The ER diagram draws from three sources, in precedence order.
+
+1. **Build-time dump** (opt-in). `src/src/EntityFrameworkCore.ModelDump/` ships as the dedicated
+   `AspireC4.EntityFrameworkCore.ModelDump` package, referenced by the project that owns the EF Core
+   provider; its `build/` target runs automatically. It builds each context's real `IModel` through the
+   project's `IDesignTimeDbContextFactory` and writes the diagram contract to `obj/aspirec4/ef/`. That
+   directory is never copied to `bin/` or `publish/` and is gitignored, so the dump has no deployment
+   footprint. `EfModelDumpReader.TryReadGraph` reads it from the project *and every project it
+   references* — the provider is usually a referenced persistence project, not the service — via
+   `obj/project.assets.json`, and falls back when it is missing or stale. This is the only source that
+   sees conventions, value converters and composite foreign keys. Use `IDesignTimeModel`, not
+   `DbContext.Model`: the runtime model is read-optimized and drops relational annotations.
+
+2. **Analyzer descriptor** (opt-in). `src/src/EntityFrameworkCore.Analyzers/` runs in the **service**
+   project (where the `DbContext` lives) and emits the complete model as
+   `[assembly: AspireC4EfModel("<json>")]`; the AppHost reads it back with `System.Reflection.Metadata`.
+   The generator must stay pure — `AddSource` only, never writing files, or compiler determinism and
+   caching break.
+
+3. **Metadata reader** (default). `src/src/EntityFrameworkCore/EfModelMetadataReader.cs` recovers an
+   approximate model from a project's build output with a reflection-only `MetadataLoadContext`, so no
+   code in the assembly executes and no project needs the analyzer. `OnModelCreating` is a method body
+   and is absent from metadata, so fluent configuration cannot be recovered this way.
+
+Every context carries an `EfModelFidelity`, so an approximate model is never mistaken for a complete
+one, and `EfModelLoader.Merge` de-duplicates by fully-qualified type name, preferring the higher
+fidelity. `EfColumn.StoreType` is always the real database type; a column's **domain type** — a value
+object or an enum — is carried in `EfColumn.DomainTypeName` with its `EfColumn.DomainTypeKind`
+(`ValueObject`, `ComplexValueObject`, `Enum`), and shown beside the store type according to
+`AspireC4EfDiagramOptions.DomainTypeDisplay` (default `DomainTypeFirst`: `AssetId (guid)`,
+`ActorType (int, enum)`). Recognising a scalar value object — a non-generic struct with a public
+`Value` member, as the Purview value-object generator emits — is also what makes its foreign keys, and
+so its relationships, resolve. A complex value object, marked
+`[ValueObject(EFMapping = ComplexType)]`, is flattened into its owner's table. `EfColumnTypeDisplay`
+owns the split, and every renderer keeps the database type in its annotation slot when it is not the
+headline.
 
 ## LikeC4 DSL work
 

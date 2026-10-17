@@ -107,14 +107,7 @@ public static class D2ModelBuilder
 
 	static string BuildType(EfColumn column, AspireC4EfDiagramOptions options)
 	{
-		var type = column.StoreType;
-
-		// Only append the length when the configured store type does not already carry one,
-		// e.g. an explicit HasColumnType("varchar(64)").
-		if (column.MaxLength is > 0 && !type.Contains('(', StringComparison.Ordinal))
-		{
-			type = $"{type}({column.MaxLength.Value})";
-		}
+		var type = EfColumnTypeDisplay.Compose(column, options);
 
 		// A nullable primary key is not meaningful, so the marker is suppressed there.
 		if (options.ShowNullability && column.IsNullable && !column.IsPrimaryKey)

@@ -14,8 +14,10 @@ static class SampleDataWiring
 	/// </summary>
 	/// <remarks>
 	/// The <c>DbContext</c> types live in libraries this project references rather than in the
-	/// executable itself — the usual layout for a real service — so AspireC4 locates their descriptors
-	/// by scanning the project's build output rather than just its own assembly.
+	/// executable itself — the usual layout for a real service — so AspireC4 locates them by scanning
+	/// the project's build output rather than just its own assembly. No per-project opt-in is needed:
+	/// the diagram discovers every project resource automatically. The <c>WithEntityFrameworkModel()</c>
+	/// call is kept here only to label the project's group.
 	/// </remarks>
 	public static IResourceBuilder<ProjectResource> AddSampleDataService(
 		this IDistributedApplicationBuilder builder,
@@ -29,7 +31,7 @@ static class SampleDataWiring
 
 		return builder
 			.AddProject<Projects.TestAppHost_DataService>("data-service")
-			.WithEntityFrameworkModel()
+			.WithEntityFrameworkModel(options => options.Label = "Sample Data Service")
 			.WithLikeC4Details(options =>
 				options
 					.WithLabel("Sample Data Service")

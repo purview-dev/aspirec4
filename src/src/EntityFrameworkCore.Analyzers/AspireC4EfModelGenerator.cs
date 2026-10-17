@@ -169,6 +169,8 @@ public sealed class AspireC4EfModelGenerator : IIncrementalGenerator
 							.Text("name", column.Name)
 							.Text("storeType", column.StoreType)
 							.Text("clrTypeName", column.ClrTypeName)
+							.Text("domainTypeName", column.DomainTypeName)
+							.Text("domainTypeKind", column.DomainTypeKind)
 							.Bool("isNullable", column.IsNullable)
 							.Bool("isPrimaryKey", column.IsPrimaryKey)
 							.Bool("isUnique", column.IsUnique)

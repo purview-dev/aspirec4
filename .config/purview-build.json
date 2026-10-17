@@ -44,10 +44,20 @@
 				"README.md"
 			],
 			// The AppHost-side EF Core to d2 ER diagram library. Library only: its generator ships as
-			// the separate analyzer-only AspireC4.EntityFrameworkCore package below.
+			// the separate analyzer-only AspireC4.EntityFrameworkCore package below, and the opt-in
+			// build-time dump as AspireC4.EntityFrameworkCore.ModelDump.
 			"aspirec4.hosting.entityframeworkcore": [
 				"lib/net10.0/Aspire.Hosting.AspireC4.EntityFrameworkCore.dll",
 				"lib/net10.0/Aspire.Hosting.AspireC4.EntityFrameworkCore.xml",
+				"likec4-logo.png",
+				"README.md"
+			],
+			// The opt-in build-time model dump, referenced by the project that owns the EF Core
+			// provider. Ships the MSBuild target that runs it and the tool itself under tools/; nothing
+			// it writes leaves obj/, so there is no deployment footprint.
+			"aspirec4.entityframeworkcore.modeldump": [
+				"build/AspireC4.EntityFrameworkCore.ModelDump.targets",
+				"tools/**",
 				"likec4-logo.png",
 				"README.md"
 			],

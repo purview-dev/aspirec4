@@ -30,6 +30,9 @@ import {
 
 const DATA_URL = document.currentScript?.dataset?.model ?? "__MODEL__";
 
+// Substituted by the generator from AspireC4EfDiagramOptions.DomainTypeDisplay.
+const DOMAIN_TYPE_DISPLAY = "__DOMAIN_TYPE_DISPLAY__";
+
 const elk = new ELK();
 
 const h = React.createElement;
@@ -137,9 +140,41 @@ function EntityNode({ data }) {
 		return keys.map((k) => h("span", { className: `badge ${k}`, key: k }, k.toUpperCase()));
 	};
 
+	const isEnum = (col) => col.domainTypeKind === "Enum";
+
+	const bothShown = () =>
+		DOMAIN_TYPE_DISPLAY === "DomainTypeFirst" || DOMAIN_TYPE_DISPLAY === "DatabaseFirst";
+
+	// The label kept alongside the headline; also the tooltip when it is not shown inline.
+	const annotation = (col) => {
+		if (!col.domainTypeName) return null;
+		const marker = isEnum(col);
+		let db = col.storeType ?? "";
+		if (col.maxLength > 0 && !db.includes("(")) db += `(${col.maxLength})`;
+
+		if (DOMAIN_TYPE_DISPLAY === "DomainTypeFirst") return marker ? `${db}, enum` : db;
+		if (DOMAIN_TYPE_DISPLAY === "DatabaseFirst") return marker ? `${col.domainTypeName}, enum` : col.domainTypeName;
+		if (DOMAIN_TYPE_DISPLAY === "DomainTypeOnly") return db;
+		return null;
+	};
+
 	const type = (col) => {
-		let t = col.storeType ?? "";
-		if (col.maxLength > 0 && !t.includes("(")) t += `(${col.maxLength})`;
+		let db = col.storeType ?? "";
+		if (col.maxLength > 0 && !db.includes("(")) db += `(${col.maxLength})`;
+
+		const domainFirst =
+			!!col.domainTypeName &&
+			DOMAIN_TYPE_DISPLAY !== "DatabaseFirst" &&
+			DOMAIN_TYPE_DISPLAY !== "DatabaseOnly";
+		const primary = domainFirst ? col.domainTypeName : db;
+
+		const parts = [];
+		if (bothShown() && col.domainTypeName) {
+			parts.push(DOMAIN_TYPE_DISPLAY === "DatabaseFirst" ? col.domainTypeName : db);
+		}
+		if (isEnum(col)) parts.push("enum");
+
+		let t = parts.length === 0 ? primary : `${primary} (${parts.join(", ")})`;
 		if (col.isNullable && !col.isPrimaryKey) t += "?";
 		return t;
 	};
@@ -165,7 +200,15 @@ function EntityNode({ data }) {
 					key: col.name,
 				},
 				h("span", { className: "name" }, h("span", { className: "col-name" }, col.name), ...badges(col)),
-				h("span", { className: "type" }, type(col)),
+				h(
+					"span",
+					{
+						className: "type",
+						// The database type stays reachable even when the domain type is the headline.
+						title: !bothShown() && annotation(col) ? annotation(col) : undefined,
+					},
+					type(col),
+				),
 			),
 		),
 		h(Handle, { type: "source", position: Position.Bottom }),

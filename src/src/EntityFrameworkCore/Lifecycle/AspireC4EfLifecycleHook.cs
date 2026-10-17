@@ -38,6 +38,13 @@ sealed partial class AspireC4EfLifecycleHook(
 	/// </remarks>
 	int _writtenContextCount;
 
+	/// <summary>The projects that contributed at least one context to the last load.</summary>
+	/// <remarks>
+	/// Set by <see cref="WriteDiagramAsync"/>, which runs before cross-linking starts, so the diagram
+	/// link is added only to the projects that actually appear in it.
+	/// </remarks>
+	IReadOnlyList<IResource> _contributors = [];
+
 	/// <inheritdoc/>
 	public Task SubscribeAsync(
 		IDistributedApplicationEventing eventing,
@@ -88,7 +95,7 @@ sealed partial class AspireC4EfLifecycleHook(
 				// The descriptor is read from each project's build output, which may not exist on the
 				// very first run after a clean. Regenerating once projects start makes that self-healing.
 				_ = Task.Run(() => WatchProjectsAsync(evt.Model, resource, ct), ct);
-				_ = Task.Run(() => CrossLinkAsync(evt.Model, resource, ct), ct);
+				_ = Task.Run(() => CrossLinkAsync(resource, ct), ct);
 				_ = Task.Run(() => PublishViewerAccessAsync(resource, ct), ct);
 			}
 		);
@@ -103,7 +110,11 @@ sealed partial class AspireC4EfLifecycleHook(
 	)
 	{
 		var logger = resourceLoggerService.GetLogger(resource);
-		var efModel = LoadModel(model, logger);
+		var load = LoadModel(model, _options, logger);
+
+		_contributors = load.Contributors;
+
+		var efModel = load.Model;
 		var directory = ResolveOutputDirectory(resource);
 
 		// A pass that finds nothing must not replace a diagram that was already produced. The
@@ -154,6 +165,15 @@ sealed partial class AspireC4EfLifecycleHook(
 		_writtenContextCount = efModel.Contexts.Count;
 
 		ErdLog.Generated(logger, _options.Renderer, efModel.Contexts.Count, tables);
+
+		// A context recovered from metadata cannot show fluent configuration, so say so rather than
+		// letting a partial model pass for a complete one.
+		var approximate = efModel.Contexts.Count(c => c.Fidelity == EfModelFidelity.Approximate);
+
+		if (approximate > 0)
+		{
+			ErdLog.ApproximateContexts(logger, approximate, efModel.Contexts.Count);
+		}
 
 		if (efModel.Contexts.Count == 0)
 		{
@@ -264,34 +284,47 @@ sealed partial class AspireC4EfLifecycleHook(
 		: Path.IsPathRooted(_options.OutputDirectory) ? _options.OutputDirectory
 		: Path.GetFullPath(Path.Combine(resource.AppHostDirectory, _options.OutputDirectory));
 
-	/// <summary>Loads and merges the EF descriptors from every opted-in project resource.</summary>
-	/// <param name="model">The application model to read the opted-in projects from.</param>
+	/// <summary>Loads and merges the EF descriptors from every contributing project resource.</summary>
+	/// <param name="model">The application model to read the contributing projects from.</param>
+	/// <param name="options">The diagram options, which select the projects and filter the contexts.</param>
 	/// <param name="logger">
 	/// Where to explain a project that produced no model, or <see langword="null"/> to stay silent. The
 	/// backstop probe passes <see langword="null"/> so a still-failing lookup is not logged per attempt.
 	/// </param>
-	internal static EfModel LoadModel(DistributedApplicationModel model, ILogger? logger = null)
+	internal static EfModelLoad LoadModel(
+		DistributedApplicationModel model,
+		AspireC4EfDiagramOptions options,
+		ILogger? logger = null
+	)
 	{
-		List<EfModel> models = [];
+		ArgumentNullException.ThrowIfNull(model);
+		ArgumentNullException.ThrowIfNull(options);
 
-		foreach (var resource in model.Resources)
+		List<EfModel> models = [];
+		List<IResource> contributors = [];
+
+		foreach (var resource in SelectProjects(model, options))
 		{
-			if (
-				!resource.TryGetLastAnnotation<AspireC4EfProjectAnnotation>(out _)
-				|| !resource.TryGetLastAnnotation<IProjectMetadata>(out var metadata)
-			)
+			if (!resource.TryGetLastAnnotation<IProjectMetadata>(out var metadata))
 			{
 				continue;
 			}
 
-			var projectModel = EfModelLoader.LoadFromProject(metadata.ProjectPath, out var diagnostics);
+			var projectModel = ApplyProjectFilters(
+				EfModelLoader.LoadFromProject(metadata.ProjectPath, out var diagnostics),
+				resource
+			);
 
 			models.Add(projectModel);
 
-			// Reported per project rather than once for the whole diagram: which project produced no
-			// descriptor, and where the lookup looked, is the entire diagnosis.
-			if (logger is not null && projectModel.Contexts.Count == 0)
+			if (projectModel.Contexts.Count > 0)
 			{
+				contributors.Add(resource);
+			}
+			else if (logger is not null && resource.TryGetLastAnnotation<AspireC4EfProjectAnnotation>(out _))
+			{
+				// Only a project the user opted in explicitly is worth warning about: under automatic
+				// discovery, a project with no DbContext is entirely expected.
 				ErdLog.ProjectProducedNoModel(
 					logger,
 					diagnostics.ProjectPath,
@@ -302,8 +335,28 @@ sealed partial class AspireC4EfLifecycleHook(
 			}
 		}
 
-		return EfModelLoader.Merge(models);
+		var merged = EfModelLoader.Merge(models);
+		var filtered = EfContextFilter.Apply(merged, options.IncludedContexts, options.ExcludedContexts);
+
+		return new EfModelLoad(filtered, contributors);
 	}
+
+	/// <summary>The project resources the diagram is built from.</summary>
+	/// <remarks>
+	/// Every project resource is a candidate by default; <c>WithProjectOptInOnly()</c> narrows it to
+	/// the projects annotated with <c>WithEntityFrameworkModel()</c>.
+	/// </remarks>
+	static IEnumerable<IResource> SelectProjects(DistributedApplicationModel model, AspireC4EfDiagramOptions options) =>
+		model.Resources.Where(resource =>
+			resource.TryGetLastAnnotation<IProjectMetadata>(out _)
+			&& (options.DiscoverAllProjects || resource.TryGetLastAnnotation<AspireC4EfProjectAnnotation>(out _))
+		);
+
+	/// <summary>Applies a project's own include/exclude filters to its contribution.</summary>
+	static EfModel ApplyProjectFilters(EfModel model, IResource resource) =>
+		resource.TryGetLastAnnotation<AspireC4EfProjectAnnotation>(out var annotation)
+			? EfContextFilter.Apply(model, annotation.Options.IncludedContexts, annotation.Options.ExcludedContexts)
+			: model;
 
 	/// <summary>How many times the empty-model backstop re-reads the descriptors.</summary>
 	internal const int ModelRetryAttempts = 20;
@@ -333,7 +386,7 @@ sealed partial class AspireC4EfLifecycleHook(
 
 				// Probed silently: a still-failing lookup would otherwise repeat the per-project
 				// warning on every attempt.
-				if (LoadModel(model).Contexts.Count == 0)
+				if (LoadModel(model, _options).Model.Contexts.Count == 0)
 				{
 					continue;
 				}
@@ -355,10 +408,7 @@ sealed partial class AspireC4EfLifecycleHook(
 		CancellationToken cancellationToken
 	)
 	{
-		var watched = model
-			.Resources.Where(r => r.TryGetLastAnnotation<AspireC4EfProjectAnnotation>(out _))
-			.Select(r => r.Name)
-			.ToHashSet(StringComparer.OrdinalIgnoreCase);
+		var watched = SelectProjects(model, _options).Select(r => r.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
 		if (watched.Count == 0)
 		{
@@ -408,3 +458,8 @@ sealed partial class AspireC4EfLifecycleHook(
 			|| trimmed.StartsWith("//", StringComparison.Ordinal);
 	}
 }
+
+/// <summary>A loaded model and the project resources that contributed at least one context to it.</summary>
+/// <param name="Model">The merged, filtered model.</param>
+/// <param name="Contributors">The projects that appear in the diagram.</param>
+readonly record struct EfModelLoad(EfModel Model, IReadOnlyList<IResource> Contributors);

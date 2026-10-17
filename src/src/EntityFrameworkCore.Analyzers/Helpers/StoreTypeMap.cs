@@ -61,12 +61,107 @@ static class StoreTypeMap
 			};
 	}
 
+	/// <summary>
+	/// Determines whether a type is a scalar value object: a struct that wraps a single value under a
+	/// <c>Value</c> member, as a strongly-typed identifier does.
+	/// </summary>
+	/// <remarks>
+	/// A struct is never an EF entity, so recognising one as a scalar is safe. The <c>Value</c> member
+	/// is what the value-object generators emit — including a forwarding <c>Value</c> when the author
+	/// names the underlying member something else — so this matches a strongly-typed id without
+	/// depending on the library that produced it.
+	/// </remarks>
+	public static bool IsValueObject(ITypeSymbol type) =>
+		type is INamedTypeSymbol { TypeKind: TypeKind.Struct, IsGenericType: false } named
+		&& named
+			.GetMembers("Value")
+			.OfType<IPropertySymbol>()
+			.Any(p => !p.IsStatic && p.DeclaredAccessibility == Accessibility.Public);
+
+	/// <summary>The scalar value-object type a property is backed by, or <see langword="null"/>.</summary>
+	public static ITypeSymbol? ValueObjectType(ITypeSymbol type)
+	{
+		var unwrapped = Unwrap(type);
+
+		return IsValueObject(unwrapped) ? unwrapped : null;
+	}
+
+	/// <summary>The real database type for a property, resolving a scalar value object to its primitive.</summary>
+	public static string ColumnStoreType(ITypeSymbol type)
+	{
+		var valueObject = ValueObjectType(type);
+
+		return valueObject is not null && ValueObjectUnderlying(valueObject) is { } underlying
+			? Resolve(underlying)
+			: Resolve(type);
+	}
+
+	static ITypeSymbol? ValueObjectUnderlying(ITypeSymbol valueObject) =>
+		valueObject
+			.GetMembers("Value")
+			.OfType<IPropertySymbol>()
+			.FirstOrDefault(p => !p.IsStatic && p.DeclaredAccessibility == Accessibility.Public)
+			?.Type;
+
+	/// <summary>
+	/// Whether a type is mapped as an EF Core complex type — a Purview complex value object.
+	/// </summary>
+	/// <remarks>Matched by attribute name, so no dependency on the value-object package is taken.</remarks>
+	public static bool IsComplexValueObject(ITypeSymbol type)
+	{
+		foreach (var attribute in Unwrap(type).GetAttributes())
+		{
+			if (attribute.AttributeClass?.Name is not ("ValueObjectAttribute" or "ValueObject"))
+			{
+				continue;
+			}
+
+			if (
+				IsNamedEnumMember(
+					attribute.NamedArguments.FirstOrDefault(a => a.Key == "EFMapping").Value,
+					"ComplexType"
+				)
+			)
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/// <summary>
+	/// Whether a typed constant is the named member of its enum type.
+	/// </summary>
+	/// <remarks>
+	/// The compiler reports either the member or its underlying value depending on how the constant was
+	/// written, so both are accepted.
+	/// </remarks>
+	static bool IsNamedEnumMember(TypedConstant constant, string member)
+	{
+		if (constant.Value is null)
+		{
+			return false;
+		}
+
+		if (string.Equals(constant.Value.ToString(), member, StringComparison.Ordinal))
+		{
+			return true;
+		}
+
+		return constant.Type is INamedTypeSymbol { TypeKind: TypeKind.Enum } enumType
+			&& enumType
+				.GetMembers()
+				.OfType<IFieldSymbol>()
+				.Any(f => f.Name == member && f.HasConstantValue && Equals(f.ConstantValue, constant.Value));
+	}
+
 	/// <summary>Determines whether a property type maps to a column rather than a navigation.</summary>
 	public static bool IsScalar(ITypeSymbol type)
 	{
 		var unwrapped = Unwrap(type);
 
-		if (unwrapped.TypeKind == TypeKind.Enum)
+		if (unwrapped.TypeKind == TypeKind.Enum || IsValueObject(unwrapped))
 		{
 			return true;
 		}

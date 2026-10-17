@@ -161,6 +161,13 @@ static class EfModelAnalyser
 				continue;
 			}
 
+			if (StoreTypeMap.IsComplexValueObject(property.Type))
+			{
+				AddComplexColumns(table, property.Name, property.Type, StoreTypeMap.IsNullable(property.Type), 0);
+
+				continue;
+			}
+
 			if (GetNavigationTarget(property.Type) is not null)
 			{
 				navigations.Add(property);
@@ -216,6 +223,8 @@ static class EfModelAnalyser
 			|| HasAttribute(property, EfTypes.Attributes.Required)
 			|| !StoreTypeMap.IsNullable(property.Type);
 
+		var domainType = DomainType(property.Type, complexType: null);
+
 		return new ColumnShape
 		{
 			PropertyName = property.Name,
@@ -226,14 +235,112 @@ static class EfModelAnalyser
 			StoreType =
 				fluentProperty?.ColumnType
 				?? GetAttributeNamedString(property, EfTypes.Attributes.Column, "TypeName")
-				?? StoreTypeMap.Resolve(property.Type),
+				?? StoreTypeMap.ColumnStoreType(property.Type),
 			ClrTypeName = property.Type.ToDisplayString(),
+			DomainTypeName = domainType.Name,
+			DomainTypeKind = domainType.Kind,
 			IsNullable = !isRequired,
 			IsUnique =
 				uniqueFromIndexes.Contains(property.Name) || config?.UniqueProperties.Contains(property.Name) == true,
 			MaxLength = maxLength,
 			Comment = fluentProperty?.Comment ?? GetAttributeString(property, EfTypes.Attributes.Comment, 0),
 		};
+	}
+
+	/// <summary>How deep nested complex value objects are flattened before the walk stops.</summary>
+	const int MaxComplexDepth = 4;
+
+	/// <summary>
+	/// Flattens a complex value object into columns on the owning table, the way EF maps one.
+	/// </summary>
+	/// <remarks>
+	/// Column names are approximated as <c>{Property}_{Member}</c>. EF's own flattening is only visible
+	/// with a built model, which the build-time dump has and this analyser does not.
+	/// </remarks>
+	static void AddComplexColumns(TableShape table, string prefix, ITypeSymbol complexType, bool nullable, int depth)
+	{
+		if (depth > MaxComplexDepth || complexType is not INamedTypeSymbol named)
+		{
+			return;
+		}
+
+		foreach (var member in named.GetMembers().OfType<IPropertySymbol>())
+		{
+			if (
+				member.DeclaredAccessibility != Accessibility.Public
+				|| member.IsStatic
+				|| member.GetMethod is null
+				|| HasAttribute(member, EfTypes.Attributes.NotMapped)
+			)
+			{
+				continue;
+			}
+
+			if (StoreTypeMap.IsComplexValueObject(member.Type))
+			{
+				AddComplexColumns(
+					table,
+					$"{prefix}_{member.Name}",
+					member.Type,
+					nullable || StoreTypeMap.IsNullable(member.Type),
+					depth + 1
+				);
+
+				continue;
+			}
+
+			if (!StoreTypeMap.IsScalar(member.Type))
+			{
+				continue;
+			}
+
+			var domainType = DomainType(member.Type, named.Name);
+
+			table.Columns.Add(
+				new ColumnShape
+				{
+					PropertyName = $"{prefix}_{member.Name}",
+					Name = GetAttributeString(member, EfTypes.Attributes.Column, 0) ?? $"{prefix}_{member.Name}",
+					StoreType = StoreTypeMap.ColumnStoreType(member.Type),
+					ClrTypeName = member.Type.ToDisplayString(),
+					DomainTypeName = domainType.Name,
+					DomainTypeKind = domainType.Kind,
+					IsNullable = nullable || StoreTypeMap.IsNullable(member.Type),
+					MaxLength =
+						GetAttributeInt(member, EfTypes.Attributes.MaxLength, 0)
+						?? GetAttributeInt(member, EfTypes.Attributes.StringLength, 0),
+					Comment = GetAttributeString(member, EfTypes.Attributes.Comment, 0),
+				}
+			);
+		}
+	}
+
+	/// <summary>
+	/// The domain type a column is backed by, when its declared type is not a primitive.
+	/// </summary>
+	/// <param name="type">The property or member type.</param>
+	/// <param name="complexType">The enclosing complex type's name, for a plain member of one.</param>
+	/// <remarks>
+	/// A member's own type wins over the enclosing complex type, so an enum member of a complex value
+	/// object shows the enum rather than the complex type.
+	/// </remarks>
+	static (string? Name, string? Kind) DomainType(ITypeSymbol type, string? complexType)
+	{
+		var valueObject = StoreTypeMap.ValueObjectType(type);
+
+		if (valueObject is not null)
+		{
+			return (valueObject.Name, EfTypes.DomainTypeKinds.ValueObject);
+		}
+
+		var unwrapped = StoreTypeMap.Unwrap(type);
+
+		if (unwrapped.TypeKind == TypeKind.Enum)
+		{
+			return (unwrapped.Name, EfTypes.DomainTypeKinds.Enum);
+		}
+
+		return complexType is not null ? (complexType, EfTypes.DomainTypeKinds.ComplexValueObject) : (null, null);
 	}
 
 	static void ApplyPrimaryKeys(INamedTypeSymbol entity, TableShape table, EntityConfiguration? config)
@@ -405,6 +512,12 @@ static class EfModelAnalyser
 		}
 
 		if (type is not INamedTypeSymbol named || named.TypeKind != TypeKind.Class)
+		{
+			return null;
+		}
+
+		// A complex value object is flattened into the owner's table, not modelled as an entity.
+		if (StoreTypeMap.IsComplexValueObject(named))
 		{
 			return null;
 		}

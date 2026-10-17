@@ -28,22 +28,19 @@ ensure-pipeline-tool:
 
 # Run the PR pipeline (restore, build, lint, tests)
 [group('Pipeline')]
-pipeline-pr *args:
-    just ensure-pipeline-tool
+pipeline-pr *args: ensure-pipeline-tool
     echo "Running PR pipeline..."
     {{ pipeline_tool }} {{ args }}
 
 # Run the build pipeline (restore, build, lint)
 [group('Pipeline')]
-pipeline-build *args:
-    just ensure-pipeline-tool
+pipeline-build *args: ensure-pipeline-tool
     echo "Running build pipeline..."
     {{ pipeline_tool }} --Build:RunTests=false --Release:Mode=None {{ args }}
 
 # Run the release pipeline (restore, build, lint, tests, pack, publish, GitHub release)
 [group('Pipeline')]
-pipeline-release *args:
-    just ensure-pipeline-tool
+pipeline-release *args: ensure-pipeline-tool
     echo "Running release pipeline..."
     {{ pipeline_tool }} --Release:Mode=NuGet {{ args }}
 
@@ -52,23 +49,19 @@ pipeline-release *args:
 # Use the LOCAL_NUGET_FEED_PATH environment variable or forward slashes, e.g.
 # just pipeline-local-release --PublishLocalNuGet:LocalFeedPath=p:/_sync-projects/.local-nuget/
 [group('Pipeline')]
-pipeline-local-release *args:
-    just ensure-pipeline-tool
-    just lint-fix
+pipeline-local-release *args: ensure-pipeline-tool
     echo "Running local release pipeline..."
     {{ pipeline_tool }} --Release:Mode=LocalNuGet {{ args }}
 
 # Run the pipeline with tests enabled
 [group('Pipeline')]
-pipeline-tests *args:
-    just ensure-pipeline-tool
+pipeline-tests *args: ensure-pipeline-tool
     echo "Running tests pipeline..."
     {{ pipeline_tool }} --Build:RunTests=true --Release:Mode=None {{ args }}
 
 # Run the pipeline through pack + validate (restore, build, lint, tests, pack, validate pack contents) without publishing/releasing
 [group('Pipeline')]
-pipeline-pack-validate *args:
-    just ensure-pipeline-tool
+pipeline-pack-validate *args: ensure-pipeline-tool
     echo "Running pack + validate pipeline..."
     {{ pipeline_tool }} --Build:RunPack=true --Build:ValidatePack=true --Release:Mode=None {{ args }}
 

@@ -325,4 +325,59 @@ public sealed class SampleDataModelTests
 		await Assert.That(dsl).Contains("constraint: [primary_key; foreign_key]");
 		await Assert.That(dsl).Contains("ParentCategoryId");
 	}
+
+	// Scalar value objects
+
+	[Test]
+	public async Task ComplexSample_ShowsScalarValueObjectBesideItsDatabaseType()
+	{
+		// The domain type sits beside the real database type, which the model always keeps.
+		// Act
+		var orders = Table(LoadComplex(), "ValueOrders");
+
+		// Assert
+		await Assert.That(Column(orders, "CustomerId").DomainTypeName).IsEqualTo("ValueCustomerId");
+		await Assert.That(Column(orders, "CustomerId").StoreType).IsEqualTo("int");
+		await Assert.That(Column(orders, "Id").DomainTypeName).IsEqualTo("ValueOrderId");
+		await Assert.That(Column(orders, "Id").StoreType).IsEqualTo("guid");
+	}
+
+	[Test]
+	public async Task ComplexSample_ResolvesRelationshipThroughValueObjectForeignKeys()
+	{
+		// The foreign key is a value object, not a primitive: if it is not recognised as a column, the
+		// navigation-derived relationship disappears with it.
+		// Act
+		var orders = Table(LoadComplex(), "ValueOrders");
+
+		// Assert
+		await Assert.That(orders.ForeignKeys.Any(fk => fk.PrincipalTable == "ValueCustomers")).IsTrue();
+	}
+
+	[Test]
+	public async Task ComplexSample_FlattensComplexValueObjectMembers()
+	{
+		// A complex value object becomes columns on its owning table, each carrying the complex type.
+		// Act
+		var customers = Table(LoadComplex(), "ValueCustomers");
+
+		// Assert
+		await Assert.That(customers.Columns.Select(c => c.Name)).Contains("Address_City");
+		await Assert.That(Column(customers, "Address_City").DomainTypeName).IsEqualTo("ValueAddress");
+		await Assert.That(Column(customers, "Address_City").StoreType).IsEqualTo("varchar");
+		await Assert.That(Column(customers, "Address_PostCode").IsNullable).IsTrue();
+	}
+
+	[Test]
+	public async Task ComplexSample_ShowsEnumsAsTheirTypeAndMarksThem()
+	{
+		// An enum is a domain type too: shown as itself and flagged, with the store type kept.
+		// Act
+		var status = Column(Table(LoadComplex(), "ValueCustomers"), "Status");
+
+		// Assert
+		await Assert.That(status.DomainTypeName).IsEqualTo("ValueStatus");
+		await Assert.That(status.DomainTypeKind).IsEqualTo(EfDomainTypeKind.Enum);
+		await Assert.That(status.StoreType).IsEqualTo("int");
+	}
 }

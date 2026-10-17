@@ -45,6 +45,8 @@
 
 	<ItemGroup>
 		<PackageReference Include="Aspire.Hosting" />
+		<!-- Reflection-only metadata reads for the analyzer-less discovery path. -->
+		<PackageReference Include="System.Reflection.MetadataLoadContext" />
 	</ItemGroup>
 
 	<ItemGroup>

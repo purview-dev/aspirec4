@@ -166,8 +166,34 @@ public static class AspireC4EfResourceBuilderExtensions
 	{
 		ArgumentNullException.ThrowIfNull(builder);
 
+		return builder.WithEntityFrameworkModel(options => options.Label = label);
+	}
+
+	/// <summary>
+	/// Includes this project's Entity Framework Core model in the ER diagram, with per-project filters.
+	/// </summary>
+	/// <remarks>
+	/// Opting in is not required — every project is scanned by default. Use this to pin a project in
+	/// when automatic discovery is disabled, to label its group, or to include or exclude specific
+	/// contexts from this project alone.
+	/// </remarks>
+	/// <param name="builder">The project resource builder.</param>
+	/// <param name="configure">Callback that configures this project's contribution.</param>
+	[AspireExportIgnore]
+	public static IResourceBuilder<T> WithEntityFrameworkModel<T>(
+		this IResourceBuilder<T> builder,
+		Action<AspireC4EfProjectOptions> configure
+	)
+		where T : IResource
+	{
+		ArgumentNullException.ThrowIfNull(builder);
+		ArgumentNullException.ThrowIfNull(configure);
+
+		AspireC4EfProjectOptions options = new();
+		configure(options);
+
 		return builder.WithAnnotation(
-			new AspireC4EfProjectAnnotation { Label = label },
+			new AspireC4EfProjectAnnotation(options),
 			ResourceAnnotationMutationBehavior.Replace
 		);
 	}

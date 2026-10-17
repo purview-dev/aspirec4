@@ -56,9 +56,20 @@ public static class EfModelLoader
 	/// Aspire exposes the project file path but not its build output, so the assembly is located by
 	/// searching <c>bin/</c> for the newest build output that carries a descriptor.
 	/// </remarks>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1021:Avoid out parameters")]
 	public static EfModel LoadFromProject(string projectPath, out EfModelLoadDiagnostics diagnostics)
 	{
 		var outputDirectory = FindOutputDirectory(projectPath);
+
+		// The build-time dump is the real EF Core model — conventions, converters and composite foreign
+		// keys included — so it wins over the descriptor and the metadata reader. It is read from this
+		// project and every project it references, because it runs where the EF Core provider lives.
+		if (EfModelDumpReader.TryReadGraph(projectPath, outputDirectory, out var dumped))
+		{
+			diagnostics = new EfModelLoadDiagnostics(projectPath, outputDirectory, 0, 0, 0, dumped.Contexts.Count);
+
+			return dumped;
+		}
 
 		if (outputDirectory is null)
 		{
@@ -68,6 +79,7 @@ public static class EfModelLoader
 		}
 
 		List<EfModel> models = [];
+		HashSet<string> withDescriptors = [with(StringComparer.OrdinalIgnoreCase)];
 		var scanned = 0;
 
 		try
@@ -82,6 +94,7 @@ public static class EfModelLoader
 				if (EfModelReader.TryRead(candidate, out var descriptor))
 				{
 					models.Add(Parse(descriptor));
+					withDescriptors.Add(Path.GetFileName(candidate));
 				}
 			}
 		}
@@ -98,17 +111,58 @@ public static class EfModelLoader
 			return EfModel.Empty;
 		}
 
-		diagnostics = new EfModelLoadDiagnostics(projectPath, outputDirectory, scanned, models.Count);
+		// Anything without a descriptor is recovered from metadata. The analyzer is opt-in and a
+		// shared or third-party assembly cannot carry a descriptor at all, so this is what makes the
+		// diagram work with no per-project configuration.
+		var approximate = EfModelMetadataReader.Read(outputDirectory, withDescriptors);
+
+		if (approximate.Count > 0)
+		{
+			models.Add(new EfModel { Contexts = approximate });
+		}
+
+		diagnostics = new EfModelLoadDiagnostics(
+			projectPath,
+			outputDirectory,
+			scanned,
+			withDescriptors.Count,
+			approximate.Count
+		);
 
 		return Merge(models);
 	}
 
-	/// <summary>Merges several descriptors into one model.</summary>
+	/// <summary>Merges several descriptors into one model, de-duplicating by context type.</summary>
+	/// <remarks>
+	/// The same context can reach the diagram more than once — a shared library referenced by two
+	/// opted-in projects is the common case — so a context is included once, keyed by its
+	/// fully-qualified type name. When both a full-fidelity and an approximate description are present,
+	/// the full one wins.
+	/// </remarks>
 	public static EfModel Merge(IEnumerable<EfModel> models)
 	{
 		ArgumentNullException.ThrowIfNull(models);
 
-		return new EfModel { Contexts = [.. models.SelectMany(m => m.Contexts)] };
+		Dictionary<string, int> indexByType = [with(StringComparer.Ordinal)];
+		List<EfContext> contexts = [];
+
+		foreach (var context in models.SelectMany(m => m.Contexts))
+		{
+			if (indexByType.TryGetValue(context.TypeName, out var index))
+			{
+				if (contexts[index].Fidelity == EfModelFidelity.Approximate && context.Fidelity == EfModelFidelity.Full)
+				{
+					contexts[index] = context;
+				}
+
+				continue;
+			}
+
+			indexByType[context.TypeName] = contexts.Count;
+			contexts.Add(context);
+		}
+
+		return new EfModel { Contexts = contexts };
 	}
 
 	/// <summary>Locates a project's most recent build output directory.</summary>
@@ -306,9 +360,18 @@ public static class EfModelLoader
 /// <param name="OutputDirectory">The output directory that was read, or <see langword="null"/> when none was found.</param>
 /// <param name="AssembliesScanned">How many assemblies in that directory were read.</param>
 /// <param name="DescriptorsFound">How many of them carried an EF descriptor.</param>
+/// <param name="MetadataContextsFound">
+/// How many contexts were recovered from metadata rather than a descriptor, and are therefore
+/// approximate.
+/// </param>
+/// <param name="DumpContextsFound">
+/// How many contexts came from a build-time dump. Non-zero means the authoritative EF model was used.
+/// </param>
 public readonly record struct EfModelLoadDiagnostics(
 	string ProjectPath,
 	string? OutputDirectory,
 	int AssembliesScanned,
-	int DescriptorsFound
+	int DescriptorsFound,
+	int MetadataContextsFound = 0,
+	int DumpContextsFound = 0
 );

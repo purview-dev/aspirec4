@@ -13,5 +13,13 @@
 			Include="..\..\src\TestAppHost.ComplexData\TestAppHost.ComplexData.csproj"
 			IsAspireProjectResource="false"
 		/>
+		<ProjectReference
+			Include="..\..\src\EntityFrameworkCore.ModelDump\EntityFrameworkCore.ModelDump.csproj"
+			IsAspireProjectResource="false"
+		/>
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
 	</ItemGroup>
 </Project>

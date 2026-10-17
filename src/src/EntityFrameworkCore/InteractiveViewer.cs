@@ -18,18 +18,19 @@ public static class InteractiveViewer
 	/// <summary>Assets for the Mermaid preview.</summary>
 	public static IReadOnlyList<string> MermaidAssetNames { get; } = ["index.html", "mermaid-app.js"];
 
-	/// <summary>Reads an interactive-viewer asset, substituting the model file name and title.</summary>
-	public static string Asset(string name, string modelFileName, string? title) =>
-		Substitute(Read("viewer." + name), modelFileName, title);
+	/// <summary>Reads an interactive-viewer asset, substituting the model file name, title and display.</summary>
+	public static string Asset(string name, string modelFileName, string? title, DomainTypeDisplay domainTypeDisplay) =>
+		Substitute(Read("viewer." + name), modelFileName, title, domainTypeDisplay);
 
 	/// <summary>Reads a Mermaid-preview asset, substituting the diagram file name and title.</summary>
 	public static string MermaidAsset(string name, string diagramFileName, string? title) =>
-		Substitute(Read("mermaid." + name), diagramFileName, title);
+		Substitute(Read("mermaid." + name), diagramFileName, title, DomainTypeDisplay.DomainTypeFirst);
 
-	static string Substitute(string content, string fileName, string? title) =>
+	static string Substitute(string content, string fileName, string? title, DomainTypeDisplay display) =>
 		content
 			.Replace("__MODEL__", fileName, StringComparison.Ordinal)
-			.Replace("__TITLE__", string.IsNullOrWhiteSpace(title) ? "ER Diagram" : title, StringComparison.Ordinal);
+			.Replace("__TITLE__", string.IsNullOrWhiteSpace(title) ? "ER Diagram" : title, StringComparison.Ordinal)
+			.Replace("__DOMAIN_TYPE_DISPLAY__", display.ToString(), StringComparison.Ordinal);
 
 	/// <summary>
 	/// The viewer's JavaScript dependencies, keyed by the file name written to <c>vendor/</c>.

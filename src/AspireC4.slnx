@@ -14,6 +14,7 @@
 		<Project Path="src/AspireC4/AspireC4.csproj" />
 		<Project Path="src/EntityFrameworkCore/EntityFrameworkCore.csproj" />
 		<Project Path="src/EntityFrameworkCore.Analyzers/EntityFrameworkCore.Analyzers.csproj" />
+		<Project Path="src/EntityFrameworkCore.ModelDump/EntityFrameworkCore.ModelDump.csproj" />
 		<Project Path="src/TestAppHost.SimpleData/TestAppHost.SimpleData.csproj" />
 		<Project Path="src/TestAppHost.ComplexData/TestAppHost.ComplexData.csproj" />
 	</Folder>

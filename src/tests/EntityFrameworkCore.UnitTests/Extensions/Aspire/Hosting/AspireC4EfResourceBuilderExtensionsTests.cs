@@ -282,6 +282,26 @@ public sealed class AspireC4EfResourceBuilderExtensionsTests
 	}
 
 	[Test]
+	public async Task WithEntityFrameworkModel_WithConfigure_CarriesLabelAndFilters()
+	{
+		// Arrange
+		var appBuilder = CreateAppBuilder();
+		var service = appBuilder.AddExecutable("svc", "dotnet", ".");
+
+		// Act
+		service.WithEntityFrameworkModel(options =>
+		{
+			options.Label = "API";
+			options.WithExcludedContexts("IdentityDbContext");
+		});
+
+		// Assert
+		var annotation = service.Resource.Annotations.OfType<AspireC4EfProjectAnnotation>().Single();
+		await Assert.That(annotation.Label).IsEqualTo("API");
+		await Assert.That(annotation.Options.ExcludedContexts).IsEquivalentTo(["IdentityDbContext"]);
+	}
+
+	[Test]
 	public async Task WithLocalD2CLI_ReplacesTheContainerWithAnExecutable()
 	{
 		// Arrange

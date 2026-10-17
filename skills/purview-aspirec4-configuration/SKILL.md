@@ -130,5 +130,6 @@ WithLegacyLayout()                        WithLikeC4ProjectFolder(string)
 ## Related skills
 
 `purview-aspirec4-quickstart` for installing and running it, `purview-aspirec4-resources` for
-per-resource customisation, and `purview-aspirec4-validation` for the registry that keeps the kind
-and tag strings honest.
+per-resource customisation, `purview-aspirec4-validation` for the registry that keeps the kind
+and tag strings honest, and `purview-aspirec4-entityframework` for the Entity Framework Core ER
+diagram and its own options.

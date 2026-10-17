@@ -65,7 +65,7 @@ public static class DbmlGenerator
 
 		foreach (var column in table.Columns)
 		{
-			WriteColumn(sb, column);
+			WriteColumn(sb, column, options);
 		}
 
 		// The owning context is recorded as a note so the grouping survives a round-trip through
@@ -76,9 +76,9 @@ public static class DbmlGenerator
 		sb.AppendLine();
 	}
 
-	static void WriteColumn(StringBuilder sb, EfColumn column)
+	static void WriteColumn(StringBuilder sb, EfColumn column, AspireC4EfDiagramOptions options)
 	{
-		sb.Append('\t').Append(Identifier(column.Name)).Append(' ').Append(StoreType(column));
+		sb.Append('\t').Append(Identifier(column.Name)).Append(' ').Append(StoreType(column, options));
 
 		List<string> settings = [];
 
@@ -98,9 +98,22 @@ public static class DbmlGenerator
 			settings.Add("not null");
 		}
 
+		// The value type and the column's own comment share the single note DBML allows.
+		List<string> notes = [];
+
+		if (EfColumnTypeDisplay.Annotation(column, options) is { } annotation)
+		{
+			notes.Add(annotation);
+		}
+
 		if (!string.IsNullOrWhiteSpace(column.Comment))
 		{
-			settings.Add($"note: {Quote(column.Comment)}");
+			notes.Add(column.Comment);
+		}
+
+		if (notes.Count > 0)
+		{
+			settings.Add($"note: {Quote(string.Join(" — ", notes))}");
 		}
 
 		if (settings.Count > 0)
@@ -172,10 +185,8 @@ public static class DbmlGenerator
 			: Identifier(table.Name);
 	}
 
-	static string StoreType(EfColumn column) =>
-		column.MaxLength is > 0 && !column.StoreType.Contains('(', StringComparison.Ordinal)
-			? $"{column.StoreType}({column.MaxLength.Value.ToString(CultureInfo.InvariantCulture)})"
-			: column.StoreType;
+	static string StoreType(EfColumn column, AspireC4EfDiagramOptions options) =>
+		EfColumnTypeDisplay.Primary(column, options);
 
 	/// <summary>Quotes an identifier only when it is not a bare word, as DBML allows both forms.</summary>
 	internal static string Identifier(string value)

@@ -28,6 +28,14 @@ sealed class ColumnShape
 
 	public string? ClrTypeName { get; set; }
 
+	/// <summary>The domain type backing this column, when its declared type is not a primitive.</summary>
+	public string? DomainTypeName { get; set; }
+
+	/// <summary>
+	/// Which kind of domain type it is: <c>ValueObject</c>, <c>ComplexValueObject</c> or <c>Enum</c>.
+	/// </summary>
+	public string? DomainTypeKind { get; set; }
+
 	public bool IsNullable { get; set; }
 
 	public bool IsPrimaryKey { get; set; }

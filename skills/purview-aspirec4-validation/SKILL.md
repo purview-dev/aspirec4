@@ -191,5 +191,6 @@ by hand collides with the generated copy.
 
 ## Related skills
 
-`purview-aspirec4-resources` for the call sites these constants feed, and
-`purview-aspirec4-configuration` for the project-wide options.
+`purview-aspirec4-resources` for the call sites these constants feed,
+`purview-aspirec4-configuration` for the project-wide options, and
+`purview-aspirec4-entityframework` for the Entity Framework Core ER diagram.

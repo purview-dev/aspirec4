@@ -148,14 +148,13 @@ icon. See [Generated Output](docs/wiki/Generated-Output.md) for the details.
 [d2](https://d2lang.com) `sql_table` ER diagram generated from your Entity Framework Core `DbContext`
 types, hosted alongside the architecture diagram and linked from it.
 
-Two packages are involved, because the model is read from source at compile time:
+The AppHost package is all that is required. `WithEntityFrameworkDiagram()` finds every associated
+`DbContext` automatically — reading a build-time dump or a source-generated descriptor where a project
+carries one, and falling back to the assembly's metadata otherwise:
 
 ```bash
 # AppHost project
 dotnet add package AspireC4.Hosting.EntityFrameworkCore
-
-# Each service project that owns a DbContext
-dotnet add package AspireC4.EntityFrameworkCore
 ```
 
 ```csharp
@@ -165,10 +164,21 @@ builder.AddAspireC4()
        .WithEntityFrameworkDiagram(configure: options => options
            .LayoutEngine = D2LayoutEngine.Elk);
 
-builder.AddProject<Projects.Api>("api")
-       .WithEntityFrameworkModel();   // contribute this project's DbContexts
+builder.AddProject<Projects.Api>("api");
 
 builder.Build().Run();
+```
+
+Two packages upgrade a project's fidelity, and both are opt-in by reference alone — see
+[How the model is read](#how-the-model-is-read):
+
+```bash
+# The project that owns the DbContext and that you control: captures fluent configuration
+dotnet add package AspireC4.EntityFrameworkCore
+
+# The project that owns the EF Core provider and a design-time DbContext factory:
+# writes the real model, composite keys included
+dotnet add package AspireC4.EntityFrameworkCore.ModelDump
 ```
 
 This writes `./.aspirec4/erd/schema.gen.d2`, starts a `d2lang/d2` sidecar running `d2 --watch`, and
@@ -195,6 +205,9 @@ aspirec4                 # parent row, added only when there is more than one di
 | --- | --- | --- |
 | `Renderer` | `Interactive` | `Interactive`, `Mermaid`, `Dbml` or `D2` — see [Renderers](#renderers) |
 | `Title` | `null` | Title shown in the generated diagram |
+| `DiscoverAllProjects` | `true` | Scan every project resource for `DbContext` types. `WithProjectOptInOnly()` restricts it to projects marked with `WithEntityFrameworkModel()` |
+| `IncludedContexts` | empty | When non-empty, only these contexts appear. `WithIncludedContexts(...)` |
+| `ExcludedContexts` | empty | Contexts to omit, matched by short or fully-qualified name. `WithExcludedContexts(...)` |
 | `OutputDirectory` | `"./.aspirec4/erd/"` | Directory the generated files are written to |
 | `FileName` | `"schema.gen"` | Generated file name without extension |
 | `UseSubgraphs` | `true` | Mermaid only — group entities into one `subgraph` per `DbContext` (needs Mermaid 11.17+) |
@@ -202,6 +215,7 @@ aspirec4                 # parent row, added only when there is more than one di
 | `ShowNullability` | `true` | Render nullable columns with a trailing `?` |
 | `GroupBySchema` | `true` | Group tables into d2 containers by database schema |
 | `GroupByContext` | `true` | Group by `DbContext` when more than one is discovered |
+| `DomainTypeDisplay` | `DomainTypeFirst` | How a column shows its domain type — a value object or an enum — beside the database type: `DomainTypeFirst` (`AssetId (guid)`, `ActorType (int, enum)`), `DatabaseFirst`, `DomainTypeOnly`, `DatabaseOnly` |
 | `ContainerImageTag` | `null` (`v0.9.0`) | Pin the [`d2lang/d2`](https://hub.docker.com/r/d2lang/d2/) image tag |
 | `UseViewerServer` | `true` | Serve the viewer so the dashboard can link to it; set `false` where there is no container runtime |
 | `ViewerServerImageTag` | `null` (`1.29-alpine`) | Pin the `nginx` image tag used to serve the viewer |
@@ -308,25 +322,87 @@ Animated edges are browser-only and will not appear in the SVG output.
 
 ### How the model is read
 
-The `AspireC4.EntityFrameworkCore` package is an **analyzer-only** package. At compile time it reads
-your `DbContext` types and emits the discovered model into the assembly as an attribute; the AppHost
-reads that attribute straight out of the built assembly's metadata, without loading or executing it.
+Every project resource is scanned for `DbContext` types. Each context is recovered from the best source
+available, and the diagram records which one was used:
+
+| Source | When | Fidelity |
+| --- | --- | --- |
+| **Dump** | The project — or one it references — references `AspireC4.EntityFrameworkCore.ModelDump` | `Full` — the real EF model, composite foreign keys included |
+| **Descriptor** | The project references the analyzer-only `AspireC4.EntityFrameworkCore` package | `Full` — includes fluent `OnModelCreating` configuration |
+| **Metadata** | Otherwise | `Approximate` — conventions and data annotations only |
+
+The metadata path opens the built assembly with a reflection-only load context, so no code in it runs —
+the same guarantee as the descriptor path, which reads the attribute straight out of assembly metadata.
+This is what makes `WithEntityFrameworkDiagram()` work with no per-project configuration, and it is the
+only way a shared or third-party assembly — one you cannot add a package to — contributes at all.
+
+Because `OnModelCreating` is a method body, it is absent from metadata: a project without the analyzer
+still appears, but fluent renames, default schemas and `Ignore` calls do not. `MetadataContextsFound` in
+the loader diagnostics, and the `Approximate` fidelity on each context, record which happened, so a
+partial model is never mistaken for a complete one.
+
+#### Filtering
+
+`WithExcludedContexts(...)` and `WithIncludedContexts(...)` accept short names (`IdentityDbContext`) or
+fully-qualified type names (`Shared.Data.IdentityDbContext`), case-insensitively; an exclusion always
+wins. This is how a context shared by several projects — an `IdentityDbContext` in a common library
+nobody owns — is kept out without editing that library. The same filters are available per project
+through the `WithEntityFrameworkModel(options => ...)` overload. Because the same context can reach the
+diagram from more than one project, contexts are de-duplicated by fully-qualified type name; when both
+an approximate and a full description exist, the full one wins.
+
+#### Authoritative dump (opt-in)
+
+The two recovered sources above never touch the service. Where you own the project and want the exact
+model — composite foreign keys included — add the dump package to the project that owns the EF Core
+**provider** and a design-time `DbContext` factory:
+
+```bash
+dotnet add package AspireC4.EntityFrameworkCore.ModelDump
+```
+
+That reference *is* the opt-in. The build then runs the dump tool, which builds each context's real
+`IModel` and writes the diagram contract to `obj/aspirec4/ef/`. That directory is never copied to
+`bin/` or `publish/` and is gitignored, so the dump has no deployment footprint. The AppHost reads it —
+from that project and from every project it references — in preference to the descriptor and the
+metadata reader, and falls back when it is missing or older than the built assembly.
+
+Set `<AspireC4EfModelDumpConnectionString>` when the design-time factory needs one to build its
+options — the model is never opened, so any syntactically valid value works.
 
 Because the model is recovered **statically**, it is a close approximation rather than a guaranteed
-match for the migrated schema. Understood today:
+match for the migrated schema.
+
+**Recovered from metadata** (every project):
 
 - `DbSet<T>` properties, and entity types reachable through navigation properties.
 - `[Key]`, `[Required]`, `[MaxLength]`, `[StringLength]`, `[Table]`, `[Column]`, `[ForeignKey]`,
   `[NotMapped]`, `[Index(IsUnique = true)]`.
 - EF naming conventions for primary keys (`Id` / `<Type>Id`) and foreign keys (`<Nav>Id` /
   `<PrincipalType>Id`).
+- A column's **domain type** — a value object or an enum — is shown beside its real database type,
+  controlled by `DomainTypeDisplay`: `AssetId (guid)` for a value object, `ActorType (int, enum)` for an
+  enum. A **scalar** value object (a struct wrapping a single `Value`, such as a strongly-typed
+  identifier) becomes a column, and its foreign keys carry the relationships between entities. A
+  **complex** value object — one marked `[ValueObject(EFMapping = ComplexType)]` — is flattened into its
+  owner's table. An **enum** is shown as itself and marked `enum`. The primitive a scalar value object
+  converts to is known only to its value converter, so the model keeps both.
+
+**Also recovered from a descriptor** (analyzer-referenced projects):
+
 - Fluent configuration in `OnModelCreating`: `HasDefaultSchema`, `ToTable`, `HasKey`, `Ignore`,
   `HasIndex(...).IsUnique()`, and `Property(...)` with `HasColumnName`, `HasColumnType`,
   `HasMaxLength`, `IsRequired`, `HasComment`.
 - Column comments, from `[Comment]` or `HasComment`.
+
+**Derived in both cases:**
+
 - Relationship cardinality and join tables, both **derived** rather than read from EF: a foreign key
   is unique when its columns are the key or carry a unique index, required when they are non-nullable,
   and a table is a join table when every key column is also a foreign key and there is more than one.
+- Relationships themselves are derived from navigation properties and the `<Nav>Id` convention. A
+  relationship configured only fluently — with no navigation, or a composite foreign key whose columns
+  do not match that convention — is not drawn.
 
 **Not captured.** These need either runtime model-building or analysis beyond what is sensible
 statically, and are silently absent rather than guessed at: owned types, TPH/TPT/TPC inheritance

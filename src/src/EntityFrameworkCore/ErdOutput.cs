@@ -52,7 +52,7 @@ public static class ErdOutput
 				new ErdFile($"{name}.json", Serialise(model)),
 				.. InteractiveViewer.AssetNames.Select(asset => new ErdFile(
 					asset,
-					InteractiveViewer.Asset(asset, $"{name}.json", options.Title)
+					InteractiveViewer.Asset(asset, $"{name}.json", options.Title, options.DomainTypeDisplay)
 				)),
 			],
 		};

@@ -135,4 +135,5 @@ See the `purview-aspirec4-validation` skill.
 ## Related skills
 
 `purview-aspirec4-quickstart` to get the diagram running, `purview-aspirec4-configuration` for the
-project-wide options, and `purview-aspirec4-validation` for the registry and diagnostics.
+project-wide options, `purview-aspirec4-validation` for the registry and diagnostics, and
+`purview-aspirec4-entityframework` for the Entity Framework Core ER diagram.

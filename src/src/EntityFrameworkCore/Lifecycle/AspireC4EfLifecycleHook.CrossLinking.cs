@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using Aspire.Hosting.AspireC4.EntityFrameworkCore.Annotations;
 using Aspire.Hosting.AspireC4.EntityFrameworkCore.ApplicationModel;
 using Aspire.Hosting.AspireC4.LikeC4.Annotations;
 using Microsoft.Extensions.Logging;
@@ -176,15 +175,11 @@ sealed partial class AspireC4EfLifecycleHook
 	/// every regeneration, so the link is picked up on the next regeneration rather than needing the two
 	/// hooks to coordinate.
 	/// </remarks>
-	async Task CrossLinkAsync(
-		DistributedApplicationModel model,
-		AspireC4EfResource resource,
-		CancellationToken cancellationToken
-	)
+	async Task CrossLinkAsync(AspireC4EfResource resource, CancellationToken cancellationToken)
 	{
-		var contributors = model
-			.Resources.Where(r => r.TryGetLastAnnotation<AspireC4EfProjectAnnotation>(out _))
-			.ToList();
+		// Only the projects that actually appear in the diagram get the link — a project scanned but
+		// contributing nothing should not advertise it.
+		var contributors = _contributors;
 
 		if (contributors.Count == 0)
 		{

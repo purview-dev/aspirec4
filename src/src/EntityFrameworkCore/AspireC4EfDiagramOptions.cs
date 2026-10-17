@@ -20,6 +20,48 @@ public sealed class AspireC4EfDiagramOptions
 	public string? Title { get; set; }
 
 	/// <summary>
+	/// Whether every project resource in the application is scanned for <c>DbContext</c> types.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// On by default, so calling <see cref="AspireC4EfResourceBuilderExtensions.WithEntityFrameworkDiagram"/>
+	/// alone is enough: the diagram finds every associated context with no per-project configuration.
+	/// Each project's build output is scanned, and a context is recovered from either a source-generated
+	/// descriptor (full fidelity) or, failing that, the assembly's metadata (approximate).
+	/// </para>
+	/// <para>
+	/// Set to <see langword="false"/> to restrict the diagram to the projects opted in explicitly with
+	/// <c>WithEntityFrameworkModel()</c>. Use <see cref="WithProjectOptInOnly"/> for that.
+	/// </para>
+	/// </remarks>
+	public bool DiscoverAllProjects { get; set; } = true;
+
+	/// <summary>
+	/// Contexts to include. When empty, every discovered context is included.
+	/// </summary>
+	/// <remarks>
+	/// Entries match the context's short name or its fully-qualified type name, case-insensitively.
+	/// Populate with <see cref="WithIncludedContexts"/>.
+	/// </remarks>
+	public IList<string> IncludedContexts { get; } = [];
+
+	/// <summary>
+	/// Contexts to exclude, matched the same way as <see cref="IncludedContexts"/>. An entry here wins
+	/// over an include entry.
+	/// </summary>
+	/// <remarks>Populate with <see cref="WithExcludedContexts"/>.</remarks>
+	public IList<string> ExcludedContexts { get; } = [];
+
+	/// <summary>
+	/// How a column shows its domain type — a value object or an enum — next to the real database type.
+	/// </summary>
+	/// <remarks>
+	/// Defaults to <see cref="DomainTypeDisplay.DomainTypeFirst"/>, so a strongly-typed identifier reads
+	/// <c>AssetId (guid)</c>. The database type is never discarded, whichever mode is chosen.
+	/// </remarks>
+	public DomainTypeDisplay DomainTypeDisplay { get; set; } = DomainTypeDisplay.DomainTypeFirst;
+
+	/// <summary>
 	/// Which renderer produces the diagram. Defaults to <see cref="ErdRenderer.Interactive"/>, the only
 	/// renderer that loses nothing; the text formats are projections for publishing and interchange.
 	/// </summary>
@@ -101,4 +143,64 @@ public sealed class AspireC4EfDiagramOptions
 
 	/// <summary>Name used for the diagram link when hidden from the dashboard.</summary>
 	public string DashboardLinkDisplayName { get; set; } = "ER Diagram";
+
+	/// <summary>Restricts the diagram to the contexts whose short or full type name is listed.</summary>
+	/// <remarks>Entries are matched case-insensitively; see <see cref="IncludedContexts"/>.</remarks>
+	/// <param name="contextNames">The context names to include.</param>
+	/// <returns>This options instance, for chaining.</returns>
+	public AspireC4EfDiagramOptions WithIncludedContexts(params string[] contextNames)
+	{
+		AddContextNames(IncludedContexts, contextNames);
+
+		return this;
+	}
+
+	/// <summary>Removes the listed contexts from the diagram, whatever else is configured.</summary>
+	/// <remarks>
+	/// This is how a context shared by several projects — an <c>IdentityDbContext</c> in a common
+	/// library, say — is kept out of the diagram without editing the library.
+	/// </remarks>
+	/// <param name="contextNames">The context names to exclude.</param>
+	/// <returns>This options instance, for chaining.</returns>
+	public AspireC4EfDiagramOptions WithExcludedContexts(params string[] contextNames)
+	{
+		AddContextNames(ExcludedContexts, contextNames);
+
+		return this;
+	}
+
+	/// <summary>Restricts the diagram to the projects opted in with <c>WithEntityFrameworkModel()</c>.</summary>
+	/// <remarks>Clears <see cref="DiscoverAllProjects"/>, which is on by default.</remarks>
+	/// <returns>This options instance, for chaining.</returns>
+	public AspireC4EfDiagramOptions WithProjectOptInOnly()
+	{
+		DiscoverAllProjects = false;
+
+		return this;
+	}
+
+	/// <summary>Sets how a column shows its domain type next to the database type.</summary>
+	/// <param name="display">The display mode.</param>
+	/// <returns>This options instance, for chaining.</returns>
+	public AspireC4EfDiagramOptions WithDomainTypeDisplay(DomainTypeDisplay display)
+	{
+		DomainTypeDisplay = display;
+
+		return this;
+	}
+
+	static void AddContextNames(IList<string> target, string[] contextNames)
+	{
+		ArgumentNullException.ThrowIfNull(contextNames);
+
+		foreach (var name in contextNames)
+		{
+			ArgumentException.ThrowIfNullOrWhiteSpace(name);
+
+			if (!target.Contains(name, StringComparer.OrdinalIgnoreCase))
+			{
+				target.Add(name);
+			}
+		}
+	}
 }
