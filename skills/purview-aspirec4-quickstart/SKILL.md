@@ -60,6 +60,27 @@ On startup AspireC4:
 
 Open the Aspire dashboard and select the `aspirec4` resource, or its **View LikeC4 Diagram** link.
 
+## Upgrading from 13.5
+
+13.6 is breaking for anything that reads AspireC4's generated files or addresses its dashboard
+resources by name:
+
+- the architecture model moved from `./likec4/gen/` to `./.aspirec4/likec4/`;
+- the ER diagram moved from `./erd/gen/` to `./.aspirec4/erd/`;
+- with a second diagram registered, the rows nest under a parent and the architecture diagram is
+  renamed `aspirec4` → `aspirec4-likec4`.
+
+To keep the previous layout, turn on **legacy mode**:
+
+```csharp
+builder.AddAspireC4(configure: options => options.WithLegacyLayout());
+```
+
+or, without code, set `"AspireC4": { "UseLegacyLayout": true }` in `appsettings.json` (or
+`AspireC4__UseLegacyLayout=true`). That restores both paths and the flat `aspirec4` / `aspirec4-er`
+names. It is a compatibility shim and will be removed in a future major version — see
+`purview-aspirec4-configuration` for the caveats and the migration steps.
+
 ## A little configuration
 
 ```csharp

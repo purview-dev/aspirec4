@@ -45,6 +45,13 @@ builder.Build().Run();
 
 This writes `./.aspirec4/likec4/model.gen.c4`, starts the LikeC4 server, and refreshes the diagram as the Aspire app changes.
 
+> [!NOTE]
+> **Upgrading from 13.5 or earlier?** Generated output moved to `./.aspirec4/` and, once a second
+> diagram is registered, the architecture diagram's dashboard resource is renamed. For an upgrade that
+> changes nothing else, call `options.WithLegacyLayout()` — it restores both the old paths
+> (`./likec4/gen/`, `./erd/gen/`) and the flat `aspirec4` / `aspirec4-er` names. See
+> [Upgrading from before 13.6](#upgrading-from-before-136).
+
 ## Configuration
 
 Configure the diagram through `AspireC4DiagramOptions`:
@@ -100,11 +107,29 @@ The LikeC4 sidecar is excluded automatically. Set `WithIncludeAspireC4InternalRe
   architecture diagram's resource is renamed from `aspirec4` to `aspirec4-likec4`. With only
   `AddAspireC4()`, nothing changes.
 
-Both revert together with one switch, for a zero-change upgrade:
+### Legacy mode (keeping the pre-13.6 layout)
+
+Both changes revert together with one switch, for a zero-change upgrade:
 
 ```csharp
 builder.AddAspireC4(configure: options => options.WithLegacyLayout());
 ```
+
+or, without touching code:
+
+```json
+{
+  "AspireC4": {
+    "UseLegacyLayout": true
+  }
+}
+```
+
+With legacy mode on, the architecture diagram writes to `./likec4/gen/`, the ER diagram to
+`./erd/gen/`, and the diagrams stay flat in the dashboard as `aspirec4` and `aspirec4-er` with no
+parent row. An `OutputDirectory` you set explicitly still wins over the legacy default, and the switch
+does not affect `WithLikeC4ProjectFolder(...)` — generated output always stays beneath a hand-authored
+project.
 
 It is a compatibility shim that will be removed in a future major version — prefer adopting the new
 layout. The full details, including what to update when you drop it, are in the
@@ -190,6 +215,12 @@ architecture diagram.
 Both diagrams write beneath a single `./.aspirec4/` root in the AppHost directory — one directory to
 ignore in source control regardless of how many are enabled.
 
+> [!NOTE]
+> The ER diagram's `./.aspirec4/erd/` default follows the architecture diagram's legacy switch:
+> `WithLegacyLayout()` restores `./erd/gen/` too, because the two diagrams must agree. An
+> `OutputDirectory` set on `WithEntityFrameworkDiagram` still wins. See
+> [Legacy mode](#legacy-mode-keeping-the-pre-136-layout).
+
 With only the architecture diagram registered, the dashboard shows the one `aspirec4` row it always
 has. Registering a second diagram nests them under a shared parent instead:
 
@@ -208,7 +239,7 @@ aspirec4                 # parent row, added only when there is more than one di
 | `DiscoverAllProjects` | `true` | Scan every project resource for `DbContext` types. `WithProjectOptInOnly()` restricts it to projects marked with `WithEntityFrameworkModel()` |
 | `IncludedContexts` | empty | When non-empty, only these contexts appear. `WithIncludedContexts(...)` |
 | `ExcludedContexts` | empty | Contexts to omit, matched by short or fully-qualified name. `WithExcludedContexts(...)` |
-| `OutputDirectory` | `"./.aspirec4/erd/"` | Directory the generated files are written to |
+| `OutputDirectory` | `"./.aspirec4/erd/"` | Directory the generated files are written to. Follows the architecture diagram's legacy switch when left at its default |
 | `FileName` | `"schema.gen"` | Generated file name without extension |
 | `UseSubgraphs` | `true` | Mermaid only — group entities into one `subgraph` per `DbContext` (needs Mermaid 11.17+) |
 | `LayoutEngine` | `Elk` | D2 only. `Dagre`, `Elk` or `Tala`. **dagre cannot target `sql_table` rows** |

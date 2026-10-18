@@ -52,6 +52,12 @@ That is all it takes. On startup AspireC4:
 
 Open the Aspire dashboard and select the `aspirec4` resource (or its **View LikeC4 Diagram** link) to see the live diagram.
 
+> [!NOTE]
+> **Upgrading from 13.5 or earlier?** 13.6 moved generated output under `./.aspirec4/` and changed the
+> dashboard names when a second diagram is registered. `WithLegacyLayout()` keeps the old
+> `./likec4/gen/` and `./erd/gen/` paths and the flat `aspirec4` / `aspirec4-er` rows. See
+> [Migration](Migration.md).
+
 ## Customize the diagram
 
 Pass a configuration callback to `AddAspireC4`:

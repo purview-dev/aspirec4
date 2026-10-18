@@ -5,7 +5,17 @@ AspireC4 writes a LikeC4 project into the output directory (`./.aspirec4/likec4/
 Every AspireC4 diagram writes beneath the same `./.aspirec4/` root in the AppHost directory — the architecture diagram into `likec4/`, the ER diagram into `erd/` — so there is a single directory to ignore in source control regardless of how many are enabled.
 
 > [!NOTE]
-> This root is new in 13.6; output previously went to `./likec4/gen/` and `./erd/gen/`. `WithLegacyLayout()` restores the old paths for an upgrade that changes nothing else — see [Migration](Migration.md).
+> This root is new in 13.6. `WithLegacyLayout()` restores the pre-13.6 paths for an upgrade that
+> changes nothing else:
+>
+> | Diagram | 13.6 default | Legacy mode |
+> | --- | --- | --- |
+> | Architecture | `./.aspirec4/likec4/` | `./likec4/gen/` |
+> | ER | `./.aspirec4/erd/` | `./erd/gen/` |
+>
+> An explicit `OutputDirectory` always wins over either default. Legacy mode still needs the old
+> `likec4/gen/` and `erd/gen/` `.gitignore` entries; the new layout needs only `**/.aspirec4/`. See
+> [Migration](Migration.md).
 
 ## Files
 

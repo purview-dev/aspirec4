@@ -130,7 +130,7 @@ Options bind from the **`AspireC4:EntityFramework`** section, applied on top of 
 | `Title` | `null` | title shown in the generated diagram |
 | `DiscoverAllProjects` | `true` | scan every project resource; `WithProjectOptInOnly()` narrows it |
 | `IncludedContexts` / `ExcludedContexts` | empty | context filters |
-| `OutputDirectory` | `"./.aspirec4/erd/"` | where generated files are written |
+| `OutputDirectory` | `"./.aspirec4/erd/"` | where generated files are written; follows the architecture diagram's `WithLegacyLayout()` (`./erd/gen/`) when left at its default |
 | `FileName` | `"schema.gen"` | file name without extension |
 | `UseSubgraphs` | `true` | Mermaid only — one `subgraph` per `DbContext` (needs Mermaid 11.17+) |
 | `LayoutEngine` | `Elk` | D2 only. `Dagre`, `Elk` or `Tala`; **dagre cannot target `sql_table` rows** |
@@ -143,6 +143,11 @@ Options bind from the **`AspireC4:EntityFramework`** section, applied on top of 
 | `ViewerServerImageTag` | `null` | pin the viewer `nginx` image tag |
 | `HideFromDashboard` | `false` | hide the sidecar and surface it as a link |
 | `DashboardLinkDisplayName` | `"ER Diagram"` | the link name when hidden |
+
+The output path follows the architecture diagram: `WithLegacyLayout()` on `AddAspireC4` restores
+`./erd/gen/` as well, because there is no separate ER switch. An `OutputDirectory` set on
+`WithEntityFrameworkDiagram` still wins over either default. See `purview-aspirec4-configuration` for
+legacy mode.
 
 ## Renderers
 

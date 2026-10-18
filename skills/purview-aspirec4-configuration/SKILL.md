@@ -43,6 +43,30 @@ Every property has a matching fluent `With*` method.
 | `UseLegacyLayout` | `false` | restores the pre-13.6 paths (`./likec4/gen/`, `./erd/gen/`) and flat dashboard names. A compatibility shim |
 | `GenerateConfigFile` | `true` | emit a `likec4.config.json` into the output directory |
 
+## Legacy layout
+
+`UseLegacyLayout` / `WithLegacyLayout()` turns on **legacy mode**: the whole pre-13.6 layout, not just
+the architecture diagram's path.
+
+- Architecture output: `./likec4/gen/` instead of `./.aspirec4/likec4/`.
+- ER output: `./erd/gen/` instead of `./.aspirec4/erd/`. There is no separate ER switch; the ER diagram
+  follows the architecture diagram so the two cannot disagree.
+- Dashboard rows stay flat as `aspirec4` and `aspirec4-er`, with no shared parent and no `-likec4`
+  suffix.
+
+```csharp
+builder.AddAspireC4(options => options.WithLegacyLayout());
+```
+
+It can also be set from configuration — `"AspireC4": { "UseLegacyLayout": true }` or
+`AspireC4__UseLegacyLayout=true` — and, unlike most options, is read when the builder runs rather than
+when the runtime options are resolved. An explicit `OutputDirectory` still wins over the legacy
+default, and `WithLikeC4ProjectFolder` is unaffected: generated output always stays beneath the project
+being served.
+
+It is a compatibility shim and will be removed in a future major version. Prefer adopting
+`**/.aspirec4/` in `.gitignore` and updating anything that addresses the `aspirec4` resource by name.
+
 ## Server, container and hot reload
 
 | Property | Default | Description |

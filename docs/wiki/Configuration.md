@@ -62,6 +62,7 @@ Every property has a corresponding fluent `With*` method, for example:
 - `WithGeneratedViewId(string?)`, `WithDefaultViewId(string?)`
 - `WithTitle(string?)`, `WithViewTitle(string)`, `WithViewDescription(string?)`
 - `WithOutputDirectory(string)`, `WithFileName(string)`
+- `WithLikeC4ProjectFolder(string)`, `WithLegacyLayout()`
 - `WithHMRDisabled(bool = true)`
 - `WithContainerImageTag(string?)`, `WithCheckLatestImageVersion(bool = true)`
 - `WithAutoIcons(bool = true)`
@@ -101,6 +102,36 @@ builder.AddAspireC4(options => options.WithHMRDisabled());
 ```csharp
 builder.AddAspireC4(options => options.WithContainerImageTag("1.57"));
 ```
+
+### Keep the pre-13.6 layout (legacy mode)
+
+If you are upgrading and need the old output paths and dashboard names unchanged, turn on **legacy
+mode**:
+
+```csharp
+builder.AddAspireC4(options => options.WithLegacyLayout());
+```
+
+or, without touching code:
+
+```json
+{
+  "AspireC4": {
+    "UseLegacyLayout": true
+  }
+}
+```
+
+Legacy mode restores `./likec4/gen/` and `./erd/gen/` and keeps the dashboard rows flat as
+`aspirec4` and `aspirec4-er`, with no shared parent and no `-likec4` suffix. It is a compatibility
+shim, not an alternative layout, and will be removed in a future major version.
+
+- An `OutputDirectory` you set explicitly always wins over the legacy default.
+- There is no separate setting for the ER diagram: it follows this one.
+- It does not affect `WithLikeC4ProjectFolder(...)`; generated output always stays beneath the
+  hand-authored project.
+
+See [Migration](Migration.md) for the complete before/after and the steps to move off the shim.
 
 ### Security note — dashboard tokens in links
 
