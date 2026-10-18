@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.Json;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Testing;
 using Microsoft.Extensions.Configuration;
@@ -42,6 +43,299 @@ public sealed class TestAppHostFixture : TUnit.Aspire.AspireFixture<Projects.Tes
 	/// <summary>Path of the generated LikeC4 config file (<c>likec4.config.json</c>).</summary>
 	public string ConfigPath => Path.Combine(OutputDirectory, "likec4.config.json");
 
+	/// <summary>
+	/// Where the ER diagram was written, read back off the resource rather than configured, so it
+	/// always matches what the viewer server is serving.
+	/// </summary>
+	public string ErOutputDirectory =>
+		(GetResource("aspirec4-er") as EntityFrameworkCore.ApplicationModel.AspireC4EfResource)?.OutputDirectory
+		?? OutputDirectory;
+
+	/// <summary>Path of the generated ER model. The default renderer emits JSON.</summary>
+	public string ErDiagramPath => Path.Combine(ErOutputDirectory, "schema.gen.json");
+
+	/// <summary>Path of the interactive viewer emitted beside the model.</summary>
+	public string ErViewerPath => Path.Combine(ErOutputDirectory, "index.html");
+
+	/// <summary>How long the ER model is given to gain its first context before a test fails.</summary>
+	/// <remarks>
+	/// The diagram is written from each contributing project's build output and regenerated once those
+	/// projects start, so an empty model right after startup is a transient the hook recovers from.
+	/// Asserting without waiting turns that transient into a spurious failure.
+	/// </remarks>
+	static readonly TimeSpan ErModelTimeout = TimeSpan.FromSeconds(30);
+
+	/// <summary>Reads the generated ER model, waiting until at least one context has been discovered.</summary>
+	/// <remarks>
+	/// Waiting here also keeps the negative assertions honest: a run that produced an empty model used
+	/// to satisfy <c>DoesNotContain</c> while failing the positive assertions, which pointed at the
+	/// wrong cause.
+	/// </remarks>
+	/// <exception cref="TimeoutException">
+	/// The model still had no contexts when <see cref="ErModelTimeout"/> elapsed.
+	/// </exception>
+	public async Task<string> ReadErModelAsync(CancellationToken cancellationToken)
+	{
+		using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+		cts.CancelAfter(ErModelTimeout);
+
+		string? lastContent = null;
+
+		try
+		{
+			while (true)
+			{
+				if (File.Exists(ErDiagramPath))
+				{
+					lastContent = await File.ReadAllTextAsync(ErDiagramPath, cts.Token);
+
+					if (CountContexts(lastContent) > 0)
+					{
+						return lastContent;
+					}
+				}
+
+				await Task.Delay(TimeSpan.FromMilliseconds(250), cts.Token);
+			}
+		}
+		catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+		{
+			var state = await GetResourceStateAsync("aspirec4-er", cancellationToken);
+			var logs = await GetResourceLogsAsync("aspirec4-er", cancellationToken);
+
+			throw new TimeoutException(
+				$"The ER diagram at '{ErDiagramPath}' had no contexts after {ErModelTimeout.TotalSeconds:0}s "
+					+ $"(the 'aspirec4-er' resource was '{state}'). The AppHost could not read an EF Core "
+					+ $"descriptor from a contributing project's build output.{Environment.NewLine}"
+					+ $"ER resource output:{Environment.NewLine}{logs}{Environment.NewLine}"
+					+ $"Last content:{Environment.NewLine}{lastContent}"
+			);
+		}
+	}
+
+	/// <summary>Counts the contexts in a generated ER model, treating unparseable content as none.</summary>
+	static int CountContexts(string json)
+	{
+		try
+		{
+			using var document = JsonDocument.Parse(json);
+
+			return document.RootElement.TryGetProperty("contexts", out var contexts) ? contexts.GetArrayLength() : 0;
+		}
+		catch (JsonException)
+		{
+			// Written mid-flight, or not a model at all.
+			return 0;
+		}
+	}
+
+	/// <summary>Reads the console output a resource has produced so far, for failure messages.</summary>
+	public async Task<string> GetResourceLogsAsync(string resourceName, CancellationToken cancellationToken)
+	{
+		var resource = GetResource(resourceName);
+
+		if (_app is null || resource is null)
+		{
+			return string.Empty;
+		}
+
+		var logger = _app.Services.GetRequiredService<ResourceLoggerService>();
+
+		using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+		cts.CancelAfter(TimeSpan.FromSeconds(5));
+
+		List<string> lines = [];
+
+		try
+		{
+			await foreach (var batch in logger.WatchAsync(resource).WithCancellation(cts.Token))
+			{
+				// The buffered backlog is replayed on subscription as the first batch, so one batch is
+				// the whole history. Live lines are not needed to explain a failure that already
+				// happened.
+				lines.AddRange(batch.Select(line => line.Content));
+
+				if (lines.Count > 0)
+				{
+					break;
+				}
+			}
+		}
+		catch (OperationCanceledException)
+		{
+			// No logs, or none yet.
+		}
+
+		return string.Join(Environment.NewLine, lines.TakeLast(20));
+	}
+
+	DistributedApplication? _app;
+
+	/// <summary>
+	/// Reads the public URLs a resource has published, waiting until it has at least one.
+	/// </summary>
+	public async Task<IReadOnlyList<string>> GetResourceUrlsAsync(
+		string resourceName,
+		CancellationToken cancellationToken
+	)
+	{
+		if (_app is null)
+			return [];
+
+		var notifications = _app.Services.GetRequiredService<ResourceNotificationService>();
+
+		using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+		cts.CancelAfter(ResourceTimeout);
+
+		try
+		{
+			await foreach (var evt in notifications.WatchAsync(cts.Token))
+			{
+				if (!evt.Resource.Name.Equals(resourceName, StringComparison.OrdinalIgnoreCase))
+					continue;
+
+				var urls = evt.Snapshot.Urls.Where(u => !u.IsInternal).Select(u => u.Url).ToArray();
+
+				if (urls.Length > 0)
+					return urls;
+			}
+		}
+		catch (OperationCanceledException)
+		{
+			// Fall through: the resource never published a URL.
+		}
+
+		return [];
+	}
+
+	/// <summary>Finds a resource in the running application model, so tests can inspect annotations.</summary>
+	public IResource? GetResource(string resourceName) =>
+		_app
+			?.Services.GetRequiredService<DistributedApplicationModel>()
+			.Resources.FirstOrDefault(r => r.Name.Equals(resourceName, StringComparison.OrdinalIgnoreCase));
+
+	/// <summary>
+	/// Reads a resource's current dashboard state, so tests can assert what the dashboard would show.
+	/// </summary>
+	/// <returns>The state text, or <see langword="null"/> if the resource never reported one.</returns>
+	public async Task<string?> GetResourceStateAsync(string resourceName, CancellationToken cancellationToken)
+	{
+		if (_app is null)
+			return null;
+
+		var notifications = _app.Services.GetRequiredService<ResourceNotificationService>();
+
+		using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+		cts.CancelAfter(TimeSpan.FromSeconds(30));
+
+		try
+		{
+			await foreach (var evt in notifications.WatchAsync(cts.Token))
+			{
+				if (
+					evt.Resource.Name.Equals(resourceName, StringComparison.OrdinalIgnoreCase)
+					&& evt.Snapshot.State?.Text is { } state
+				)
+				{
+					return state;
+				}
+			}
+		}
+		catch (OperationCanceledException)
+		{
+			// Fall through: the resource never reported a state.
+		}
+
+		return null;
+	}
+
+	/// <summary>
+	/// Waits for a resource to be hidden from the dashboard.
+	/// </summary>
+	/// <remarks>
+	/// Hiding is applied by a lifecycle hook watching notifications, not at build time, so this has to
+	/// wait rather than read one snapshot: the resource is briefly visible before the hook reacts.
+	/// </remarks>
+	/// <returns>
+	/// <see langword="true"/> once the resource reports a hidden snapshot, <see langword="false"/> if it
+	/// never does.
+	/// </returns>
+	public async Task<bool> WaitForHiddenAsync(string resourceName, CancellationToken cancellationToken)
+	{
+		if (_app is null)
+			return false;
+
+		var notifications = _app.Services.GetRequiredService<ResourceNotificationService>();
+
+		using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+		cts.CancelAfter(TimeSpan.FromSeconds(60));
+
+		try
+		{
+			await foreach (var evt in notifications.WatchAsync(cts.Token))
+			{
+				if (evt.Resource.Name.Equals(resourceName, StringComparison.OrdinalIgnoreCase) && evt.Snapshot.IsHidden)
+					return true;
+			}
+		}
+		catch (OperationCanceledException)
+		{
+			// Fall through: the resource stayed visible.
+		}
+
+		return false;
+	}
+
+	/// <summary>
+	/// Reads the parent the dashboard would nest a resource under.
+	/// </summary>
+	/// <remarks>
+	/// Read from the published snapshot rather than from the resource's annotations: the dashboard
+	/// renders the snapshot, and a later update that replaces the property collection wholesale drops
+	/// the parent without touching the annotation the builder added.
+	/// </remarks>
+	/// <returns>The parent resource name, or <see langword="null"/> when the snapshot carries none.</returns>
+	public async Task<string?> GetDashboardParentAsync(string resourceName, CancellationToken cancellationToken)
+	{
+		// Aspire's own KnownProperties.Resource.ParentName, which is internal to Aspire.Hosting.
+		const string parentNameProperty = "resource.parentName";
+
+		if (_app is null)
+			return null;
+
+		var notifications = _app.Services.GetRequiredService<ResourceNotificationService>();
+
+		using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+		cts.CancelAfter(TimeSpan.FromSeconds(30));
+
+		string? parent = null;
+
+		try
+		{
+			await foreach (var evt in notifications.WatchAsync(cts.Token))
+			{
+				if (!evt.Resource.Name.Equals(resourceName, StringComparison.OrdinalIgnoreCase))
+					continue;
+
+				parent =
+					evt.Snapshot.Properties.FirstOrDefault(p =>
+						p.Name.Equals(parentNameProperty, StringComparison.Ordinal)
+					)?.Value as string;
+
+				// The resource publishes more than once — initial state, then whatever the lifecycle
+				// hook forwards onto it — and it is the last word that the dashboard draws.
+				if (evt.Snapshot.State?.Text == KnownResourceStates.Running)
+					return parent;
+			}
+		}
+		catch (OperationCanceledException)
+		{
+			// Fall through: the resource never reached Running.
+		}
+
+		return parent;
+	}
+
 	/// <summary>Directory containing the copied image aliases (svg/png assets).</summary>
 	public string ImagesDirectory => Path.Combine(AppContext.BaseDirectory, "likec4", "images");
 
@@ -71,7 +365,13 @@ public sealed class TestAppHostFixture : TUnit.Aspire.AspireFixture<Projects.Tes
 	/// </summary>
 	protected override async Task WaitForResourcesAsync(DistributedApplication app, CancellationToken cancellationToken)
 	{
-		const string aspireC4ResourceName = AspireC4DistributedApplicationBuilderExtensions.AspireC4ResourceName;
+		_app = app;
+
+		// TestAppHost registers the ER diagram too, so the architecture diagram is nested under the
+		// shared parent row and carries the grouping suffix.
+		const string aspireC4ResourceName =
+			AspireC4DistributedApplicationBuilderExtensions.AspireC4ResourceName
+			+ ApplicationModel.AspireC4DiagramGrouping.LikeC4ResourceSuffix;
 
 		var notificationService = app.Services.GetRequiredService<ResourceNotificationService>();
 
@@ -140,6 +440,11 @@ public sealed class TestAppHostFixture : TUnit.Aspire.AspireFixture<Projects.Tes
 			.Build();
 
 		builder.Configuration.AddInMemoryCollection(configOptions);
+
+		// The ER diagram's output directory is deliberately not overridden. Its viewer server binds a
+		// mount when the builder runs, which cannot follow a configuration change applied afterwards —
+		// overriding it here would leave the server serving a directory the diagram is not written to.
+		// Tests read the directory back off the resource instead.
 
 		// PostConfigure wins over all Configure callbacks, including the default FormatGeneratedFile=true.
 		// The format step invokes `npx likec4 …` which traverses up the directory tree and scans the entire

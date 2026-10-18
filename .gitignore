@@ -567,11 +567,17 @@ dist
 
 [Bb]uild/
 !/src/src/AspireC4/build/
+!/src/src/EntityFrameworkCore.ModelDump/build/
 *.o
 [Dd]ebug*/
 [Rr]elease*/
 !.github/skills/
 *.mode*
+# *.mode* also matches anything named *.Model*, which would otherwise swallow the
+# EntityFrameworkCore.ModelDump project and its AspireC4.EntityFrameworkCore.ModelDump.targets.
+!src/src/EntityFrameworkCore.ModelDump/
+!src/src/EntityFrameworkCore.ModelDump/*.csproj
+!src/src/EntityFrameworkCore.ModelDump/build/*.targets
 *.app/
 .svn/
 
@@ -664,3 +670,8 @@ sketch
 BenchmarkDotNet.Artifacts/
 
 .tools/purview-build/**
+
+# AspireC4 generated diagram output (architecture diagram, ER diagram, and the ER viewer's bundled
+# JS dependencies). Regenerated on every AppHost run, and the LikeC4 model embeds ephemeral localhost
+# ports, so tracking it guarantees a dirty tree after every run.
+**/.aspirec4/

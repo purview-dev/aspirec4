@@ -1,0 +1,57 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<IsPackable>true</IsPackable>
+		<PackageId>AspireC4.EntityFrameworkCore.ModelDump</PackageId>
+		<AssemblyTitle>AspireC4 Entity Framework Core Model Dump</AssemblyTitle>
+		<Description>Build-time EF Core model dump for AspireC4's d2 ER diagram. Reference it from the project that owns the EF Core provider to have the real model written to obj/ for the AppHost to read.</Description>
+		<Title>AspireC4.EntityFrameworkCore.ModelDump - EF Core model dump for AspireC4</Title>
+		<COPYRIGHT_YEAR>2026</COPYRIGHT_YEAR>
+		<Authors>Purview Contributors</Authors>
+		<Copyright>Purview-Dev., $(COPYRIGHT_YEAR) | All rights reserved.</Copyright>
+		<PackageIcon>likec4-logo.png</PackageIcon>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<RepositoryUrl>https://github.com/purview-dev/aspirec4</RepositoryUrl>
+		<PackageProjectUrl>$(PurviewProjectUrl)</PackageProjectUrl>
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<PackageTags>aspire;dotnet;aspirec4;entityframework;efcore;erd;diagram;model;</PackageTags>
+		<IncludeSymbols>true</IncludeSymbols>
+		<!--
+			The tool ships under tools/, not lib/, and takes no runtime dependency: the target imports
+			the build/ folder, and the tool runs as a child process. Suppressing the build output keeps
+			a stray lib/ assembly from making the package referenceable at runtime.
+		-->
+		<IncludeBuildOutput>false</IncludeBuildOutput>
+		<SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+		<DevelopmentDependency>true</DevelopmentDependency>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.EntityFrameworkCore" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="build\AspireC4.EntityFrameworkCore.ModelDump.targets" Pack="true" PackagePath="build\" />
+		<None
+			Include="$(MSBuildThisFileDirectory)..\..\..\assets\images\likec4\likec4-logo.png"
+			Link="Sdk/likec4-logo.png"
+		/>
+		<None Include="$(MSBuildThisFileDirectory)..\..\..\README.md" Link="Sdk/README.md" />
+	</ItemGroup>
+
+	<PropertyGroup>
+		<TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);AspireC4PackModelDumpTool</TargetsForTfmSpecificContentInPackage>
+	</PropertyGroup>
+
+	<!-- Packs the tool itself, and its dependencies, under tools/ so the target can invoke it. -->
+	<Target Name="AspireC4PackModelDumpTool">
+		<ItemGroup>
+			<TfmSpecificPackageFile Include="$(TargetDir)**\*.*">
+				<PackagePath>tools\</PackagePath>
+			</TfmSpecificPackageFile>
+		</ItemGroup>
+	</Target>
+</Project>

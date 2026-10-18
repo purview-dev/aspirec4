@@ -20,10 +20,16 @@ generates live [LikeC4](https://likec4.dev) architecture diagrams from the Aspir
 |---|---|
 | `src/src/AspireC4/` | Aspire integration library (`Aspire.Hosting.AspireC4`): lifecycle hook, Docker/CLI server resources, model builder, DSL generator, dashboard integration |
 | `src/src/SourceGenerators/` | Roslyn `netstandard2.0` incremental source generator (registry + DSL strict validation) |
+| `src/src/EntityFrameworkCore/` | AppHost-side EF Core → d2 ER diagram library (`AspireC4.Hosting.EntityFrameworkCore`): descriptor and metadata readers, d2 model builder, d2 DSL generator, sidecar resources, lifecycle hook |
+| `src/src/EntityFrameworkCore.Analyzers/` | Roslyn `netstandard2.0` generator packed as the analyzer-only `AspireC4.EntityFrameworkCore` package, referenced by *service* projects |
 | `src/src/TestAppHost/` | C# sample AppHost used by integration tests and manual runs |
+| `src/src/TestAppHost.SimpleData/` | Sample EF Core model: one `DbContext`, convention-only configuration |
+| `src/src/TestAppHost.ComplexData/` | Sample EF Core model: three `DbContext` types, schemas, composite keys, self-references, attribute + fluent configuration |
 | `src/tests/AspireC4.UnitTests/` | Unit tests (model builder, DSL generator, options, lifecycle — no Docker) |
 | `src/tests/AspireC4.IntegrationTests/` | Aspire lifecycle tests (requires Docker, pulls `ghcr.io/likec4/likec4`) |
 | `src/tests/SourceGenerators.UnitTests/` | Source-generator tests (TUnit + `Purview.SourceGeneratorFramework.Testing.TUnit`) |
+| `src/tests/EntityFrameworkCore.UnitTests/` | d2 model builder, d2 DSL generator and descriptor loader tests (no Docker) |
+| `src/tests/EntityFrameworkCore.Analyzers.UnitTests/` | EF model generator tests, plus the generator→assembly→AppHost round-trip test |
 | `src/tests/SharedTestingInfra/` | Shared test helpers for the test projects |
 | `samples/typescript-app-host/` | TypeScript AppHost sample (`apphost.mts`, generated `.aspire/modules/`) |
 | `assets/likec4-extensions/` | Extra LikeC4 DSL used by the samples |
@@ -35,6 +41,7 @@ generates live [LikeC4](https://likec4.dev) architecture diagrams from the Aspir
 | Tool | Purpose | Version source |
 |---|---|---|
 | .NET SDK | Build/test | `global.json` |
+| Target framework | **net10.0** for all shipping and test projects (`src/Directory.Build.props`); Roslyn components override to `netstandard2.0` | `src/Directory.Build.props` |
 | Bun | JS scripts, commit hooks, TS sample | `package.json` → `packageManager` |
 | just | Task runner (single entry point) | system install |
 | Docker | Integration tests, local diagram viewer | system install |
@@ -187,6 +194,15 @@ Test authoring requirements (from the source-generator test authoring agent in `
 - Build dependencies/SUTs through `CreateXXX` helpers with optional parameters; never instantiate inside a test.
 - Pass a `CancellationToken` wherever a downstream method accepts one.
 
+### Integration tests and the project runner
+
+Run `AspireC4.IntegrationTests` through `just test-integration` or `just test`, **not** from an IDE test
+runner. Aspire's project-resource runner detects the IDE and fails with
+`run session could not be started: IDE returned ... 500 Internal Server Error`, so project resources such as
+`data-service` never start. The fixture only waits for the architecture diagram, so the suite still reports
+green; the missing ER diagram content is the only signal. The ER tests now fail with the descriptor
+diagnostics in that situation, but a broken project runner is still a runner problem, not a product one.
+
 ## Source generator work
 
 The generator in `src/src/SourceGenerators/` is built on `Purview.SourceGeneratorFramework`. Follow:
@@ -200,10 +216,53 @@ The generator in `src/src/SourceGenerators/` is built on `Purview.SourceGenerato
 - `.agents/prompts/refactor-source-generator-to-codewriter.prompt.md` and
   `.agents/prompts/modernize-test-to-codequery-tunit.prompt.md` — prompt templates.
 
-Diagnostic IDs (`ASPIREC4001`–`ASPIREC4007`) are declared in
-`src/src/SourceGenerators/Helpers/DiagnosticLibrary.cs` and tracked in
-`src/src/SourceGenerators/AnalyzerReleases.Shipped.md` / `AnalyzerReleases.Unshipped.md`. When adding a
-diagnostic, update those release-tracking files.
+Diagnostic IDs are allocated across two generators and must stay unique:
+
+| Range | Generator | Declared in | Tracked in |
+|---|---|---|---|
+| `ASPIREC4001`–`ASPIREC4007` | Registry/DSL strict validator | `src/src/SourceGenerators/Helpers/DiagnosticLibrary.cs` | `src/src/SourceGenerators/AnalyzerReleases.*.md` |
+| `ASPIREC4008`–`ASPIREC4010` | EF Core model generator | `src/src/EntityFrameworkCore.Analyzers/Helpers/DiagnosticLibrary.cs` | `src/src/EntityFrameworkCore.Analyzers/AnalyzerReleases.*.md` |
+
+When adding a diagnostic, update the owning generator's release-tracking files.
+
+### EF Core model discovery
+
+The ER diagram draws from three sources, in precedence order.
+
+1. **Build-time dump** (opt-in). `src/src/EntityFrameworkCore.ModelDump/` ships as the dedicated
+   `AspireC4.EntityFrameworkCore.ModelDump` package, referenced by the project that owns the EF Core
+   provider; its `build/` target runs automatically. It builds each context's real `IModel` through the
+   project's `IDesignTimeDbContextFactory` and writes the diagram contract to `obj/aspirec4/ef/`. That
+   directory is never copied to `bin/` or `publish/` and is gitignored, so the dump has no deployment
+   footprint. `EfModelDumpReader.TryReadGraph` reads it from the project *and every project it
+   references* — the provider is usually a referenced persistence project, not the service — via
+   `obj/project.assets.json`, and falls back when it is missing or stale. This is the only source that
+   sees conventions, value converters and composite foreign keys. Use `IDesignTimeModel`, not
+   `DbContext.Model`: the runtime model is read-optimized and drops relational annotations.
+
+2. **Analyzer descriptor** (opt-in). `src/src/EntityFrameworkCore.Analyzers/` runs in the **service**
+   project (where the `DbContext` lives) and emits the complete model as
+   `[assembly: AspireC4EfModel("<json>")]`; the AppHost reads it back with `System.Reflection.Metadata`.
+   The generator must stay pure — `AddSource` only, never writing files, or compiler determinism and
+   caching break.
+
+3. **Metadata reader** (default). `src/src/EntityFrameworkCore/EfModelMetadataReader.cs` recovers an
+   approximate model from a project's build output with a reflection-only `MetadataLoadContext`, so no
+   code in the assembly executes and no project needs the analyzer. `OnModelCreating` is a method body
+   and is absent from metadata, so fluent configuration cannot be recovered this way.
+
+Every context carries an `EfModelFidelity`, so an approximate model is never mistaken for a complete
+one, and `EfModelLoader.Merge` de-duplicates by fully-qualified type name, preferring the higher
+fidelity. `EfColumn.StoreType` is always the real database type; a column's **domain type** — a value
+object or an enum — is carried in `EfColumn.DomainTypeName` with its `EfColumn.DomainTypeKind`
+(`ValueObject`, `ComplexValueObject`, `Enum`), and shown beside the store type according to
+`AspireC4EfDiagramOptions.DomainTypeDisplay` (default `DomainTypeFirst`: `AssetId (guid)`,
+`ActorType (int, enum)`). Recognising a scalar value object — a non-generic struct with a public
+`Value` member, as the Purview value-object generator emits — is also what makes its foreign keys, and
+so its relationships, resolve. A complex value object, marked
+`[ValueObject(EFMapping = ComplexType)]`, is flattened into its owner's table. `EfColumnTypeDisplay`
+owns the split, and every renderer keeps the database type in its annotation slot when it is not the
+headline.
 
 ## LikeC4 DSL work
 
@@ -240,3 +299,40 @@ Relevant bundled skills in `.agents/skills/`:
   Roslyn generator work and tests.
 - `telemetry-sourcegenerator-*` — Purview.Telemetry.SourceGenerator usage (library telemetry).
 - Agents and prompts live in `.agents/agents/` and `.agents/prompts/`.
+
+## Agent skills
+
+Authored skills live in the repository-root `skills/` folder. **Nothing packs them into a NuGet
+package** - `Purview.BuildSdk` 1.0.6 removed skill packaging and the build-time `.agents/` mirror
+outright. The skills CLI clones the *git* repository and only discovers a root `skills/` folder, so
+that is the one delivery route.
+
+`.agents/skills/` is the CLI's install location for skills from **other** repositories, and is
+gitignored; `skills-lock.json` is the tracked record of what was installed there. This repository's
+own skills are never installed into it - that would leave two copies to drift apart. Read them at
+their authored path, `skills/<name>/SKILL.md`.
+
+```bash
+npx skills add purview-dev/aspirec4
+```
+
+| Skill | Answers |
+| -- | -- |
+| `skills/purview-aspirec4-quickstart/` | installing, `AddAspireC4`, what happens on startup, Docker sidecar versus local CLI |
+| `skills/purview-aspirec4-configuration/` | every `AspireC4DiagramOptions` property and its fluent method |
+| `skills/purview-aspirec4-resources/` | `WithLikeC4Details`, `WithLikeC4Reference`, `WithLikeC4Group`, and exclusion |
+| `skills/purview-aspirec4-validation/` | the `[LikeC4Registry]` class, severity levels, and the `ASPIREC4xxx` diagnostics |
+
+Every skill carries the `purview-aspirec4` prefix. Skills install into one flat directory per agent,
+shared with every skill a developer has installed from anywhere, so an unprefixed name collides and
+the loser is whichever installed second.
+
+The `.agents/skills/` content under `samples/typescript-app-host/` belongs to that sample and is not
+part of this repository's published set.
+
+`src/tests/Repository.UnitTests/SkillTests.cs` validates the authored skills on every test run
+through `Purview.Skills.Testing`. The `[InheritsTests]` attribute there is load-bearing - TUnit does
+not walk base types during discovery, so without it the run is green and nothing is checked.
+
+A relative link from one `SKILL.md` into another skill's folder is a rule violation: only a skill's
+own folder is installed with it. Name the other skill in prose instead.

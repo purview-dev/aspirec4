@@ -138,6 +138,79 @@ public sealed class AspireC4DistributedApplicationBuilderExtensionsTests
 	}
 
 	[Test]
+	public async Task AddAspireC4_WithNoSecondDiagram_AddsNoGroupResource()
+	{
+		// A parent row with a single child under it is just an extra click, so grouping only happens
+		// once a second diagram is registered.
+		// Arrange
+		var appBuilder = CreateAppBuilder();
+
+		// Act
+		appBuilder.AddAspireC4();
+
+		// Assert
+		await Assert.That(appBuilder.Resources.OfType<AspireC4DiagramGroupResource>()).IsEmpty();
+	}
+
+	[Test]
+	public async Task AddAspireC4_WithNoSecondDiagram_KeepsTheUnsuffixedResourceName()
+	{
+		// Arrange
+		var appBuilder = CreateAppBuilder();
+
+		// Act
+		var visualization = appBuilder.AddAspireC4();
+
+		// Assert
+		await Assert
+			.That(visualization.Resource.Name)
+			.IsEqualTo(AspireC4DistributedApplicationBuilderExtensions.AspireC4ResourceName);
+	}
+
+	[Test]
+	public async Task AddAspireC4_WithTheLegacyLayout_UsesThePre136OutputDirectory()
+	{
+		// Arrange
+		var appBuilder = CreateAppBuilder();
+
+		// Act
+		var visualization = appBuilder.AddAspireC4(configure: opts => opts.WithLegacyLayout());
+
+		// Assert
+		await Assert.That(visualization.Resource.OutputDirectory).EndsWith(Path.Combine("likec4", "gen"));
+	}
+
+	[Test]
+	public async Task AddAspireC4_ByDefault_UsesTheAspireC4Root()
+	{
+		// Guards the legacy switch against becoming the default by accident.
+		// Arrange
+		var appBuilder = CreateAppBuilder();
+
+		// Act
+		var visualization = appBuilder.AddAspireC4();
+
+		// Assert
+		await Assert.That(visualization.Resource.OutputDirectory).EndsWith(Path.Combine(".aspirec4", "likec4"));
+	}
+
+	[Test]
+	public async Task AddAspireC4_WithTheLegacyLayoutInConfiguration_IsHonouredAtBuilderTime()
+	{
+		// The switch fixes the paths and resource names before anything else runs, so a configuration
+		// override has to be visible here — not only when the runtime options are resolved.
+		// Arrange
+		var appBuilder = CreateAppBuilder();
+		appBuilder.Configuration[AspireC4DiagramOptions.UseLegacyLayoutConfigurationKey] = "true";
+
+		// Act
+		var visualization = appBuilder.AddAspireC4();
+
+		// Assert
+		await Assert.That(visualization.Resource.OutputDirectory).EndsWith(Path.Combine("likec4", "gen"));
+	}
+
+	[Test]
 	public async Task AddAspireC4_ContainerArgs_IncludesHMRPortForConfigurableMode(CancellationToken cancellationToken)
 	{
 		// Arrange

@@ -109,6 +109,20 @@ aspire restore
 
 When adding another Aspire integration, use `aspire add <package>` so Aspire updates `aspire.config.json` and regenerates the TypeScript API. Inspect `.aspire/modules/aspire.mts` to see the APIs currently available to `apphost.mts`.
 
+## Output paths and legacy mode
+
+The TypeScript AppHost writes to the same paths as the C# AppHost: `./.aspirec4/likec4/` for the architecture diagram and `./.aspirec4/erd/` for the ER diagram, both relative to the AppHost working directory. If you are upgrading from 13.5 and need the pre-13.6 layout unchanged, call `withLegacyLayout()` inside the `configure` callback:
+
+```typescript
+await builder.addAspireC4({
+    configure: async (options) => {
+        options.withLegacyLayout();
+    },
+});
+```
+
+That restores `./likec4/gen/` and `./erd/gen/` and keeps the dashboard rows flat as `aspirec4` and `aspirec4-er`. An explicit output directory still wins, and the switch does not affect a hand-authored project folder. See [Migration](Migration.md) for the full list of breaking changes.
+
 ## Next pages
 
 - [Configuration](Configuration.md)

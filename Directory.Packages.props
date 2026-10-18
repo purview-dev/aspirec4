@@ -1,29 +1,54 @@
 <Project>
+	<!-- Version Settings -->
 	<PropertyGroup>
+		<ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
 		<CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+	</PropertyGroup>
+
+	<PropertyGroup>
 		<RoslynCompilerVersion>5.9.0</RoslynCompilerVersion>
 		<RoslynAnalyzersVersion>5.9.0</RoslynAnalyzersVersion>
-		<TUnitVersion>1.67.0</TUnitVersion>
-		<PurviewSourceGenVersion>1.0.0</PurviewSourceGenVersion>
-		<PurviewTelemetryVersion>5.0.2</PurviewTelemetryVersion>
-		<AspireVersion>13.5.3</AspireVersion>
+		<TUnitVersion>1.75.0</TUnitVersion>
+		<PurviewSourceGenVersion>1.1.1</PurviewSourceGenVersion>
+		<PurviewTelemetryVersion>5.0.4</PurviewTelemetryVersion>
+		<AspireVersion>13.6.1</AspireVersion>
 	</PropertyGroup>
+
+	<ItemGroup Label="Transitive Pinning">
+		<PackageVersion Include="MessagePack" Version="2.5.307" />
+	</ItemGroup>
+
 	<ItemGroup>
 		<PackageVersion Include="Aspire.Hosting" Version="$(AspireVersion)" />
 		<PackageVersion Include="Aspire.Hosting.Testing" Version="$(AspireVersion)" />
 		<PackageVersion Include="Aspire.Hosting.JavaScript" Version="$(AspireVersion)" />
 		<PackageVersion Include="Aspire.Hosting.Azure.PostgreSQL" Version="$(AspireVersion)" />
 		<PackageVersion Include="Aspire.Hosting.Azure.Redis" Version="$(AspireVersion)" />
-		<PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.401" />
+		<PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.402" />
 		<PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="$(RoslynCompilerVersion)" />
 		<PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="$(RoslynAnalyzersVersion)" />
 		<PackageVersion Include="Purview.SourceGeneratorFramework" Version="$(PurviewSourceGenVersion)" />
 		<PackageVersion Include="Purview.SourceGeneratorFramework.Testing.TUnit" Version="$(PurviewSourceGenVersion)" />
 		<PackageVersion Include="Purview.Telemetry.SourceGenerator" Version="$(PurviewTelemetryVersion)" />
+		<!--
+			Sample EF Core data projects only. Relational carries the fluent API the generator
+			interprets (ToTable, HasDefaultSchema, HasColumnName, HasColumnType).
+		-->
+		<PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.13" />
+		<PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.13" />
+		<!-- Relational provider used only by the model-dump projector tests. -->
+		<PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.13" />
+		<!--
+			AppHost-side, metadata-only reflection over a service's build output. Loads types without
+			executing any code in the target assembly, which is how a DbContext is discovered when the
+			service project has not referenced the AspireC4.EntityFrameworkCore analyzer.
+		-->
+		<PackageVersion Include="System.Reflection.MetadataLoadContext" Version="10.0.1" />
 		<PackageVersion Include="Bogus" Version="35.6.5" />
 		<PackageVersion Include="TUnit" Version="$(TUnitVersion)" />
 		<PackageVersion Include="TUnit.Aspire" Version="$(TUnitVersion)" />
 		<PackageVersion Include="TUnit.Core" Version="$(TUnitVersion)" />
 		<PackageVersion Include="TUnit.Mocks" Version="$(TUnitVersion)" />
+		<PackageVersion Include="Purview.Skills.Testing" Version="1.0.7" />
 	</ItemGroup>
 </Project>

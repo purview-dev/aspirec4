@@ -46,11 +46,17 @@ builder.Build().Run();
 
 That is all it takes. On startup AspireC4:
 
-1. Writes the generated model to `./likec4/gen/model.gen.c4` (relative to the AppHost working directory).
+1. Writes the generated model to `./.aspirec4/likec4/model.gen.c4` (relative to the AppHost working directory).
 2. Starts the official `ghcr.io/likec4/likec4` container as a sidecar resource named `aspirec4`.
 3. Refreshes the diagram whenever the Aspire application changes — for example when a resource transitions to `Running` or `Exited`.
 
 Open the Aspire dashboard and select the `aspirec4` resource (or its **View LikeC4 Diagram** link) to see the live diagram.
+
+> [!NOTE]
+> **Upgrading from 13.5 or earlier?** 13.6 moved generated output under `./.aspirec4/` and changed the
+> dashboard names when a second diagram is registered. `WithLegacyLayout()` keeps the old
+> `./likec4/gen/` and `./erd/gen/` paths and the flat `aspirec4` / `aspirec4-er` rows. See
+> [Migration](Migration.md).
 
 ## Customize the diagram
 

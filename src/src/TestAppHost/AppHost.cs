@@ -26,6 +26,9 @@ if (cliRuntimeStr is not null && Enum.TryParse<LocalCLIRuntime>(cliRuntimeStr, i
 // This is to configure certain parts of the AppHost and AspireC4 purely for this example test app.
 c4.ConfigureAspireC4TestHost();
 
+// Adds the d2 ER diagram plus the service that owns the sample Entity Framework Core models.
+builder.AddSampleDataService(c4);
+
 // Azure managed resources (containers when local).
 var azureManagerRedis = builder
 	.AddAzureManagedRedis("azure-redis")

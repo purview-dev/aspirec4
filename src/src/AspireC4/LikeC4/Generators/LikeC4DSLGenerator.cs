@@ -37,7 +37,9 @@ public static class LikeC4DSLGenerator
 
 	static void WriteSpecification(StringBuilder sb, LikeC4Model model, AspireC4DiagramOptions options)
 	{
-		var elementKindsInModel = model.Elements.Select(e => e.Kind).ToHashSet();
+		// Elements extending a hand-authored project declare no kind of their own — the project already
+		// declares it, and re-declaring it here would collide with that declaration.
+		var elementKindsInModel = model.Elements.Where(e => !e.ExtendsExistingElement).Select(e => e.Kind).ToHashSet();
 		var allElementKinds = elementKindsInModel.Union(options.ElementKindSpecs.Select(s => s.Name)).OrderBy(k => k);
 
 		var relationshipKindsInModel = model
@@ -180,6 +182,13 @@ public static class LikeC4DSLGenerator
 	{
 		sb.AppendLine("model {");
 
+		// Identifiers of elements borrowed from a hand-authored project, whose dots are hierarchy
+		// separators and must survive sanitisation.
+		var qualifiedIds = model
+			.Elements.Where(e => e.ExtendsExistingElement)
+			.Select(e => e.Name)
+			.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
 		// Top-level elements first, then nested.
 		var topLevel = model.Elements.Where(e => e.ParentName is null).ToList();
 		var nested = model
@@ -197,7 +206,7 @@ public static class LikeC4DSLGenerator
 		{
 			var hasKind = !string.IsNullOrWhiteSpace(rel.Kind);
 
-			sb.Append("  ").Append(Sanitize(rel.SourceName));
+			sb.Append("  ").Append(SanitizeReference(rel.SourceName, qualifiedIds.Contains(rel.SourceName)));
 
 			if (hasKind)
 			{
@@ -215,7 +224,7 @@ public static class LikeC4DSLGenerator
 				sb.Append(" -> ");
 			}
 
-			sb.Append(Sanitize(rel.TargetName));
+			sb.Append(SanitizeReference(rel.TargetName, qualifiedIds.Contains(rel.TargetName)));
 
 			if (!string.IsNullOrWhiteSpace(rel.Label))
 			{
@@ -301,13 +310,11 @@ public static class LikeC4DSLGenerator
 		ILookup<string, LikeC4Element> nested
 	)
 	{
-		sb.Append(indent)
-			.Append(Sanitize(element.Name))
-			.Append(" = ")
-			.Append(element.Kind)
-			.Append(" '")
-			.Append(EscapeQuote(element.Label))
-			.Append('\'');
+		// An element borrowed from a hand-authored project is extended rather than declared. LikeC4's
+		// extend body takes no title, technology, summary, description or icon — those stay the
+		// project's — so the model builder leaves them unset and only the tags, links, metadata and
+		// nested declarations below are applied.
+		var extendsExisting = element.ExtendsExistingElement;
 
 		var children = nested[element.Name];
 		var hasTags = element.Tags.Count > 0;
@@ -319,16 +326,38 @@ public static class LikeC4DSLGenerator
 		var hasMetadata = element.Metadata.Count > 0;
 		var hasChildren = children.Any();
 
-		if (
-			!hasTags
-			&& !hasTechnology
-			&& !hasDescription
-			&& !hasSummary
-			&& !hasIcon
-			&& !hasLinks
-			&& !hasMetadata
-			&& !hasChildren
-		)
+		var hasBody =
+			hasTags
+			|| hasTechnology
+			|| hasDescription
+			|| hasSummary
+			|| hasIcon
+			|| hasLinks
+			|| hasMetadata
+			|| hasChildren;
+
+		// An empty extend block is not valid DSL, and there would be nothing to apply anyway.
+		if (extendsExisting && !hasBody)
+		{
+			return;
+		}
+
+		if (extendsExisting)
+		{
+			sb.Append(indent).Append("extend ").Append(SanitizeReference(element.Name, isFullyQualified: true));
+		}
+		else
+		{
+			sb.Append(indent)
+				.Append(Sanitize(element.Name))
+				.Append(" = ")
+				.Append(element.Kind)
+				.Append(" '")
+				.Append(EscapeQuote(element.Label))
+				.Append('\'');
+		}
+
+		if (!hasBody)
 		{
 			sb.AppendLine();
 			return;
@@ -336,7 +365,26 @@ public static class LikeC4DSLGenerator
 
 		sb.AppendLine(" {");
 
-		if (hasTags)
+		WriteElementProperties(sb, element, indent);
+
+		if (hasChildren)
+		{
+			foreach (var child in children)
+			{
+				WriteElement(sb, child, indent + "  ", nested);
+			}
+		}
+
+		sb.Append(indent).AppendLine("}");
+	}
+
+	/// <summary>Writes the property lines of an element or <c>extend</c> body, excluding children.</summary>
+	/// <param name="sb">The buffer the DSL is being written to.</param>
+	/// <param name="element">The element whose properties are written.</param>
+	/// <param name="indent">The indent of the element's own line; properties are indented one level in.</param>
+	static void WriteElementProperties(StringBuilder sb, LikeC4Element element, string indent)
+	{
+		if (element.Tags.Count > 0)
 		{
 			sb.Append(indent).Append("  ");
 			foreach (var tag in element.Tags)
@@ -347,29 +395,29 @@ public static class LikeC4DSLGenerator
 			sb.AppendLine();
 		}
 
-		if (hasTechnology)
+		if (!string.IsNullOrWhiteSpace(element.Technology))
 		{
-			sb.Append(indent).Append("  technology '").Append(EscapeQuote(element.Technology!)).AppendLine("'");
+			sb.Append(indent).Append("  technology '").Append(EscapeQuote(element.Technology)).AppendLine("'");
 		}
 
-		if (hasSummary)
+		if (!string.IsNullOrWhiteSpace(element.Summary))
 		{
-			sb.Append(indent).Append("  summary '").Append(EscapeQuote(element.Summary!)).AppendLine("'");
+			sb.Append(indent).Append("  summary '").Append(EscapeQuote(element.Summary)).AppendLine("'");
 		}
 
-		if (hasDescription)
+		if (!string.IsNullOrWhiteSpace(element.Description))
 		{
 			sb.Append(indent)
 				.Append("  description '''")
 				.AppendLine()
-				.Append(EscapeQuote(element.Description!))
+				.Append(EscapeQuote(element.Description))
 				.AppendLine()
 				.AppendLine("  '''");
 		}
 
-		if (hasIcon)
+		if (!string.IsNullOrWhiteSpace(element.Icon))
 		{
-			sb.Append(indent).Append("  icon ").AppendLine(element.Icon!);
+			sb.Append(indent).Append("  icon ").AppendLine(element.Icon);
 		}
 
 		foreach (var link in element.Links)
@@ -383,7 +431,7 @@ public static class LikeC4DSLGenerator
 			sb.AppendLine();
 		}
 
-		if (hasMetadata)
+		if (element.Metadata.Count > 0)
 		{
 			sb.Append(indent).AppendLine("  metadata {");
 			foreach (var (key, value) in element.Metadata)
@@ -393,16 +441,6 @@ public static class LikeC4DSLGenerator
 
 			sb.Append(indent).AppendLine("  }");
 		}
-
-		if (hasChildren)
-		{
-			foreach (var child in children)
-			{
-				WriteElement(sb, child, indent + "  ", nested);
-			}
-		}
-
-		sb.Append(indent).AppendLine("}");
 	}
 
 	/// <summary>
@@ -460,7 +498,7 @@ public static class LikeC4DSLGenerator
 
 			foreach (var group in groups)
 			{
-				var members = string.Join(", ", group.Select(e => Sanitize(e.Name)));
+				var members = string.Join(", ", group.Select(e => SanitizeReference(e.Name, e.ExtendsExistingElement)));
 				sb.Append("    group '").Append(EscapeQuote(group.Key)).AppendLine("' {");
 				sb.Append("      include ").AppendLine(members);
 				sb.AppendLine("    }");
@@ -497,6 +535,13 @@ public static class LikeC4DSLGenerator
 	}
 
 	/// <summary>Replaces characters invalid in LikeC4 identifiers with underscores.</summary>
+	/// <summary>
+	/// Sanitises an identifier, preserving the dots that separate the segments of a fully-qualified
+	/// reference to an element in a hand-authored project.
+	/// </summary>
+	static string SanitizeReference(string name, bool isFullyQualified) =>
+		isFullyQualified ? string.Join('.', name.Split('.').Select(Sanitize)) : Sanitize(name);
+
 	static string Sanitize(string name) =>
 		string.Create(
 			name.Length,

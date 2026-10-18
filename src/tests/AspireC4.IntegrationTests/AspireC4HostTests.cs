@@ -16,7 +16,11 @@ namespace Aspire.Hosting.AspireC4;
 [ClassDataSource<Fixtures.TestAppHostFixture>(Shared = SharedType.PerTestSession)]
 public sealed class AspireC4HostTests(Fixtures.TestAppHostFixture fixture)
 {
-	const string AspireC4ResourceName = AspireC4DistributedApplicationBuilderExtensions.AspireC4ResourceName;
+	// TestAppHost registers the ER diagram too, so the architecture diagram is nested under the
+	// shared parent row and carries the grouping suffix.
+	const string AspireC4ResourceName =
+		AspireC4DistributedApplicationBuilderExtensions.AspireC4ResourceName
+		+ AspireC4DiagramGrouping.LikeC4ResourceSuffix;
 	const string AspireC4ServerResourceName =
 		AspireC4DistributedApplicationBuilderExtensions.AspireC4ResourceName
 		+ AspireC4DistributedApplicationBuilderExtensions.AspireC4ServerResourceSuffix;
@@ -75,6 +79,46 @@ public sealed class AspireC4HostTests(Fixtures.TestAppHostFixture fixture)
 		// Assert
 		await Assert.That(snapshot).IsNotNull();
 		await Assert.That(snapshot!.State).IsEqualTo(KnownResourceStates.Running);
+	}
+
+	[Test]
+	[Timeout(120_000)]
+	public async Task StartAsync_WithBothDiagrams_NestsThemUnderTheSharedParentInTheDashboard(
+		CancellationToken cancellationToken
+	)
+	{
+		// The builder-time annotation is only half the story. The dashboard builds its tree from the
+		// resource.parentName property on the published snapshot, so an update that replaces the
+		// property collection unnests the row while leaving the annotation — and every unit test —
+		// perfectly happy.
+		// Arrange
+		// (app started by the shared fixture)
+
+		// Act
+		var architecture = await fixture.GetDashboardParentAsync(AspireC4ResourceName, cancellationToken);
+		var er = await fixture.GetDashboardParentAsync("aspirec4-er", cancellationToken);
+
+		// Assert
+		await Assert.That(architecture).IsEqualTo(AspireC4DistributedApplicationBuilderExtensions.AspireC4ResourceName);
+		await Assert.That(er).IsEqualTo(AspireC4DistributedApplicationBuilderExtensions.AspireC4ResourceName);
+	}
+
+	[Test]
+	[Timeout(120_000)]
+	public async Task StartAsync_WithEntityFrameworkDiagram_HidesTheViewerSidecarFromTheDashboard(
+		CancellationToken cancellationToken
+	)
+	{
+		// The ER diagram row forwards the sidecar's URLs and console output, so the sidecar is an
+		// implementation detail rather than a second row to nest under it.
+		// Arrange
+		// (app started by the shared fixture)
+
+		// Act
+		var hidden = await fixture.WaitForHiddenAsync("aspirec4-er-server", cancellationToken);
+
+		// Assert
+		await Assert.That(hidden).IsTrue();
 	}
 
 	[Test]

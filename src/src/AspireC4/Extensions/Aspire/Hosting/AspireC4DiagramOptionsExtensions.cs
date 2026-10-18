@@ -427,6 +427,62 @@ public static class AspireC4DiagramOptionsExtensions
 	}
 
 	/// <summary>
+	/// Restores the pre-13.6 generated-output paths and dashboard resource names, so an existing
+	/// AppHost upgrades without changing anything else.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// Generated output goes back to <c>./likec4/gen/</c> and <c>./erd/gen/</c>, and the diagram
+	/// resources stay flat in the dashboard as <c>aspirec4</c> and <c>aspirec4-er</c> rather than
+	/// nesting under a shared parent. One switch covers both diagrams.
+	/// </para>
+	/// <para>
+	/// This is a compatibility shim and will be removed in a future major version. Prefer adopting the
+	/// default layout — see the migration guide in the repository wiki.
+	/// </para>
+	/// </remarks>
+	/// <param name="options"></param>
+	/// <seealso cref="AspireC4DiagramOptions.UseLegacyLayout"/>
+	[AspireExport]
+	public static AspireC4DiagramOptions WithLegacyLayout([NotNull] this AspireC4DiagramOptions options)
+	{
+		options.UseLegacyLayout = true;
+		return options;
+	}
+
+	/// <summary>
+	/// Points AspireC4 at an existing, hand-authored LikeC4 project: that directory is served, and
+	/// the generated model joins the project's own <c>.c4</c> files rather than replacing them.
+	/// </summary>
+	/// <remarks>
+	/// The project's <c>likec4.config.json</c>, if it has one, is used as-is and never overwritten.
+	/// Unless <see cref="AspireC4DiagramOptions.OutputDirectory"/> was also set, generated output goes
+	/// to <c>.aspirec4/</c> beneath the project so it stays out of the hand-curated files.
+	/// </remarks>
+	/// <param name="options"></param>
+	/// <param name="folderPath">The path to the LikeC4 project directory.</param>
+	/// <exception cref="DirectoryNotFoundException">
+	/// Thrown if <paramref name="folderPath"/> does not refer to an existing directory.
+	/// </exception>
+	/// <seealso cref="AspireC4ResourceBuilderExtensions.WithLikeC4Element{T}"/>
+	[AspireExport]
+	public static AspireC4DiagramOptions WithLikeC4ProjectFolder(
+		[NotNull] this AspireC4DiagramOptions options,
+		string folderPath
+	)
+	{
+		ArgumentException.ThrowIfNullOrWhiteSpace(folderPath);
+
+		var absoluteFolder = Path.GetFullPath(folderPath);
+		if (!Directory.Exists(absoluteFolder))
+			throw new DirectoryNotFoundException($"The LikeC4 project folder does not exist: '{absoluteFolder}'");
+
+		options.ProjectDirectory = absoluteFolder;
+
+		return options;
+	}
+
+	/// <summary>
 	/// Registers an additional folder whose <c>.c4</c> files will be included in the LikeC4
 	/// project via the <c>include.paths</c> field of the generated <c>likec4.config.json</c>.
 	/// </summary>

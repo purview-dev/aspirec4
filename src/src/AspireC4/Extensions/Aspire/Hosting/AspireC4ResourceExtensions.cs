@@ -46,8 +46,10 @@ public static class AspireC4ResourceExtensions
 		// Removing the resource from the collection above does not un-register the DI service entry,
 		// so we must clean it up here to prevent a duplicate-name error when the local resource adds
 		// its own identically-named health check.
+		// Derived from BaseName, not Name: dashboard grouping may have renamed the outer resource after
+		// the container registered this health check under the original name.
 		var containerHcName =
-			$"{aspirec4.Name}{AspireC4DistributedApplicationBuilderExtensions.AspireC4ServerResourceSuffix}_{AspireC4Resource.HttpEndpointName}_/_200_check";
+			$"{aspirec4.BaseName}{AspireC4DistributedApplicationBuilderExtensions.AspireC4ServerResourceSuffix}_{AspireC4Resource.HttpEndpointName}_/_200_check";
 
 		builder.ApplicationBuilder.Services.PostConfigure<HealthCheckServiceOptions>(opts =>
 		{
@@ -62,9 +64,11 @@ public static class AspireC4ResourceExtensions
 
 		// Build the base args without the HMR port — the async WithArgs callback below appends
 		// --hmr-port at startup time once IOptions<AspireC4DiagramOptions> is resolvable.
+		// Serves the project root, which is the output directory unless a hand-authored LikeC4 project
+		// was supplied — then the generated model is only one file within the project being served.
 		var (command, baseArgs) = AspireC4Builder.BuildLocalCLICommand(
 			resolvedRuntime,
-			aspirec4.OutputDirectory,
+			string.IsNullOrEmpty(aspirec4.ServeDirectory) ? aspirec4.OutputDirectory : aspirec4.ServeDirectory,
 			AspireC4Resource.DefaultPort
 		);
 
@@ -75,7 +79,7 @@ public static class AspireC4ResourceExtensions
 		// and detecting the AppHost's parent package.json as a workspace root, which would
 		// cause them to bypass the pre-warmed dlx cache and re-download on every start.
 		LikeC4LocalServerResource localResource = new(
-			aspirec4.Name + AspireC4DistributedApplicationBuilderExtensions.AspireC4ServerResourceSuffix,
+			aspirec4.BaseName + AspireC4DistributedApplicationBuilderExtensions.AspireC4ServerResourceSuffix,
 			command,
 			Path.GetTempPath()
 		);
@@ -127,7 +131,7 @@ public static class AspireC4ResourceExtensions
 			.WithHttpEndpoint(name: AspireC4Resource.HttpEndpointName, targetPort: AspireC4Resource.DefaultPort)
 			.WithHttpEndpoint(name: AspireC4Resource.HMREndpointName, targetPort: AspireC4Resource.DefaultHMRPort)
 			.WithHttpHealthCheck("/", statusCode: 200, endpointName: AspireC4Resource.HttpEndpointName)
-			.WithAnnotation(new LikeC4DSLIdAnnotation(aspirec4.Name))
+			.WithAnnotation(new LikeC4DSLIdAnnotation(aspirec4.BaseName))
 			.ExcludeFromManifest()
 			.WithInitialState(
 				new CustomResourceSnapshot

@@ -1,0 +1,38 @@
+<Project>
+	<!--
+		AspireC4 build-time EF Core model dump.
+
+		Referencing this package from a project that owns an EF Core provider and a design-time
+		DbContext factory is the opt-in: the target below runs after every build and writes the
+		AspireC4 diagram contract beneath obj/aspirec4/ef/. That directory is never copied to bin/ or
+		publish/, so the dump has no deployment footprint.
+
+		The AppHost reads it in preference to the analyzer descriptor and the metadata reader, and falls
+		back when it is missing or stale. A project with no design-time factory writes nothing and is
+		read by the metadata reader as usual.
+
+		Set <AspireC4EfModelDumpConnectionString> when the design-time factory needs one to build its
+		options. The model is never opened, so any syntactically valid value works.
+	-->
+	<PropertyGroup>
+		<AspireC4EfModelDumpOutputDir Condition="'$(AspireC4EfModelDumpOutputDir)' == ''"
+			>$(BaseIntermediateOutputPath)aspirec4/ef/</AspireC4EfModelDumpOutputDir>
+		<AspireC4EfModelDumpToolPath Condition="'$(AspireC4EfModelDumpToolPath)' == ''"
+			>$(MSBuildThisFileDirectory)../tools/Aspire.Hosting.AspireC4.EntityFrameworkCore.ModelDump.dll</AspireC4EfModelDumpToolPath>
+		<AspireC4EfModelDumpConnectionArgs Condition="'$(AspireC4EfModelDumpConnectionString)' != ''"
+			>--connection "$(AspireC4EfModelDumpConnectionString)"</AspireC4EfModelDumpConnectionArgs>
+	</PropertyGroup>
+
+	<Target
+		Name="AspireC4EfModelDump"
+		AfterTargets="Build"
+		Condition="'$(TargetPath)' != '' and Exists('$(AspireC4EfModelDumpToolPath)')"
+	>
+		<MakeDir Directories="$(AspireC4EfModelDumpOutputDir)" />
+		<Exec
+			Command="dotnet &quot;$(AspireC4EfModelDumpToolPath)&quot; --assembly &quot;$(TargetPath)&quot; --output &quot;$(AspireC4EfModelDumpOutputDir)&quot; $(AspireC4EfModelDumpConnectionArgs)"
+			ContinueOnError="true"
+			StandardOutputImportance="low"
+		/>
+	</Target>
+</Project>

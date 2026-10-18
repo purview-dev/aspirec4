@@ -5,6 +5,7 @@ using Aspire.Hosting.AspireC4.Lifecycle;
 using Aspire.Hosting.AspireC4.LikeC4.Annotations;
 using Aspire.Hosting.AspireC4.LikeC4.Runtime;
 using Aspire.Hosting.Lifecycle;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -66,8 +67,7 @@ public static class AspireC4DistributedApplicationBuilderExtensions
 			.Configure(options => configure?.Invoke(options))
 			.BindConfiguration(AspireC4DiagramOptions.SectionName);
 
-		var outputDir = ResolveOutputDirectory(builder.AppHostDirectory, options.OutputDirectory);
-		Directory.CreateDirectory(outputDir);
+		var (outputDir, serveDir) = ResolveLayout(builder, options);
 
 		var imageTag = options.ContainerImageTag ?? LikeC4ServerResource.DefaultTag;
 		var resolvedHmrPort = options.HMRPort ?? AspireC4Resource.DefaultHMRPort;
@@ -127,7 +127,13 @@ public static class AspireC4DistributedApplicationBuilderExtensions
 		if (!options.DisableHMR)
 			EnableHotModuleReloading(resolvedHmrPort, hmrHostPort, serverBuilder);
 
-		AspireC4Resource aspirec4Resource = new(name, outputDir) { InnerResource = serverResource };
+		AspireC4Resource aspirec4Resource = new(name, outputDir)
+		{
+			InnerResource = serverResource,
+			HiddenFromDashboard = options.HideFromDashboard,
+			ServeDirectory = serveDir,
+			UsesLegacyLayout = options.UseLegacyLayout,
+		};
 
 		return builder
 			.AddResource(aspirec4Resource)
@@ -144,6 +150,33 @@ public static class AspireC4DistributedApplicationBuilderExtensions
 					Properties = [],
 				}
 			);
+	}
+
+	/// <summary>
+	/// Resolves where the model is generated and which directory LikeC4 serves, creating the former.
+	/// </summary>
+	/// <remarks>
+	/// <see cref="AspireC4DiagramOptions.UseLegacyLayout"/> is read from configuration here as well as
+	/// from the callback. It is a structural decision — it fixes the generated paths and the dashboard
+	/// resource names before anything else runs — so an <c>appsettings</c> override has to be visible
+	/// now, not only when the runtime options are resolved, or the server would mount one directory
+	/// while the model is written to another.
+	/// </remarks>
+	static (string OutputDirectory, string ServeDirectory) ResolveLayout(
+		IDistributedApplicationBuilder builder,
+		AspireC4DiagramOptions options
+	)
+	{
+		if (builder.Configuration.GetValue<bool?>(AspireC4DiagramOptions.UseLegacyLayoutConfigurationKey) is { } legacy)
+		{
+			options.UseLegacyLayout = legacy;
+		}
+
+		var layout = LikeC4ProjectLayout.Resolve(builder.AppHostDirectory, options);
+
+		Directory.CreateDirectory(layout.OutputDirectory);
+
+		return layout;
 	}
 
 	static IResourceBuilder<LikeC4ServerResource> CreateLikeC4ServerResource(
@@ -259,15 +292,5 @@ public static class AspireC4DistributedApplicationBuilderExtensions
 				.WithEnvironment("CHOKIDAR_USEPOLLING", "1")
 				.WithEnvironment("CHOKIDAR_INTERVAL", "200");
 		}
-	}
-
-	static string ResolveOutputDirectory(string appHostDirectory, string outputDirectory)
-	{
-		ArgumentException.ThrowIfNullOrWhiteSpace(appHostDirectory);
-		ArgumentException.ThrowIfNullOrWhiteSpace(outputDirectory);
-
-		return Path.GetFullPath(
-			Path.IsPathRooted(outputDirectory) ? outputDirectory : Path.Combine(appHostDirectory, outputDirectory)
-		);
 	}
 }

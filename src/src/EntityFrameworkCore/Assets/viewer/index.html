@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>__TITLE__</title>
+		<link rel="stylesheet" href="./vendor/reactflow.css" />
+		<style>
+			/*
+			 * The viewer runs offline with no CDN, so no typeface can be loaded. Character comes from
+			 * colour, structure and rhythm instead: context colour marks where a table came from, key
+			 * colour marks what a column does, and monospace is reserved for store types, which are
+			 * code rather than prose.
+			 */
+			/*
+			 * One token block for all three themes. light-dark() resolves against the element's own
+			 * color-scheme, so the theme control only has to change color-scheme on :root and every
+			 * token follows — no duplicated dark block to keep in step with the light one.
+			 */
+			:root {
+				color-scheme: light dark;
+				--bg: light-dark(#fbfbfd, #0b141b);
+				--panel: light-dark(#ffffff, #121d26);
+				--fg: light-dark(#1a1d23, #e6e8ec);
+				--muted: light-dark(#6e7480, #8b93a1);
+				--line: light-dark(#e3e5ea, #1f2f3a);
+				--accent: light-dark(#3b82f6, #60a5fa);
+				--grid: light-dark(rgb(0 0 0 / 6%), rgb(255 255 255 / 5%));
+				--pk: light-dark(#b45309, #f59e0b);
+				--fk: light-dark(#1d4ed8, #60a5fa);
+				--uk: light-dark(#7e22ce, #c084fc);
+
+				/* Faint wash over the current background, for badge fills and the minimap mask. */
+				--wash: light-dark(rgb(0 0 0 / 6%), rgb(255 255 255 / 6%));
+				--wash-strong: light-dark(rgb(0 0 0 / 11%), rgb(255 255 255 / 11%));
+
+				/*
+				 * Card metrics. The height is fixed per row; the width is measured per card in app.js
+				 * and applied inline, so a long column name or store type widens its own card rather
+				 * than being truncated. app.js mirrors these values when it measures and lays out, so
+				 * change one, change the other.
+				 */
+				--entity-min-width: 200px;
+				--entity-header-height: 36px;
+				--entity-row-height: 28px;
+			}
+
+			/*
+			 * The theme control pins color-scheme; without data-theme the root keeps `light dark` and
+			 * follows the operating system. Set on <html> before first paint, so there is no flash of
+			 * the wrong theme while the module loads.
+			 */
+			:root[data-theme="light"] {
+				color-scheme: light;
+			}
+
+			:root[data-theme="dark"] {
+				color-scheme: dark;
+			}
+
+			* {
+				box-sizing: border-box;
+			}
+
+			html,
+			body,
+			#root {
+				height: 100%;
+				margin: 0;
+			}
+
+			body {
+				background: var(--bg);
+				color: var(--fg);
+				font:
+					12.5px/1.5 ui-sans-serif,
+					system-ui,
+					-apple-system,
+					Segoe UI,
+					sans-serif;
+				-webkit-font-smoothing: antialiased;
+			}
+
+			.erd-markers {
+				position: absolute;
+				width: 0;
+				height: 0;
+			}
+
+			.toolbar {
+				position: absolute;
+				z-index: 10;
+				top: 14px;
+				left: 14px;
+				display: flex;
+				gap: 8px;
+				align-items: center;
+				padding: 7px 9px;
+				border: 1px solid var(--line);
+				border-radius: 3px;
+				background: var(--panel);
+			}
+
+			/*
+			 * The field, its match counter and its clear button read as one control, so the border is
+			 * on the wrapper and the input inside it is bare.
+			 */
+			.search {
+				display: flex;
+				gap: 6px;
+				align-items: center;
+				padding: 0 6px 0 8px;
+				border: 1px solid var(--line);
+				border-radius: 2px;
+				background: var(--bg);
+			}
+
+			.search:focus-within {
+				border-color: var(--accent);
+				outline: 2px solid rgb(59 130 246 / 35%);
+				outline-offset: 1px;
+			}
+
+			.search input {
+				min-width: 230px;
+				padding: 5px 0;
+				border: 0;
+				background: none;
+				color: inherit;
+				font: inherit;
+				outline: none;
+			}
+
+			/* Position within the matches, e.g. 2/7. Tabular so it does not jog while cycling. */
+			.search .matches {
+				flex: none;
+				color: var(--muted);
+				font-size: 11px;
+				font-variant-numeric: tabular-nums;
+				white-space: nowrap;
+			}
+
+			.search .matches.none {
+				color: var(--pk);
+			}
+
+			.toolbar .count {
+				padding-right: 2px;
+				color: var(--muted);
+				font-variant-numeric: tabular-nums;
+			}
+
+			.toolbar .sep {
+				width: 1px;
+				height: 20px;
+				background: var(--line);
+			}
+
+			.toolbar button {
+				padding: 4px 8px;
+				border: 1px solid transparent;
+				border-radius: 2px;
+				background: none;
+				color: var(--muted);
+				font: inherit;
+				font-size: 11px;
+				cursor: pointer;
+			}
+
+			.toolbar button[disabled] {
+				cursor: default;
+				opacity: 0.5;
+			}
+
+			.toolbar button:not([disabled]):hover {
+				background: var(--wash);
+				color: var(--fg);
+			}
+
+			.toolbar button:focus-visible {
+				outline: 2px solid var(--accent);
+				outline-offset: 1px;
+			}
+
+			/* The chosen theme is held rather than merely hovered, so it is filled, not just coloured. */
+			.toolbar button[aria-pressed="true"] {
+				border-color: var(--line);
+				background: var(--wash-strong);
+				color: var(--fg);
+			}
+
+			.segmented {
+				display: flex;
+				gap: 2px;
+			}
+
+			/* The settings popover hangs off the toolbar, so the toolbar must be its positioning context. */
+			.settings {
+				position: relative;
+			}
+
+			.settings-panel {
+				position: absolute;
+				z-index: 20;
+				top: calc(100% + 8px);
+				right: 0;
+				display: grid;
+				gap: 9px;
+				min-width: 260px;
+				padding: 11px;
+				border: 1px solid var(--line);
+				border-radius: 3px;
+				background: var(--panel);
+				box-shadow: 0 8px 28px rgb(0 0 0 / 22%);
+			}
+
+			.settings-row {
+				display: flex;
+				gap: 12px;
+				align-items: center;
+				justify-content: space-between;
+			}
+
+			.settings-row .settings-label {
+				color: var(--muted);
+				font-size: 11px;
+			}
+
+			/* Applies to the toolbar's View control as well as the settings popover's rows. */
+			.segmented button {
+				min-width: 30px;
+				text-align: center;
+			}
+
+			.search button.clear {
+				padding: 2px 5px;
+				font-size: 13px;
+				line-height: 1;
+			}
+
+			/*
+			 * One container per DbContext. The label sits on the border line the way it would on a
+			 * schematic drawing, rather than floating above the box as a heading.
+			 */
+			.context {
+				width: 100%;
+				height: 100%;
+				border: 1px solid;
+				border-radius: 2px;
+			}
+
+			.context-label {
+				position: absolute;
+				top: -0.62em;
+				left: 14px;
+				padding: 0 8px;
+				background: var(--bg);
+				font-size: 12px;
+				font-weight: 600;
+			}
+
+			/* Catalogue cards: squarer than the container, held by a rule rather than a shadow. */
+			.entity {
+				min-width: var(--entity-min-width);
+				height: 100%;
+				border: 1px solid var(--line);
+				border-radius: 3px;
+				background: var(--panel);
+				overflow: hidden;
+			}
+
+			.entity.dimmed {
+				opacity: 0.22;
+			}
+
+			.entity.hit {
+				border-color: var(--accent);
+				box-shadow: 0 0 0 2px rgb(59 130 246 / 28%);
+			}
+
+			/* The one match Enter has stepped to, picked out from the rest of the matches. */
+			.entity.current {
+				border-color: var(--accent);
+				box-shadow: 0 0 0 3px rgb(59 130 246 / 55%);
+			}
+
+			/* A match on a column is marked on the row itself, so the reason for the hit is visible. */
+			.entity .col.hit {
+				background: rgb(59 130 246 / 14%);
+			}
+
+			/* Relationships to a table that did not match recede with it. */
+			.react-flow__edge.dimmed {
+				opacity: 0.18;
+			}
+
+			.entity header {
+				display: flex;
+				gap: 10px;
+				/* Centred, not baseline: a fixed height puts a baseline-aligned row against its top. */
+				align-items: center;
+				justify-content: space-between;
+				height: var(--entity-header-height);
+				padding: 0 12px;
+				border-bottom: 2px solid;
+				font-size: 13px;
+				font-weight: 600;
+				line-height: 20px;
+				letter-spacing: -0.01em;
+			}
+
+			.entity header .schema {
+				color: var(--muted);
+				font-size: 11px;
+				font-weight: 400;
+			}
+
+			.entity .col {
+				display: flex;
+				gap: 10px;
+				align-items: center;
+				justify-content: space-between;
+				height: var(--entity-row-height);
+				padding: 0 12px;
+				line-height: 18px;
+			}
+
+			.entity .col .name {
+				display: flex;
+				gap: 5px;
+				align-items: center;
+				min-width: 0;
+			}
+
+			/* The card is measured to fit its content, so a long name widens it rather than being cut. */
+			.entity .col .col-name {
+				white-space: nowrap;
+			}
+
+			/* Store types are code, so they are set as code. */
+			.entity .col .type {
+				flex: none;
+				color: var(--muted);
+				font-family: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, monospace;
+				font-size: 11px;
+			}
+
+			/* Colour separates what a column does: key, reference, uniqueness. */
+			.badge {
+				flex: none;
+				padding: 1px 4px;
+				border-radius: 2px;
+				background: var(--wash);
+				font-size: 9px;
+				font-weight: 700;
+				letter-spacing: 0.04em;
+			}
+
+			.badge.pk {
+				color: var(--pk);
+			}
+
+			.badge.fk {
+				color: var(--fk);
+			}
+
+			.badge.uk {
+				color: var(--uk);
+			}
+
+			/* React Flow's resize handles, tinted to match rather than left as its light default. */
+			.entity-resize-line {
+				border-color: var(--accent);
+			}
+
+			.entity-resize-handle {
+				width: 8px;
+				height: 8px;
+				border: 1px solid var(--panel);
+				border-radius: 2px;
+				background: var(--accent);
+			}
+
+			/* React Flow's own chrome defaults to light; without this it floats white over the dark theme. */
+			.react-flow__minimap {
+				border: 1px solid var(--line);
+				border-radius: 3px;
+				background: var(--panel);
+			}
+
+			.react-flow__minimap-mask {
+				fill: var(--wash);
+			}
+
+			.react-flow__minimap-node {
+				fill: var(--line);
+			}
+
+			.react-flow__controls {
+				border: 1px solid var(--line);
+				border-radius: 3px;
+				box-shadow: none;
+				overflow: hidden;
+			}
+
+			.react-flow__controls-button {
+				border-bottom: 1px solid var(--line);
+				background: var(--panel);
+				fill: var(--fg);
+			}
+
+			.react-flow__controls-button:hover {
+				background: var(--bg);
+			}
+
+
+			/* Relationship labels ride on the line, so they are set as pills rather than plain text. */
+			.react-flow__edge-textbg {
+				stroke-width: 1;
+			}
+
+			.react-flow__edge-text {
+				font-weight: 500;
+			}
+
+			/* A halo rather than a backing rect, so the label sits on the arc without boxing it. */
+			.self-loop-label {
+				fill: var(--fg);
+				font-size: 11px;
+				font-weight: 500;
+				paint-order: stroke;
+				stroke: var(--bg);
+				stroke-width: 4px;
+			}
+
+			/*
+			 * Edges flow toward the many end; disabled when the OS asks for reduced motion.
+			 *
+			 * React Flow applies an edge's className to the edge GROUP, not to the path inside it, so
+			 * the animation has to be targeted through the group. Its default edges carry no
+			 * marker-start/marker-end either, which is why direction is decided from the model rather
+			 * than read off the markers.
+			 */
+			.react-flow__edge.flowing .react-flow__edge-path {
+				stroke-dasharray: 9 4;
+				animation: var(--edge-animation, dash 0.9s linear infinite);
+			}
+
+			@keyframes dash {
+				to {
+					stroke-dashoffset: -10;
+				}
+			}
+
+			/* The OS preference, unless the viewer's own override has spoken. */
+			@media (prefers-reduced-motion: reduce) {
+				:root:not([data-motion="allow"]) .react-flow__edge.flowing .react-flow__edge-path {
+					animation: none;
+				}
+			}
+
+			:root[data-motion="reduce"] .react-flow__edge.flowing .react-flow__edge-path {
+				animation: none;
+			}
+		</style>
+		<script>
+			/*
+			 * Applies the pinned theme before anything paints, so a dark-pinned viewer on a light
+			 * desktop does not flash white while the module graph loads. The module sets the same
+			 * attribute once it is running; this only has to cover the gap.
+			 *
+			 * localStorage throws outright on an opaque origin, which is what a sandboxed iframe or
+			 * some file:// configurations give you, so the absence of a stored choice and the
+			 * inability to read one both end up meaning "follow the system".
+			 */
+			try {
+				const raw = localStorage.getItem("aspirec4-erd-settings");
+				const theme = raw ? JSON.parse(raw).theme : null;
+
+				if (theme === "light" || theme === "dark") {
+					document.documentElement.dataset.theme = theme;
+				}
+			} catch {
+				/* no stored preference available */
+			}
+		</script>
+	</head>
+	<body>
+		<!--
+			Crow's-foot notation for relationship ends. context-stroke makes each marker take the
+			colour of the edge it belongs to, so they match without being generated per colour.
+			Markers converge on the line and fan towards the entity, which is the standard reading.
+		-->
+		<svg class="erd-markers" aria-hidden="true">
+			<defs>
+				<marker
+					id="erd-one"
+					viewBox="0 0 14 14"
+					markerWidth="14"
+					markerHeight="14"
+					refX="12"
+					refY="7"
+					orient="auto"
+					markerUnits="userSpaceOnUse"
+				>
+					<path d="M9 2 V12" fill="none" stroke="context-stroke" stroke-width="1.6" />
+				</marker>
+				<marker
+					id="erd-one-optional"
+					viewBox="0 0 18 14"
+					markerWidth="18"
+					markerHeight="14"
+					refX="16"
+					refY="7"
+					orient="auto"
+					markerUnits="userSpaceOnUse"
+				>
+					<circle cx="4" cy="7" r="3" fill="none" stroke="context-stroke" stroke-width="1.4" />
+					<path d="M12 2 V12" fill="none" stroke="context-stroke" stroke-width="1.6" />
+				</marker>
+				<marker
+					id="erd-many"
+					viewBox="0 0 18 14"
+					markerWidth="18"
+					markerHeight="14"
+					refX="16"
+					refY="7"
+					orient="auto"
+					markerUnits="userSpaceOnUse"
+				>
+					<path d="M5 2 V12" fill="none" stroke="context-stroke" stroke-width="1.6" />
+					<path d="M8 7 L16 1 M8 7 L16 7 M8 7 L16 13" fill="none" stroke="context-stroke" stroke-width="1.4" />
+				</marker>
+				<marker
+					id="erd-many-optional"
+					viewBox="0 0 22 14"
+					markerWidth="22"
+					markerHeight="14"
+					refX="20"
+					refY="7"
+					orient="auto"
+					markerUnits="userSpaceOnUse"
+				>
+					<circle cx="4" cy="7" r="3" fill="none" stroke="context-stroke" stroke-width="1.4" />
+					<path
+						d="M12 7 L20 1 M12 7 L20 7 M12 7 L20 13"
+						fill="none"
+						stroke="context-stroke"
+						stroke-width="1.4"
+					/>
+				</marker>
+			</defs>
+		</svg>
+		<div id="root"></div>
+		<script type="module" src="./app.js"></script>
+	</body>
+</html>

@@ -1,6 +1,21 @@
 # Generated Output
 
-AspireC4 writes a LikeC4 project into the output directory (`./likec4/gen/` by default) and serves it with the LikeC4 server.
+AspireC4 writes a LikeC4 project into the output directory (`./.aspirec4/likec4/` by default) and serves it with the LikeC4 server.
+
+Every AspireC4 diagram writes beneath the same `./.aspirec4/` root in the AppHost directory — the architecture diagram into `likec4/`, the ER diagram into `erd/` — so there is a single directory to ignore in source control regardless of how many are enabled.
+
+> [!NOTE]
+> This root is new in 13.6. `WithLegacyLayout()` restores the pre-13.6 paths for an upgrade that
+> changes nothing else:
+>
+> | Diagram | 13.6 default | Legacy mode |
+> | --- | --- | --- |
+> | Architecture | `./.aspirec4/likec4/` | `./likec4/gen/` |
+> | ER | `./.aspirec4/erd/` | `./erd/gen/` |
+>
+> An explicit `OutputDirectory` always wins over either default. Legacy mode still needs the old
+> `likec4/gen/` and `erd/gen/` `.gitignore` entries; the new layout needs only `**/.aspirec4/`. See
+> [Migration](Migration.md).
 
 ## Files
 
@@ -9,6 +24,55 @@ AspireC4 writes a LikeC4 project into the output directory (`./likec4/gen/` by d
 | `model.gen.c4` | The generated model — see below. |
 | `likec4.config.json` | LikeC4 project configuration (`name`, `title`, `include.paths`, `imageAliases`, `metadata`). Generated when `GenerateConfigFile` is `true`. |
 | Additional `.c4` files | Any files registered through `WithAdditionalDSLFile` are copied here; LikeC4 discovers all `.c4` files in the project directory automatically. |
+
+## Generating into your own LikeC4 project
+
+`WithLikeC4ProjectFolder(path)` points AspireC4 at a LikeC4 project you already maintain. That directory is what the LikeC4 server serves, so the project's own `likec4.config.json`, `.c4` sources and views are all in play, and the generated model joins them as one more file:
+
+```csharp
+builder.AddAspireC4(configure: options => options
+    .WithLikeC4ProjectFolder("../../architecture"));
+```
+
+```text
+architecture/            <- served by LikeC4
+  likec4.config.json     <- yours, never written to
+  model.c4               <- hand-authored
+  .aspirec4/
+    model.gen.c4         <- generated
+```
+
+Generated output goes to `.aspirec4/` beneath the project so it stays out of your hand-curated files. Set `OutputDirectory` as well if you want it elsewhere — an explicit value is always honoured. **No `likec4.config.json` is generated for such a project**: if it has one, overwriting it would discard settings AspireC4 knows nothing about; if it has none, the config is optional to LikeC4 anyway.
+
+### Attaching Aspire state to elements you already declared
+
+`WithLikeC4Element(id)` maps an Aspire resource onto an element your project already declares, so the live state lands on that element instead of a duplicate appearing beside it:
+
+```csharp
+builder.AddProject<Projects.Api>("api")
+       .WithLikeC4Element("cloud.backend.api");
+```
+
+The generated model then emits an `extend` block rather than a declaration:
+
+```likec4
+model {
+  extend cloud.backend.api {
+    #aspire-run-state-running
+    link http://localhost:5123 'Endpoint: http'
+    metadata {
+      aspire-name 'api'
+    }
+  }
+}
+```
+
+Every reference follows the mapping — relationships, nesting and view groups all use the fully-qualified id — and the element's kind is not re-declared in the generated `specification {}`, because your project already declares it.
+
+> [!IMPORTANT]
+> Only **tags, links, metadata, relationships and nested elements** are applied. LikeC4's `extend` body accepts nothing else: `title`, `technology`, `summary`, `description` and `icon` are parse errors inside it. Your project therefore stays the single source of those, and anything set for them through `WithLikeC4Details` is ignored for a mapped resource.
+
+AspireC4 never reads your `.c4` sources, so it cannot tell you at build time that an id does not exist — LikeC4 reports that itself, with a proper source location.
 
 ## The generated `.c4` file
 

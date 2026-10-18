@@ -15,7 +15,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 		const string source = "namespace TestApp;";
 
 		// Act
-		var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
+		using var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
 
 		// Assert — the marker attribute types are always emitted as post-initialization output
 		await Assert.That(result.Generated()).HasGeneratedSyntaxTree("LikeC4RegistryAttribute.g.cs");
@@ -41,7 +41,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 		var source = BuildSourceWithCallSites(".WithTag(\"external\")");
 
 		// Act
-		var result = await RunGeneratorAsync(
+		using var result = await RunGeneratorAsync(
 			source,
 			additionalFiles: [new TestAdditionalText("model.c4", dsl)],
 			strictMode: "warning",
@@ -66,7 +66,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 		var source = BuildSourceWithCallSites(".WithTag(\"unknown-tag\")");
 
 		// Act
-		var result = await RunGeneratorAsync(
+		using var result = await RunGeneratorAsync(
 			source,
 			additionalFiles: [new TestAdditionalText("model.c4", dsl)],
 			strictMode: "error",
@@ -88,7 +88,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 		var source = BuildSourceWithCallSites(".WithTag(\"unknown-tag\")");
 
 		// Act
-		var result = await RunGeneratorAsync(
+		using var result = await RunGeneratorAsync(
 			source,
 			additionalFiles: [new TestAdditionalText("model.c4", dsl)],
 			strictMode: "off",
@@ -106,7 +106,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 		var source = BuildSourceWithCallSites(".WithTag(\"any-value\")");
 
 		// Act
-		var result = await RunGeneratorAsync(
+		using var result = await RunGeneratorAsync(
 			source,
 			additionalFiles: [],
 			strictMode: "all",
@@ -125,7 +125,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 		var source = BuildSourceWithCallSites(".WithKind(\"service\")");
 
 		// Act
-		var result = await RunGeneratorAsync(
+		using var result = await RunGeneratorAsync(
 			source,
 			additionalFiles: [new TestAdditionalText("spec.c4", dsl)],
 			strictMode: "all",
@@ -150,7 +150,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 		var source = BuildSourceWithCallSites(".WithKind(\"unknown-kind\")");
 
 		// Act
-		var result = await RunGeneratorAsync(
+		using var result = await RunGeneratorAsync(
 			source,
 			additionalFiles: [new TestAdditionalText("spec.c4", dsl)],
 			strictMode: "all",
@@ -176,7 +176,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 		var source = BuildSourceWithCallSites(".WithKind(\"async\")");
 
 		// Act
-		var result = await RunGeneratorAsync(
+		using var result = await RunGeneratorAsync(
 			source,
 			additionalFiles: [new TestAdditionalText("spec.c4", dsl)],
 			strictMode: "all",
@@ -208,7 +208,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 			""";
 
 		// Act
-		var result = await RunGeneratorAsync(
+		using var result = await RunGeneratorAsync(
 			source,
 			additionalFiles: [new TestAdditionalText("spec.c4", dsl)],
 			strictMode: "all",
@@ -235,7 +235,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 		);
 
 		// Act
-		var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
+		using var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
 
 		// Assert
 		await Assert.That(result).DoesNotHaveDiagnostic(DiagnosticLibrary.UndeclaredTag);
@@ -253,7 +253,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 		);
 
 		// Act
-		var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
+		using var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
 
 		// Assert
 		var diagnostic = await Assert.That(result).HasDiagnostic(DiagnosticLibrary.UndeclaredTag);
@@ -272,7 +272,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 		);
 
 		// Act
-		var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
+		using var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
 
 		// Assert
 		await Assert.That(result).DoesNotHaveDiagnostic(DiagnosticLibrary.UndeclaredKind);
@@ -290,7 +290,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 		);
 
 		// Act
-		var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
+		using var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
 
 		// Assert
 		await Assert.That(result).DoesNotHaveDiagnostic(DiagnosticLibrary.UndeclaredKind);
@@ -308,7 +308,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 		);
 
 		// Act
-		var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
+		using var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
 
 		// Assert
 		var diagnostic = await Assert.That(result).HasDiagnostic(DiagnosticLibrary.UndeclaredKind);
@@ -328,7 +328,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 		);
 
 		// Act
-		var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
+		using var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
 
 		// Assert
 		await Assert.That(result).DoesNotHaveDiagnostic(DiagnosticLibrary.UndeclaredTag);
@@ -362,7 +362,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 			""";
 
 		// Act
-		var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
+		using var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
 
 		// Assert
 		await Assert.That(result).HasDiagnostic(DiagnosticLibrary.MultipleRegistryClassesDefined);
@@ -377,7 +377,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 		var source = BuildSourceWithCallSites(".WithTag(\"anything\")", ".WithKind(\"anything\")");
 
 		// Act
-		var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
+		using var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
 
 		// Assert — no validation active when no definitions are present
 		await Assert.That(result).DoesNotHaveDiagnostic(DiagnosticLibrary.UndeclaredTag);
@@ -400,7 +400,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 		);
 
 		// Act
-		var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
+		using var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
 
 		// Assert
 		await Assert.That(result).DoesNotHaveDiagnostic(DiagnosticLibrary.UndeclaredGroup);
@@ -418,7 +418,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 		);
 
 		// Act
-		var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
+		using var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
 
 		// Assert
 		var diagnostic = await Assert.That(result).HasDiagnostic(DiagnosticLibrary.UndeclaredGroup);
@@ -437,7 +437,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 		);
 
 		// Act
-		var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
+		using var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
 
 		// Assert
 		await Assert.That(result).DoesNotHaveDiagnostic(DiagnosticLibrary.UndeclaredGroup);
@@ -455,7 +455,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 		);
 
 		// Act
-		var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
+		using var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
 
 		// Assert — group validation is opt-in via declaring a Groups nested class
 		await Assert.That(result).DoesNotHaveDiagnostic(DiagnosticLibrary.UndeclaredGroup);
@@ -470,7 +470,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 		var source = BuildSourceWithCallSites(".WithLikeC4Group(\"Frontend\")");
 
 		// Act
-		var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
+		using var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
 
 		// Assert
 		await Assert.That(result).DoesNotHaveDiagnostic(DiagnosticLibrary.UndeclaredGroup);
@@ -508,7 +508,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 			""";
 
 		// Act
-		var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
+		using var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
 
 		// Assert
 		var diagnostic = await Assert.That(result).HasDiagnostic(DiagnosticLibrary.UndeclaredTag);
@@ -543,7 +543,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 			""";
 
 		// Act
-		var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
+		using var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
 
 		// Assert
 		await Assert.That(result).DoesNotHaveDiagnostic(DiagnosticLibrary.UndeclaredTag);
@@ -578,7 +578,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 			""";
 
 		// Act
-		var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
+		using var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
 
 		// Assert
 		await Assert.That(result).HasDiagnostic(DiagnosticLibrary.DuplicateTypeDeclaration);
@@ -610,7 +610,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 			""";
 
 		// Act
-		var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
+		using var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
 
 		// Assert
 		var diagnostic = await Assert.That(result).HasDiagnostic(DiagnosticLibrary.UndeclaredGroup);
@@ -645,7 +645,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 			""";
 
 		// Act
-		var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
+		using var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
 
 		// Assert — strict disabled for tags, so no diagnostic
 		await Assert.That(result).DoesNotHaveDiagnostic(DiagnosticLibrary.UndeclaredTag);
@@ -678,7 +678,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 			""";
 
 		// Act
-		var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
+		using var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
 
 		// Assert — strict enabled at registry level, no tags declared → fires
 		var diagnostic = await Assert.That(result).HasDiagnostic(DiagnosticLibrary.UndeclaredTag);
@@ -699,7 +699,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 		);
 
 		// Act
-		var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
+		using var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
 
 		// Assert — no diagnostics from having a MetadataKeys nested class
 		await Assert.That(result).DoesNotHaveDiagnostic(DiagnosticLibrary.UndeclaredMetadataKey);
@@ -717,7 +717,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 		);
 
 		// Act — AllIncludingMetadata enables metadata key validation
-		var result = await RunGeneratorAsync(
+		using var result = await RunGeneratorAsync(
 			source,
 			strictMode: "AllIncludingMetadata",
 			cancellationToken: cancellationToken
@@ -739,7 +739,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 		);
 
 		// Act — AllIncludingMetadata enables metadata key validation
-		var result = await RunGeneratorAsync(
+		using var result = await RunGeneratorAsync(
 			source,
 			strictMode: "AllIncludingMetadata",
 			cancellationToken: cancellationToken
@@ -761,7 +761,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 		);
 
 		// Act — AllIncludingMetadata enables metadata key validation
-		var result = await RunGeneratorAsync(
+		using var result = await RunGeneratorAsync(
 			source,
 			strictMode: "AllIncludingMetadata",
 			cancellationToken: cancellationToken
@@ -783,7 +783,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 		);
 
 		// Act — AllIncludingMetadata enables metadata key validation
-		var result = await RunGeneratorAsync(
+		using var result = await RunGeneratorAsync(
 			source,
 			strictMode: "AllIncludingMetadata",
 			cancellationToken: cancellationToken
@@ -805,7 +805,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 		);
 
 		// Act — AllIncludingMetadata enables metadata key validation
-		var result = await RunGeneratorAsync(
+		using var result = await RunGeneratorAsync(
 			source,
 			strictMode: "AllIncludingMetadata",
 			cancellationToken: cancellationToken
@@ -886,7 +886,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 		);
 
 		// Act
-		var result = await RunGeneratorAsync(source, disabled: true, cancellationToken: cancellationToken);
+		using var result = await RunGeneratorAsync(source, disabled: true, cancellationToken: cancellationToken);
 
 		// Assert — generator disabled, so no ASPIREC4001 should fire
 		await Assert.That(result).DoesNotHaveDiagnostic(DiagnosticLibrary.UndeclaredTag);
@@ -904,7 +904,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 		);
 
 		// Act — disabled=false is the default; verification that normal validation still runs
-		var result = await RunGeneratorAsync(source, disabled: false, cancellationToken: cancellationToken);
+		using var result = await RunGeneratorAsync(source, disabled: false, cancellationToken: cancellationToken);
 
 		// Assert — validation is active, undeclared tag triggers ASPIREC4001
 		var diagnostic = await Assert.That(result).HasDiagnostic(DiagnosticLibrary.UndeclaredTag);
@@ -927,7 +927,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 		);
 
 		// Act
-		var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
+		using var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
 
 		// Assert
 		var diagnostic = await Assert.That(result).HasDiagnostic(DiagnosticLibrary.UndeclaredTag);
@@ -948,7 +948,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 		var source = BuildSourceWithCallSites(".WithTag(\"unknown-tag\")");
 
 		// Act
-		var result = await RunGeneratorAsync(
+		using var result = await RunGeneratorAsync(
 			source,
 			additionalFiles: [new TestAdditionalText("model.c4", dsl)],
 			strictMode: "warning",
@@ -974,7 +974,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 		var source = BuildSourceWithCallSites(".WithTag(\"unknown-tag\")");
 
 		// Act
-		var result = await RunGeneratorAsync(
+		using var result = await RunGeneratorAsync(
 			source,
 			additionalFiles: [new TestAdditionalText("model.c4", dsl)],
 			strictMode: "error",
@@ -1000,7 +1000,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 		var source = BuildSourceWithCallSites(".WithKind(\"unknown-kind\")");
 
 		// Act
-		var result = await RunGeneratorAsync(
+		using var result = await RunGeneratorAsync(
 			source,
 			additionalFiles: [new TestAdditionalText("spec.c4", dsl)],
 			strictMode: "warning",
@@ -1039,7 +1039,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 			""";
 
 		// Act
-		var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
+		using var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
 
 		// Assert
 		var diagnostic = await Assert.That(result).HasDiagnostic(DiagnosticLibrary.UndeclaredTag);
@@ -1073,7 +1073,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 			""";
 
 		// Act
-		var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
+		using var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
 
 		// Assert
 		var diagnostic = await Assert.That(result).HasDiagnostic(DiagnosticLibrary.UndeclaredKind);
@@ -1107,7 +1107,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 			""";
 
 		// Act
-		var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
+		using var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
 
 		// Assert
 		var diagnostic = await Assert.That(result).HasDiagnostic(DiagnosticLibrary.UndeclaredGroup);
@@ -1142,7 +1142,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 			""";
 
 		// Act
-		var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
+		using var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
 
 		// Assert
 		var diagnostic = await Assert.That(result).HasDiagnostic(DiagnosticLibrary.UndeclaredTag);
@@ -1173,7 +1173,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 			}
 			""";
 
-		var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
+		using var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
 
 		var diagnostic = await Assert.That(result).HasDiagnostic(DiagnosticLibrary.UndeclaredTag);
 		await Assert.That(diagnostic.Severity).IsEqualTo(DiagnosticSeverity.Error);
@@ -1210,7 +1210,7 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 			""";
 
 		// Act
-		var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
+		using var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
 
 		// Assert — tags are errors, kinds remain suggestions
 		var tagDiagnostic = await Assert.That(result).HasDiagnostic(DiagnosticLibrary.UndeclaredTag);

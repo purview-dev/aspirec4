@@ -43,7 +43,14 @@ builder.AddAspireC4();
 builder.Build().Run();
 ```
 
-This writes `./likec4/gen/model.gen.c4`, starts the LikeC4 server, and refreshes the diagram as the Aspire app changes.
+This writes `./.aspirec4/likec4/model.gen.c4`, starts the LikeC4 server, and refreshes the diagram as the Aspire app changes.
+
+> [!NOTE]
+> **Upgrading from 13.5 or earlier?** Generated output moved to `./.aspirec4/` and, once a second
+> diagram is registered, the architecture diagram's dashboard resource is renamed. For an upgrade that
+> changes nothing else, call `options.WithLegacyLayout()` — it restores both the old paths
+> (`./likec4/gen/`, `./erd/gen/`) and the flat `aspirec4` / `aspirec4-er` names. See
+> [Upgrading from before 13.6](#upgrading-from-before-136).
 
 ## Configuration
 
@@ -54,7 +61,9 @@ Configure the diagram through `AspireC4DiagramOptions`:
 | `Title` | `null` | Title shown in the LikeC4 app |
 | `ViewTitle` | `"Architecture"` | Title shown in the generated view |
 | `ViewDescription` | `null` | Optional view description |
-| `OutputDirectory` | `"./likec4/gen/"` | Directory where the generated `.c4` file is written |
+| `OutputDirectory` | `"./.aspirec4/likec4/"` | Directory where the generated `.c4` file is written |
+| `ProjectDirectory` | `null` | An existing LikeC4 project to generate into and serve — see [Using your own LikeC4 project](#using-your-own-likec4-project) |
+| `UseLegacyLayout` | `false` | Restores the pre-13.6 paths and dashboard names — see [Upgrading from before 13.6](#upgrading-from-before-136) |
 | `FileName` | `"model.gen"` | Generated file name without extension |
 | `DisableHMR` | `false` | Disable Hot Module Replacement |
 | `HMRPort` | `null` (dynamically allocated) | HMR port used by the LikeC4 server and browser when it supports configurable HMR ports; set a fixed port when needed |
@@ -87,6 +96,388 @@ builder.AddAspireC4(options => options.WithHMRDisabled());
 ### Exclude the sidecar from the diagram
 
 The LikeC4 sidecar is excluded automatically. Set `WithIncludeAspireC4InternalResource(true)` in the options callback if you want to inspect it.
+
+## Upgrading from before 13.6
+
+13.6 changed two things, both breaking:
+
+- Generated output moved under one root: `./.aspirec4/likec4/` (was `./likec4/gen/`) and
+  `./.aspirec4/erd/` (was `./erd/gen/`). Replace your `.gitignore` entries with `**/.aspirec4/`.
+- When more than one diagram is registered, they nest under a shared dashboard parent and the
+  architecture diagram's resource is renamed from `aspirec4` to `aspirec4-likec4`. With only
+  `AddAspireC4()`, nothing changes.
+
+### Legacy mode (keeping the pre-13.6 layout)
+
+Both changes revert together with one switch, for a zero-change upgrade:
+
+```csharp
+builder.AddAspireC4(configure: options => options.WithLegacyLayout());
+```
+
+or, without touching code:
+
+```json
+{
+  "AspireC4": {
+    "UseLegacyLayout": true
+  }
+}
+```
+
+With legacy mode on, the architecture diagram writes to `./likec4/gen/`, the ER diagram to
+`./erd/gen/`, and the diagrams stay flat in the dashboard as `aspirec4` and `aspirec4-er` with no
+parent row. An `OutputDirectory` you set explicitly still wins over the legacy default, and the switch
+does not affect `WithLikeC4ProjectFolder(...)` — generated output always stays beneath a hand-authored
+project.
+
+It is a compatibility shim that will be removed in a future major version — prefer adopting the new
+layout. The full details, including what to update when you drop it, are in the
+[migration guide](docs/wiki/Migration.md).
+
+## Using your own LikeC4 project
+
+Point AspireC4 at a LikeC4 project you already maintain and it serves that directory instead of its own:
+your `likec4.config.json`, `.c4` sources and views are all in play, and the generated model joins them as
+one more file. AspireC4 writes to `.aspirec4/` beneath the project and never generates a config over yours.
+
+```csharp
+builder.AddAspireC4(configure: options => options
+    .WithLikeC4ProjectFolder("../../architecture"));
+
+builder.AddProject<Projects.Api>("api")
+       // Attach Aspire's live state to the element the project already declares,
+       // rather than adding a duplicate beside it.
+       .WithLikeC4Element("cloud.backend.api");
+```
+
+The generated model emits an `extend` block for a mapped resource:
+
+```likec4
+model {
+  extend cloud.backend.api {
+    #aspire-run-state-running
+    link http://localhost:5123 'Endpoint: http'
+    metadata { aspire-name 'api' }
+  }
+}
+```
+
+Only tags, links, metadata, relationships and nested elements are applied — LikeC4's `extend` body accepts
+nothing else, so your project stays the single source of each element's title, technology, description and
+icon. See [Generated Output](docs/wiki/Generated-Output.md) for the details.
+
+## Entity Framework Core ER diagrams (d2)
+
+`AspireC4.Hosting.EntityFrameworkCore` adds a second, complementary diagram: a live
+[d2](https://d2lang.com) `sql_table` ER diagram generated from your Entity Framework Core `DbContext`
+types, hosted alongside the architecture diagram and linked from it.
+
+The AppHost package is all that is required. `WithEntityFrameworkDiagram()` finds every associated
+`DbContext` automatically — reading a build-time dump or a source-generated descriptor where a project
+carries one, and falling back to the assembly's metadata otherwise:
+
+```bash
+# AppHost project
+dotnet add package AspireC4.Hosting.EntityFrameworkCore
+```
+
+```csharp
+var builder = DistributedApplication.CreateBuilder(args);
+
+builder.AddAspireC4()
+       .WithEntityFrameworkDiagram(configure: options => options
+           .LayoutEngine = D2LayoutEngine.Elk);
+
+builder.AddProject<Projects.Api>("api");
+
+builder.Build().Run();
+```
+
+Two packages upgrade a project's fidelity, and both are opt-in by reference alone — see
+[How the model is read](#how-the-model-is-read):
+
+```bash
+# The project that owns the DbContext and that you control: captures fluent configuration
+dotnet add package AspireC4.EntityFrameworkCore
+
+# The project that owns the EF Core provider and a design-time DbContext factory:
+# writes the real model, composite keys included
+dotnet add package AspireC4.EntityFrameworkCore.ModelDump
+```
+
+This writes `./.aspirec4/erd/schema.gen.d2`, starts a `d2lang/d2` sidecar running `d2 --watch`, and
+adds an **ER Diagram** link to each contributing project in the dashboard and on its element in the
+architecture diagram.
+
+### Dashboard layout
+
+Both diagrams write beneath a single `./.aspirec4/` root in the AppHost directory — one directory to
+ignore in source control regardless of how many are enabled.
+
+> [!NOTE]
+> The ER diagram's `./.aspirec4/erd/` default follows the architecture diagram's legacy switch:
+> `WithLegacyLayout()` restores `./erd/gen/` too, because the two diagrams must agree. An
+> `OutputDirectory` set on `WithEntityFrameworkDiagram` still wins. See
+> [Legacy mode](#legacy-mode-keeping-the-pre-136-layout).
+
+With only the architecture diagram registered, the dashboard shows the one `aspirec4` row it always
+has. Registering a second diagram nests them under a shared parent instead:
+
+```text
+aspirec4                 # parent row, added only when there is more than one diagram
+├── aspirec4-likec4      # the architecture diagram
+└── aspirec4-er          # the ER diagram
+```
+
+### Configuration
+
+| Property | Default | Description |
+| --- | --- | --- |
+| `Renderer` | `Interactive` | `Interactive`, `Mermaid`, `Dbml` or `D2` — see [Renderers](#renderers) |
+| `Title` | `null` | Title shown in the generated diagram |
+| `DiscoverAllProjects` | `true` | Scan every project resource for `DbContext` types. `WithProjectOptInOnly()` restricts it to projects marked with `WithEntityFrameworkModel()` |
+| `IncludedContexts` | empty | When non-empty, only these contexts appear. `WithIncludedContexts(...)` |
+| `ExcludedContexts` | empty | Contexts to omit, matched by short or fully-qualified name. `WithExcludedContexts(...)` |
+| `OutputDirectory` | `"./.aspirec4/erd/"` | Directory the generated files are written to. Follows the architecture diagram's legacy switch when left at its default |
+| `FileName` | `"schema.gen"` | Generated file name without extension |
+| `UseSubgraphs` | `true` | Mermaid only — group entities into one `subgraph` per `DbContext` (needs Mermaid 11.17+) |
+| `LayoutEngine` | `Elk` | D2 only. `Dagre`, `Elk` or `Tala`. **dagre cannot target `sql_table` rows** |
+| `ShowNullability` | `true` | Render nullable columns with a trailing `?` |
+| `GroupBySchema` | `true` | Group tables into d2 containers by database schema |
+| `GroupByContext` | `true` | Group by `DbContext` when more than one is discovered |
+| `DomainTypeDisplay` | `DomainTypeFirst` | How a column shows its domain type — a value object or an enum — beside the database type: `DomainTypeFirst` (`AssetId (guid)`, `ActorType (int, enum)`), `DatabaseFirst`, `DomainTypeOnly`, `DatabaseOnly` |
+| `ContainerImageTag` | `null` (`v0.9.0`) | Pin the [`d2lang/d2`](https://hub.docker.com/r/d2lang/d2/) image tag |
+| `UseViewerServer` | `true` | Serve the viewer so the dashboard can link to it; set `false` where there is no container runtime |
+| `ViewerServerImageTag` | `null` (`1.29-alpine`) | Pin the `nginx` image tag used to serve the viewer |
+| `HideFromDashboard` | `false` | Hide the d2 sidecar from the Aspire dashboard |
+| `DashboardLinkDisplayName` | `"ER Diagram"` | Name used for the diagram link |
+
+### Renderers
+
+Every text format is a **lossy projection** of the model. Only the interactive renderer consumes the
+descriptor directly, which is why it is the default.
+
+| Renderer | Output | Fidelity | Use it for |
+| --- | --- | --- | --- |
+| `Interactive` *(default)* | `.json` + viewer | **Full** — column-level edges, grouping, key badges, crow's-foot cardinality | The primary experience |
+| `Dbml` | `.dbml` | High — column-level refs and precision types survive | Interchange: dbdiagram.io, SQL generation |
+| `Mermaid` | `.mmd` + preview | Low — edges join entities, not columns; one flat grouping level | Publishing: GitHub, Azure DevOps, wikis |
+| `D2` | `.d2` + live sidecar | High — column-level edges, nested containers | Live local viewing |
+
+Known limitations, by renderer:
+
+- **Mermaid** emits a local preview alongside the `.mmd` for eyeballing the output before pasting it
+  somewhere that renders Mermaid natively. The preview is deliberately minimal — render, pan, zoom,
+  theme and export — because Mermaid's job here is publishing, not being the primary experience. It cannot attach an edge
+  to a column, so the participating columns are carried in the edge label instead. Its attribute-type grammar permits parentheses but **not commas**, so `decimal(18,2)`
+  is emitted as `decimal(18_2)` — the precision is kept rather than dropped. Grouping is one flat
+  `subgraph` level, so the schema tier is lost. GitHub was confirmed to render the subgraph output in
+  October 2026; set `UseSubgraphs = false` for a renderer pinned to a Mermaid older than 11.17.
+- **DBML** renders nowhere on its own — it is an interchange format for tools such as dbdiagram.io.
+- **D2** needs the container (or a local `d2` binary) and renders nowhere else.
+- **Interactive** needs its JavaScript dependencies vendored once per output directory — see below.
+
+#### Cardinality mapping
+
+EF's own `IsUnique`/`IsRequired` are runtime concepts, so both are derived statically: a foreign key is
+*unique* when its columns are the primary key or carry a unique index, and *required* when they are
+non-nullable. The principal side is always `||`, because a foreign key references exactly one row.
+
+The interactive renderer draws the same mapping as crow's-foot notation, so both renderers say the
+same thing about a relationship.
+
+| Unique | Required | Mermaid | Meaning |
+| --- | --- | --- | --- |
+| yes | yes | `\|\|--\|\|` | one-to-one, mandatory |
+| yes | no | `\|\|--o\|` | one-to-zero-or-one |
+| no | yes | `\|\|--\|{` | one-to-one-or-many |
+| no | no | `\|\|--o{` | one-to-zero-or-many |
+
+Lines are always identifying (`--`). Delete behaviour and ownership are runtime EF concepts that static
+analysis cannot recover, and guessing non-identifying would be misleading.
+
+### Using the viewer
+
+The interactive viewer is a tool for reading a schema, not just a picture of one.
+
+**Search** (`/` or `Ctrl`/`Cmd`+`K` to focus) matches table *and* column names. Matching tables are
+highlighted, everything else — including the relationships into it — recedes, and the row that caused
+a match is marked on the card, so a hit on a column is visible without hunting for it. The counter
+shows your position in the results; `Enter` travels to the next match and `Shift`+`Enter` to the
+previous, bringing each into view. `Esc` clears.
+
+**Relationships** are labelled with the relationship's name in both directions — `Blog ⇄ Posts` — so a
+direction the model does not declare shows as `?` rather than being hidden. Where neither navigation
+exists it falls back to the foreign key's constraint name, then its columns. Edges are drawn from the
+model, so nothing can be connected by hand: the handles are anchors, not a drawing surface.
+
+**Layout.** Drag a table and the box around its `DbContext` follows, growing or shrinking to wrap its
+tables; the arrangement is remembered per model, so a reload keeps it and a regenerated diagram (whose
+model has changed) falls back to a fresh layout.
+
+**View** (the toolbar's `View` control) chooses how much of each table is drawn: `Columns` (the
+default — every column with its type and key badges) or `Names` (the table name alone, for reading a
+large schema at a glance).
+
+**Settings** (the toolbar's *Settings* button) holds the theme (`Auto`, the default, following the
+operating system; `Light`; `Dark`), the edge animation speed (or off), the background pattern, and a
+motion override. A pinned theme is applied before the page paints, so there is no flash of the wrong
+theme. The Mermaid preview shares the theme — pinning it in one applies it to both.
+
+**Export** writes `PNG` or `SVG` of the *whole* diagram at its natural size, not a capture of the
+window, so nothing scrolled out of view is lost. PNG is rendered at 2× for printing and zooming. Both
+honour the current theme, so a diagram exported in dark mode is dark.
+
+The Mermaid preview carries the same theme control and the same PNG/SVG export; beyond that it stays
+deliberately minimal — render, pan, zoom — because Mermaid's job here is publishing. Note that
+animated edges are browser-only and do not appear in any exported image.
+
+### Recipes
+
+```sh
+just erd-vendor --embed               # rebuild the viewer's bundled JS after a dependency bump
+just erd-check                        # drive the interactive viewer in a real browser
+just erd-mermaid-check                # drive the Mermaid preview in a real browser
+just erd-svg .aspirec4/erd/schema.gen.mmd   # render Mermaid to SVG via mermaid-cli 12 in a container
+```
+
+### How the viewer is served
+
+The interactive and Mermaid renderers write static files rather than running a server, so a small
+`nginx` sidecar serves the output directory. That is what gives the resource a real URL in the
+dashboard — a `file://` link cannot be navigated to from the dashboard's own origin — and it makes
+every generated export downloadable from the same place.
+
+Set `UseViewerServer = false` where no container runtime is available. The diagram is still
+generated, and the dashboard offers a command that opens it locally instead.
+
+The viewer's JavaScript ships with the package, gzipped, and is written out beside the diagram on
+first generation — there is no setup step. Only what the chosen renderer needs is written.
+
+The viewer loads its dependencies from `./vendor/` rather than a CDN, so a generated diagram keeps
+working offline. They are genuinely bundled with `bun build`; fetching ESM modules from a CDN at
+vendoring time does **not** work, because the responses are re-export stubs pointing at absolute CDN
+paths.
+
+Existing files are never overwritten, so a locally rebuilt bundle survives regeneration. Run
+`bunx playwright install chromium` once before `just erd-check`.
+
+Animated edges are browser-only and will not appear in the SVG output.
+
+### How the model is read
+
+Every project resource is scanned for `DbContext` types. Each context is recovered from the best source
+available, and the diagram records which one was used:
+
+| Source | When | Fidelity |
+| --- | --- | --- |
+| **Dump** | The project — or one it references — references `AspireC4.EntityFrameworkCore.ModelDump` | `Full` — the real EF model, composite foreign keys included |
+| **Descriptor** | The project references the analyzer-only `AspireC4.EntityFrameworkCore` package | `Full` — includes fluent `OnModelCreating` configuration |
+| **Metadata** | Otherwise | `Approximate` — conventions and data annotations only |
+
+The metadata path opens the built assembly with a reflection-only load context, so no code in it runs —
+the same guarantee as the descriptor path, which reads the attribute straight out of assembly metadata.
+This is what makes `WithEntityFrameworkDiagram()` work with no per-project configuration, and it is the
+only way a shared or third-party assembly — one you cannot add a package to — contributes at all.
+
+Because `OnModelCreating` is a method body, it is absent from metadata: a project without the analyzer
+still appears, but fluent renames, default schemas and `Ignore` calls do not. `MetadataContextsFound` in
+the loader diagnostics, and the `Approximate` fidelity on each context, record which happened, so a
+partial model is never mistaken for a complete one.
+
+#### Filtering
+
+`WithExcludedContexts(...)` and `WithIncludedContexts(...)` accept short names (`IdentityDbContext`) or
+fully-qualified type names (`Shared.Data.IdentityDbContext`), case-insensitively; an exclusion always
+wins. This is how a context shared by several projects — an `IdentityDbContext` in a common library
+nobody owns — is kept out without editing that library. The same filters are available per project
+through the `WithEntityFrameworkModel(options => ...)` overload. Because the same context can reach the
+diagram from more than one project, contexts are de-duplicated by fully-qualified type name; when both
+an approximate and a full description exist, the full one wins.
+
+#### Authoritative dump (opt-in)
+
+The two recovered sources above never touch the service. Where you own the project and want the exact
+model — composite foreign keys included — add the dump package to the project that owns the EF Core
+**provider** and a design-time `DbContext` factory:
+
+```bash
+dotnet add package AspireC4.EntityFrameworkCore.ModelDump
+```
+
+That reference *is* the opt-in. The build then runs the dump tool, which builds each context's real
+`IModel` and writes the diagram contract to `obj/aspirec4/ef/`. That directory is never copied to
+`bin/` or `publish/` and is gitignored, so the dump has no deployment footprint. The AppHost reads it —
+from that project and from every project it references — in preference to the descriptor and the
+metadata reader, and falls back when it is missing or older than the built assembly.
+
+Set `<AspireC4EfModelDumpConnectionString>` when the design-time factory needs one to build its
+options — the model is never opened, so any syntactically valid value works.
+
+Because the model is recovered **statically**, it is a close approximation rather than a guaranteed
+match for the migrated schema.
+
+**Recovered from metadata** (every project):
+
+- `DbSet<T>` properties, and entity types reachable through navigation properties.
+- `[Key]`, `[Required]`, `[MaxLength]`, `[StringLength]`, `[Table]`, `[Column]`, `[ForeignKey]`,
+  `[NotMapped]`, `[Index(IsUnique = true)]`.
+- EF naming conventions for primary keys (`Id` / `<Type>Id`) and foreign keys (`<Nav>Id` /
+  `<PrincipalType>Id`).
+- A column's **domain type** — a value object or an enum — is shown beside its real database type,
+  controlled by `DomainTypeDisplay`: `AssetId (guid)` for a value object, `ActorType (int, enum)` for an
+  enum. A **scalar** value object (a struct wrapping a single `Value`, such as a strongly-typed
+  identifier) becomes a column, and its foreign keys carry the relationships between entities. A
+  **complex** value object — one marked `[ValueObject(EFMapping = ComplexType)]` — is flattened into its
+  owner's table. An **enum** is shown as itself and marked `enum`. The primitive a scalar value object
+  converts to is known only to its value converter, so the model keeps both.
+
+**Also recovered from a descriptor** (analyzer-referenced projects):
+
+- Fluent configuration in `OnModelCreating`: `HasDefaultSchema`, `ToTable`, `HasKey`, `Ignore`,
+  `HasIndex(...).IsUnique()`, and `Property(...)` with `HasColumnName`, `HasColumnType`,
+  `HasMaxLength`, `IsRequired`, `HasComment`.
+- Column comments, from `[Comment]` or `HasComment`.
+
+**Derived in both cases:**
+
+- Relationship cardinality and join tables, both **derived** rather than read from EF: a foreign key
+  is unique when its columns are the key or carry a unique index, required when they are non-nullable,
+  and a table is a join table when every key column is also a foreign key and there is more than one.
+- Relationships themselves are derived from navigation properties and the `<Nav>Id` convention. A
+  relationship configured only fluently — with no navigation, or a composite foreign key whose columns
+  do not match that convention — is not drawn.
+
+**Not captured.** These need either runtime model-building or analysis beyond what is sensible
+statically, and are silently absent rather than guessed at: owned types, TPH/TPT/TPC inheritance
+mapping, delete behaviour, sequences, check constraints, and value conversions. Relationships that
+cross a `DbContext` boundary are deliberately not drawn — EF models a relationship inside one context,
+so an edge across that boundary would be invented rather than observed.
+
+Configuration applied indirectly — most notably `ApplyConfigurationsFromAssembly` — cannot be seen by
+static analysis and is reported as `ASPIREC4010`. Store types are generic (`int`, `varchar`, `guid`, …)
+rather than provider-specific, since the provider is not knowable at compile time; an explicit
+`[Column(TypeName = "...")]` or `HasColumnType("...")` always wins.
+
+### Local CLI instead of a container
+
+```csharp
+builder.AddAspireC4()
+       .WithEntityFrameworkDiagram()
+       .WithLocalD2CLI();          // after WithEntityFrameworkDiagram
+```
+
+d2 ships as a Go binary. Unlike the LikeC4 sidecar, there is **no npm CLI fallback** — the
+`@d2lang/d2` npm package is a WASM library with no executable. Install d2 (scoop, Homebrew,
+`install.sh`, or `go install`) so it is on `PATH`, or pass an explicit path:
+`WithLocalD2CLI("/opt/d2/bin/d2")`.
+
+### Overriding the output directory
+
+Prefer the `configure` callback over configuration for `OutputDirectory`. The sidecar's bind mount is
+fixed when the AppHost builder runs, so a value supplied through configuration changes where the file
+is written but **not** what the container serves. The callback is applied in time for both.
 
 ## Aspire TypeScript AppHost support
 

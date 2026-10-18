@@ -101,9 +101,15 @@ static class ModelBuilder
 		// under a different identifier than its Aspire resource name (used, for example, to
 		// normalise the AspireC4 sidecar to "aspirec4" regardless of whether the Docker
 		// container or the local-CLI executable is active).
+		// A LikeC4ExistingElementAnnotation takes precedence: the resource is emitted against an element
+		// a hand-authored project already declares, and every reference to it — relationships, nesting,
+		// view groups — has to use that identifier rather than the Aspire resource name.
 		var dslIdByName = visibleResources.ToDictionary(
 			r => r.Name,
-			r => r.Annotations.OfType<LikeC4DSLIdAnnotation>().LastOrDefault()?.DSLId ?? r.Name,
+			r =>
+				r.Annotations.OfType<LikeC4ExistingElementAnnotation>().LastOrDefault()?.ElementId
+				?? r.Annotations.OfType<LikeC4DSLIdAnnotation>().LastOrDefault()?.DSLId
+				?? r.Name,
 			StringComparer.OrdinalIgnoreCase
 		);
 
@@ -237,10 +243,18 @@ static class ModelBuilder
 	{
 		var details = resource.Annotations.OfType<LikeC4NodeDetailsAnnotation>().LastOrDefault();
 		var inferredTechnology = InferTechnology(resource);
+		var extendsExisting = resource.Annotations.OfType<LikeC4ExistingElementAnnotation>().Any();
 
 		var label = details?.Label ?? resource.Name;
-		var technology = details?.Technology ?? inferredTechnology;
-		var icon = ResolveIcon(resource, details, inferredTechnology, autoIconsEnabled, hiddenOriginal, iconResolvers);
+		var (technology, icon) = ResolveAppearance(
+			resource,
+			details,
+			inferredTechnology,
+			extendsExisting,
+			autoIconsEnabled,
+			hiddenOriginal,
+			iconResolvers
+		);
 		var kind = details?.Kind ?? InferKind(resource);
 		var parentName = resource is IResourceWithParent { Parent: { } parent }
 			? (parent.Annotations.OfType<LikeC4DSLIdAnnotation>().LastOrDefault()?.DSLId ?? parent.Name)
@@ -272,8 +286,10 @@ static class ModelBuilder
 				stateTags = [Helpers.NormaliseTag(stateTag)];
 		}
 
-		var description = details?.Description;
-		var summary = details?.Summary;
+		// Prose is dropped for the same reason as technology and icon: LikeC4's extend body has no
+		// description or summary, so the project the element comes from keeps both.
+		var description = extendsExisting ? null : details?.Description;
+		var summary = extendsExisting ? null : details?.Summary;
 
 		return new()
 		{
@@ -290,7 +306,35 @@ static class ModelBuilder
 			Links = [.. userLinks, .. autoLinks],
 			Metadata = [.. userMetadata, .. autoMetadata],
 			Group = group,
+			ExtendsExistingElement = extendsExisting,
 		};
+	}
+
+	/// <summary>Resolves the technology label and icon shown on an element.</summary>
+	/// <remarks>
+	/// Both are dropped when extending an element a hand-authored project already describes: LikeC4's
+	/// <c>extend</c> body accepts tags, links, metadata and nested declarations only — <c>technology</c>
+	/// and <c>icon</c> are parse errors there — so the project remains their sole source.
+	/// </remarks>
+	static (string? Technology, string? Icon) ResolveAppearance(
+		IResource resource,
+		LikeC4NodeDetailsAnnotation? details,
+		string? inferredTechnology,
+		bool extendsExisting,
+		bool autoIconsEnabled,
+		IResource? hiddenOriginal,
+		IReadOnlyList<Func<IconResolverContext, string?>>? iconResolvers
+	)
+	{
+		if (extendsExisting)
+		{
+			return (null, null);
+		}
+
+		return (
+			details?.Technology ?? inferredTechnology,
+			ResolveIcon(resource, details, inferredTechnology, autoIconsEnabled, hiddenOriginal, iconResolvers)
+		);
 	}
 
 	/// <summary>

@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<!--
+			RS1035 bans file IO in analyzers. This is a test project, not an analyzer: the round-trip
+			test must emit a real assembly to disk to prove the AppHost can read it back.
+		-->
+		<NoWarn>$(NoWarn);RS1035</NoWarn>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+		<PackageReference Include="Purview.SourceGeneratorFramework.Testing.TUnit" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- Referenced so the round-trip test can read the emitted descriptor back with EfModelReader. -->
+		<ProjectReference
+			Include="..\..\src\EntityFrameworkCore\EntityFrameworkCore.csproj"
+			IsAspireProjectResource="false"
+		/>
+	</ItemGroup>
+</Project>

@@ -59,6 +59,47 @@ public static class AspireC4ResourceBuilderExtensions
 	}
 
 	/// <summary>
+	/// Maps this resource onto an element that already exists in a hand-authored LikeC4 project.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// Instead of declaring a new element, the generated model emits <c>extend &lt;elementId&gt;</c> for
+	/// this resource, applying its Aspire runtime state tag, endpoint links and metadata to the element
+	/// the project already describes. Tags, links and metadata from <see cref="WithLikeC4Details"/> are
+	/// applied too, as are relationships from <see cref="WithLikeC4Reference"/>, and any Aspire children
+	/// of this resource are nested inside the extended element.
+	/// </para>
+	/// <para>
+	/// <b>The title, technology, summary, description and icon are not applied.</b> LikeC4's
+	/// <c>extend</c> body accepts tags, links, metadata and nested declarations only — the others are
+	/// parse errors there — so the project that declares the element remains their only source, and
+	/// anything set for them through <see cref="WithLikeC4Details"/> is ignored for this resource.
+	/// </para>
+	/// <para>
+	/// Pair with <see cref="AspireC4DiagramOptionsExtensions.WithLikeC4ProjectFolder"/> so the project
+	/// declaring <paramref name="elementId"/> is the one being served. AspireC4 does not read the
+	/// project's <c>.c4</c> sources, so an identifier that does not exist there is reported by LikeC4
+	/// rather than at build time.
+	/// </para>
+	/// </remarks>
+	/// <param name="builder">The resource builder for the resource being mapped.</param>
+	/// <param name="elementId">
+	/// The element's fully-qualified identifier, with dots separating the hierarchy
+	/// (e.g. <c>cloud.backend.api</c>).
+	/// </param>
+	[AspireExport]
+	public static IResourceBuilder<T> WithLikeC4Element<T>(this IResourceBuilder<T> builder, string elementId)
+		where T : IResource
+	{
+		ArgumentNullException.ThrowIfNull(builder);
+
+		return builder.WithAnnotation(
+			new LikeC4ExistingElementAnnotation(elementId),
+			ResourceAnnotationMutationBehavior.Replace
+		);
+	}
+
+	/// <summary>
 	/// Assigns this resource to a named group in the generated LikeC4 diagram.
 	/// Resources sharing the same <paramref name="groupName"/> are emitted inside a
 	/// <c>group 'label' { include ... }</c> block in the generated view.

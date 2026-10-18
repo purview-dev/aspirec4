@@ -116,6 +116,12 @@ builder.AddAspireC4(options => options.WithRelationshipKindSyntax(LikeC4Relation
 
 `ExternalProcessTimeoutSeconds` (default 30) caps how long the optional `npx likec4 format` step can block startup. See [Generated Output](Generated-Output.md).
 
+## Output layout and legacy mode
+
+Generated output defaults to `./.aspirec4/likec4/` for the architecture diagram and `./.aspirec4/erd/` for the ER diagram. `WithOutputDirectory(...)` moves either one; an explicit value always wins.
+
+To restore the pre-13.6 paths (`./likec4/gen/` and `./erd/gen/`) and the flat `aspirec4` / `aspirec4-er` dashboard rows, use `WithLegacyLayout()` (legacy mode). See [Configuration](Configuration.md#keep-the-pre-136-layout-legacy-mode) and [Migration](Migration.md).
+
 ## Including the internal resource
 
 `WithIncludeAspireC4InternalResource(true)` includes the AspireC4 server sidecar in the diagram, which exists purely for debugging/monitoring. It is excluded by default.

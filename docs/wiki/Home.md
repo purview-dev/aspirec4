@@ -4,6 +4,12 @@ This wiki is the project documentation hub for `AspireC4.Hosting`, an [Aspire](h
 
 AspireC4 turns your distributed application into a living architecture diagram. On startup it builds a `.c4` model file from the Aspire resource graph, starts the official LikeC4 server as a sidecar, and keeps the diagram refreshed as resources start, stop, and change state at runtime.
 
+> [!TIP]
+> **Upgrading from 13.5?** 13.6 moved all generated output beneath `./.aspirec4/` and changed the
+> dashboard names when a second diagram is registered. If you need the pre-13.6 layout unchanged, turn
+> on **legacy mode** with `WithLegacyLayout()` or `"AspireC4": { "UseLegacyLayout": true }`.
+> The [Migration Guide](Migration.md) has the full before/after and the opt-out details.
+
 ## Start here
 
 - [Getting Started](Getting-Started.md)
@@ -22,6 +28,7 @@ AspireC4 turns your distributed application into a living architecture diagram. 
 ## Feature highlights
 
 - **Live diagram generation.** `AddAspireC4()` registers a lifecycle hook that generates the `.c4` file before startup and regenerates it (debounced) whenever a resource changes state — so the diagram always reflects the current application.
+- **One generated-output root.** The architecture and ER diagrams default beneath `./.aspirec4/`, so source control needs a single `**/.aspirec4/` ignore entry.
 - **Docker or local CLI.** The LikeC4 server runs as the `ghcr.io/likec4/likec4` container by default, or through a local JavaScript package manager CLI (`npx`, `pnpm`, `yarn`, `bun`, or `deno`) with `.WithLocalCLI()`.
 - **Rich per-resource customization.** `WithLikeC4Details()` controls labels, technologies, descriptions, summaries, icons, kinds, tags, links, and metadata; `WithLikeC4Reference()` customizes relationships; `WithLikeC4Group()` groups resources in the generated view.
 - **Automatic icons.** Icons are inferred from resource type and name using a bundled manifest, with custom `IconResolvers` evaluated first, and optional GraphViz `dot` assistance.

@@ -12,8 +12,7 @@ _typescriptAppHost := "samples/typescript-app-host/"
 config_default := "Debug"
 default_test_filter := "/*/*/*/*"
 
-pipeline_feed := "https://api.nuget.org/v3/index.json"
-pipeline_tool := ".tools/purview-build/purview-build"
+pipeline_tool := "dotnet purview-build"
 
 current_version := `bun -p "require('./package.json').version"`
 
@@ -22,58 +21,49 @@ current_version := `bun -p "require('./package.json').version"`
 default:
     just --list
 
-# Install the shared Purview.Build tool (authenticated to the Purview-Dev feed) if not present
+# Restore the repository's .NET local tools (.config/dotnet-tools.json)
 [private]
 ensure-pipeline-tool:
-    if [ ! -x "{{ pipeline_tool }}" ]; then \
-        dotnet tool install Purview.Build --tool-path .tools/purview-build --add-source "{{ pipeline_feed }}"; \
-    fi
+    dotnet tool restore
 
 # Run the PR pipeline (restore, build, lint, tests)
 [group('Pipeline')]
-pipeline-pr *args:
-    just ensure-pipeline-tool
+pipeline-pr *args: ensure-pipeline-tool
     echo "Running PR pipeline..."
-    "{{ pipeline_tool }}" {{ args }}
+    {{ pipeline_tool }} {{ args }}
 
 # Run the build pipeline (restore, build, lint)
 [group('Pipeline')]
-pipeline-build *args:
-    just ensure-pipeline-tool
+pipeline-build *args: ensure-pipeline-tool
     echo "Running build pipeline..."
-    "{{ pipeline_tool }}" --Build:RunTests=false --Release:Mode=None {{ args }}
+    {{ pipeline_tool }} --Build:RunTests=false --Release:Mode=None {{ args }}
 
 # Run the release pipeline (restore, build, lint, tests, pack, publish, GitHub release)
 [group('Pipeline')]
-pipeline-release *args:
-    just ensure-pipeline-tool
+pipeline-release *args: ensure-pipeline-tool
     echo "Running release pipeline..."
-    "{{ pipeline_tool }}" --Release:Mode=NuGet {{ args }}
+    {{ pipeline_tool }} --Release:Mode=NuGet {{ args }}
 
 # Run the release pipeline (restore, build, lint, tests, pack, local nuget publish)
 # Note: `just` runs recipes through the shell, which strips backslashes from unquoted arguments.
 # Use the LOCAL_NUGET_FEED_PATH environment variable or forward slashes, e.g.
 # just pipeline-local-release --PublishLocalNuGet:LocalFeedPath=p:/_sync-projects/.local-nuget/
 [group('Pipeline')]
-pipeline-local-release *args:
-    just ensure-pipeline-tool
-    just lint-fix
+pipeline-local-release *args: ensure-pipeline-tool
     echo "Running local release pipeline..."
-    "{{ pipeline_tool }}" --Release:Mode=LocalNuGet {{ args }}
+    {{ pipeline_tool }} --Release:Mode=LocalNuGet {{ args }}
 
 # Run the pipeline with tests enabled
 [group('Pipeline')]
-pipeline-tests *args:
-    just ensure-pipeline-tool
+pipeline-tests *args: ensure-pipeline-tool
     echo "Running tests pipeline..."
-    "{{ pipeline_tool }}" --Build:RunTests=true --Release:Mode=None {{ args }}
+    {{ pipeline_tool }} --Build:RunTests=true --Release:Mode=None {{ args }}
 
 # Run the pipeline through pack + validate (restore, build, lint, tests, pack, validate pack contents) without publishing/releasing
 [group('Pipeline')]
-pipeline-pack-validate *args:
-    just ensure-pipeline-tool
+pipeline-pack-validate *args: ensure-pipeline-tool
     echo "Running pack + validate pipeline..."
-    "{{ pipeline_tool }}" --Build:RunPack=true --Build:ValidatePack=true --Release:Mode=None {{ args }}
+    {{ pipeline_tool }} --Build:RunPack=true --Build:ValidatePack=true --Release:Mode=None {{ args }}
 
 # Initialise the repo: restore packages, install tools, and wire up git hooks.
 # Safe to run multiple times.
@@ -273,3 +263,37 @@ _try-docker path=justfile_dir():
 _try-bun path=justfile_dir():
     echo "Docker not available, falling back to Bun..."
     sh -c 'set -- --use-hash-history; if command -v dot >/dev/null 2>&1; then set -- "$@" --use-dot-bin; fi; bunx likec4 serve "{{ path }}" "$@"'
+
+# ── ER diagrams ───────────────────────────────────────────────────────────────
+
+# Rebuild the viewer's bundled JavaScript. Pass --embed to refresh the copies shipped with the
+# package (after a dependency bump); pass a directory to write plain files into <dir>/vendor.
+[group('Diagrams')]
+erd-vendor target="--embed":
+    bun scripts/erd-vendor.mts "{{ target }}"
+
+# Drive the interactive viewer in a real browser and assert it renders, lays out, searches and
+# animates. Takes a generated model JSON. Requires: bunx playwright install chromium
+[group('Diagrams')]
+erd-check model="src/src/TestAppHost/.aspirec4/erd/schema.gen.json":
+    bun scripts/erd-vendor.mts artifacts/erd-viewer-check
+    bun scripts/erd-viewer-check.mts "{{ model }}"
+
+# Drive the Mermaid preview in a real browser. Takes an optional .mmd; uses a representative
+# diagram when omitted. Requires: bunx playwright install chromium
+[group('Diagrams')]
+erd-mermaid-check diagram="":
+    bun scripts/erd-vendor.mts artifacts/erd-mermaid-check
+    bun scripts/erd-mermaid-check.mts "{{ diagram }}"
+
+# Render an emitted Mermaid .mmd to SVG using mermaid-cli 12 in a one-shot container.
+# Animated edges are browser-only and will not appear in this output.
+[group('Diagrams')]
+erd-svg input output="artifacts/erd/schema.svg":
+    # justfile_directory() rather than $(pwd): under Git Bash on Windows the latter resolves to the
+    # shell's own install root. MSYS_NO_PATHCONV stops Git Bash rewriting the in-container /work
+    # paths into Windows ones before docker ever sees them.
+    mkdir -p artifacts/erd
+    MSYS_NO_PATHCONV=1 docker run --rm -v "{{ justfile_directory() }}:/work" \
+        ghcr.io/mermaid-js/mermaid-cli/mermaid-cli:12.0.0 \
+        -i "/work/{{ input }}" -o "/work/{{ output }}"
