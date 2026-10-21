@@ -223,7 +223,7 @@ static class EfModelAnalyser
 			|| HasAttribute(property, EfTypes.Attributes.Required)
 			|| !StoreTypeMap.IsNullable(property.Type);
 
-		var domainType = DomainType(property.Type, complexType: null);
+		var (Name, Kind) = DomainType(property.Type, complexType: null);
 
 		return new ColumnShape
 		{
@@ -237,8 +237,8 @@ static class EfModelAnalyser
 				?? GetAttributeNamedString(property, EfTypes.Attributes.Column, "TypeName")
 				?? StoreTypeMap.ColumnStoreType(property.Type),
 			ClrTypeName = property.Type.ToDisplayString(),
-			DomainTypeName = domainType.Name,
-			DomainTypeKind = domainType.Kind,
+			DomainTypeName = Name,
+			DomainTypeKind = Kind,
 			IsNullable = !isRequired,
 			IsUnique =
 				uniqueFromIndexes.Contains(property.Name) || config?.UniqueProperties.Contains(property.Name) == true,
@@ -294,7 +294,7 @@ static class EfModelAnalyser
 				continue;
 			}
 
-			var domainType = DomainType(member.Type, named.Name);
+			var (Name, Kind) = DomainType(member.Type, named.Name);
 
 			table.Columns.Add(
 				new ColumnShape
@@ -303,8 +303,8 @@ static class EfModelAnalyser
 					Name = GetAttributeString(member, EfTypes.Attributes.Column, 0) ?? $"{prefix}_{member.Name}",
 					StoreType = StoreTypeMap.ColumnStoreType(member.Type),
 					ClrTypeName = member.Type.ToDisplayString(),
-					DomainTypeName = domainType.Name,
-					DomainTypeKind = domainType.Kind,
+					DomainTypeName = Name,
+					DomainTypeKind = Kind,
 					IsNullable = nullable || StoreTypeMap.IsNullable(member.Type),
 					MaxLength =
 						GetAttributeInt(member, EfTypes.Attributes.MaxLength, 0)

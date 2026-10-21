@@ -3,7 +3,7 @@
 		"Solution": "src/AspireC4.slnx",
 		"TestRoot": "src/tests",
 		"TestPatterns": "*Tests.csproj",
-		"TestFilter": "/*/*/*/*[Category=Unit]"
+		"TestFilter": "/*/*/*/*"
 	},
 	"PackValidation": {
 		// AspireC4.EntityFrameworkCore is analyzer-only (IncludeBuildOutput=false), so NuGet produces
@@ -25,7 +25,9 @@
 		// versions forced this check on and could not be configured off, so these packages have
 		// always been validated against it; declaring it keeps that behaviour. The analyzer-only
 		// package is unaffected either way: it ships no PDB, so it is never inspected.
-		"RequiredCompilerFlags": ["optimization=release"],
+		"RequiredCompilerFlags": [
+			"optimization=release"
+		],
 		// RequireExplicitContent defaults to true, so this is the exhaustive declaration of what each
 		// package ships: a package with no rule here, or an entry matching none of its globs, fails
 		// validation. The lib/ paths are literal net10.0 and must be updated alongside the target

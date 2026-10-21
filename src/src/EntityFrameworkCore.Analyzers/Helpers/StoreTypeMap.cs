@@ -145,10 +145,9 @@ static class StoreTypeMap
 		}
 
 		if (string.Equals(constant.Value.ToString(), member, StringComparison.Ordinal))
-		{
 			return true;
-		}
 
+		// The constant is not the member name, so check whether it is the underlying value of the member.
 		return constant.Type is INamedTypeSymbol { TypeKind: TypeKind.Enum } enumType
 			&& enumType
 				.GetMembers()

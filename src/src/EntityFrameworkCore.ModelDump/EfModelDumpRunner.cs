@@ -17,7 +17,7 @@ namespace Aspire.Hosting.AspireC4.EntityFrameworkCore.ModelDump;
 /// composite foreign keys included. The output directory is the project's <c>obj/</c>, so nothing it
 /// writes is deployed or committed.
 /// </remarks>
-public static class EfModelDumpRunner
+static class EfModelDumpRunner
 {
 	/// <summary>Dumps every context the assembly's design-time factories expose.</summary>
 	/// <param name="assemblyPath">The built assembly to read contexts from.</param>

@@ -33,10 +33,9 @@ static class EfRelationshipName
 		}
 
 		if (!string.IsNullOrEmpty(principal))
-		{
 			return $"? → {principal}";
-		}
 
+		// If neither end is named, fall back to the constraint name, and then to the columns.
 		return !string.IsNullOrEmpty(foreignKey.ConstraintName)
 			? foreignKey.ConstraintName
 			: string.Join(", ", foreignKey.Columns);
