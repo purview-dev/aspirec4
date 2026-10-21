@@ -8,14 +8,14 @@
 	<PropertyGroup>
 		<RoslynCompilerVersion>5.9.0</RoslynCompilerVersion>
 		<RoslynAnalyzersVersion>5.9.0</RoslynAnalyzersVersion>
-		<TUnitVersion>1.75.0</TUnitVersion>
-		<PurviewSourceGenVersion>1.1.1</PurviewSourceGenVersion>
+		<TUnitVersion>1.76.0</TUnitVersion>
+		<PurviewSourceGenVersion>1.2.0</PurviewSourceGenVersion>
 		<PurviewTelemetryVersion>5.0.4</PurviewTelemetryVersion>
-		<AspireVersion>13.6.1</AspireVersion>
+		<AspireVersion>13.6.2</AspireVersion>
 	</PropertyGroup>
 
 	<ItemGroup Label="Transitive Pinning">
-		<PackageVersion Include="MessagePack" Version="2.5.307" />
+		<PackageVersion Include="MessagePack" Version="3.1.12" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -49,6 +49,6 @@
 		<PackageVersion Include="TUnit.Aspire" Version="$(TUnitVersion)" />
 		<PackageVersion Include="TUnit.Core" Version="$(TUnitVersion)" />
 		<PackageVersion Include="TUnit.Mocks" Version="$(TUnitVersion)" />
-		<PackageVersion Include="Purview.Skills.Testing" Version="1.0.7" />
+		<PackageVersion Include="Purview.Skills.Testing" Version="1.1.0" />
 	</ItemGroup>
 </Project>
