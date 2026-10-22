@@ -11,13 +11,9 @@
 		<TUnitVersion>1.76.0</TUnitVersion>
 		<PurviewSourceGenVersion>1.2.0</PurviewSourceGenVersion>
 		<PurviewTelemetryVersion>5.0.5</PurviewTelemetryVersion>
-		<AspireVersion>13.6.2</AspireVersion>
+		<AspireVersion>13.6.3</AspireVersion>
 	</PropertyGroup>
 
-	<!-- <ItemGroup Label="Transitive Pinning">
-		<PackageVersion Include="MessagePack" Version="3.1.12" />
-	</ItemGroup>
- -->
 	<ItemGroup>
 		<PackageVersion Include="Aspire.Hosting" Version="$(AspireVersion)" />
 		<PackageVersion Include="Aspire.Hosting.Testing" Version="$(AspireVersion)" />

@@ -85,7 +85,7 @@ static class EfModelDumpProjector
 
 		foreach (var (property, complexType) in Columns(entityType))
 		{
-			var (Name, Kind) = DomainType(property, complexType);
+			var (name, kind) = DomainType(property, complexType);
 
 			columns.Add(
 				new DumpColumn
@@ -93,8 +93,8 @@ static class EfModelDumpProjector
 					Name = property.GetColumnName(),
 					StoreType = ResolveStoreType(ProviderType(property)),
 					ClrTypeName = property.ClrType.FullName,
-					DomainTypeName = Name,
-					DomainTypeKind = Kind,
+					DomainTypeName = name,
+					DomainTypeKind = kind,
 					IsNullable = property.IsNullable,
 					IsPrimaryKey = property.IsPrimaryKey(),
 					IsUnique = uniqueProperties.Contains(property),

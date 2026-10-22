@@ -380,7 +380,7 @@ static class EfModelMetadataReader
 
 	static ColumnShape BuildColumn(PropertyInfo property, HashSet<string> uniqueFromIndexes)
 	{
-		var (Name, Kind) = DomainType(property.PropertyType, complexType: null);
+		var (name, kind) = DomainType(property.PropertyType, complexType: null);
 
 		return new ColumnShape
 		{
@@ -389,8 +389,8 @@ static class EfModelMetadataReader
 			StoreType =
 				GetAttributeNamedString(property, "Column", "TypeName") ?? ColumnStoreType(property.PropertyType),
 			ClrTypeName = property.PropertyType.FullName,
-			DomainTypeName = Name,
-			DomainTypeKind = Kind,
+			DomainTypeName = name,
+			DomainTypeKind = kind,
 			IsNullable = IsNullable(property),
 			IsUnique = uniqueFromIndexes.Contains(property.Name),
 			MaxLength = GetAttributeInt(property, "MaxLength", 0) ?? GetAttributeInt(property, "StringLength", 0),
@@ -437,7 +437,7 @@ static class EfModelMetadataReader
 				continue;
 			}
 
-			var (Name, Kind) = DomainType(member.PropertyType, Unwrap(complexType).Name);
+			var (name, kind) = DomainType(member.PropertyType, Unwrap(complexType).Name);
 
 			table.Columns.Add(
 				new ColumnShape
@@ -446,8 +446,8 @@ static class EfModelMetadataReader
 					Name = GetAttributeString(member, "Column", 0) ?? $"{prefix}_{member.Name}",
 					StoreType = ColumnStoreType(member.PropertyType),
 					ClrTypeName = member.PropertyType.FullName,
-					DomainTypeName = Name,
-					DomainTypeKind = Kind,
+					DomainTypeName = name,
+					DomainTypeKind = kind,
 					IsNullable = nullable || IsNullable(member),
 					MaxLength = GetAttributeInt(member, "MaxLength", 0) ?? GetAttributeInt(member, "StringLength", 0),
 					Comment = GetAttributeString(member, "Comment", 0),

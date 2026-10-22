@@ -265,10 +265,10 @@ public sealed class D2DSLGeneratorTests
 	public async Task Sanitize_NameWithSeparators_ProducesBareIdentifier()
 	{
 		// Arrange
-		const string Value = "Order-Items.2024";
+		const string value = "Order-Items.2024";
 
 		// Act
-		var result = D2DSLGenerator.Sanitize(Value);
+		var result = D2DSLGenerator.Sanitize(value);
 
 		// Assert
 		await Assert.That(result).IsEqualTo("Order_Items_2024");
@@ -278,10 +278,10 @@ public sealed class D2DSLGeneratorTests
 	public async Task Sanitize_NameStartingWithDigit_IsPrefixed()
 	{
 		// Arrange
-		const string Value = "2024_orders";
+		const string value = "2024_orders";
 
 		// Act
-		var result = D2DSLGenerator.Sanitize(Value);
+		var result = D2DSLGenerator.Sanitize(value);
 
 		// Assert
 		await Assert.That(result).IsEqualTo("_2024_orders");
@@ -291,10 +291,10 @@ public sealed class D2DSLGeneratorTests
 	public async Task Sanitize_ReservedKeyword_IsPrefixed()
 	{
 		// Arrange
-		const string Value = "style";
+		const string value = "style";
 
 		// Act
-		var result = D2DSLGenerator.Sanitize(Value);
+		var result = D2DSLGenerator.Sanitize(value);
 
 		// Assert
 		await Assert.That(result).IsEqualTo("_style");
