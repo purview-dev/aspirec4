@@ -48,10 +48,10 @@ public sealed class AspireC4EfModelGeneratorTests
 	public async Task RunGenerator_Always_EmitsTheModelAttributeType(CancellationToken cancellationToken)
 	{
 		// Arrange
-		const string Source = "namespace Sample;";
+		const string source = "namespace Sample;";
 
 		// Act
-		using var result = await GenerateAsync(Source, cancellationToken: cancellationToken);
+		using var result = await GenerateAsync(source, cancellationToken: cancellationToken);
 
 		// Assert
 		await Assert.That(result.Generated()).HasGeneratedSyntaxTree("AspireC4EfModelAttribute.g.cs");
@@ -61,10 +61,10 @@ public sealed class AspireC4EfModelGeneratorTests
 	public async Task RunGenerator_WithNoDbContext_EmitsNoDescriptor(CancellationToken cancellationToken)
 	{
 		// Arrange
-		const string Source = "namespace Sample; public class NotAContext { }";
+		const string source = "namespace Sample; public class NotAContext { }";
 
 		// Act
-		var descriptor = await GenerateDescriptorAsync(Source, cancellationToken);
+		var descriptor = await GenerateDescriptorAsync(source, cancellationToken);
 
 		// Assert
 		await Assert.That(descriptor).IsEmpty();
@@ -404,7 +404,7 @@ public sealed class AspireC4EfModelGeneratorTests
 	)
 	{
 		// Arrange
-		const string Source = """
+		const string source = """
 			using Microsoft.EntityFrameworkCore;
 
 			namespace Sample;
@@ -413,7 +413,7 @@ public sealed class AspireC4EfModelGeneratorTests
 			""";
 
 		// Act
-		using var result = await GenerateAsync(Source, cancellationToken: cancellationToken);
+		using var result = await GenerateAsync(source, cancellationToken: cancellationToken);
 
 		// Assert
 		await Assert.That(result).HasDiagnostic(DiagnosticLibrary.NoEntityTypesDiscovered);

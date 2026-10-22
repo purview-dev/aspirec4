@@ -41,8 +41,8 @@ public sealed partial class LikeC4StrictValidatorGenerator : IIncrementalGenerat
 
 		context.RegisterPostInitializationOutput(ctx =>
 		{
-			foreach (var (HintName, Source) in MarkerAttributeEmitter.EmitMarkAttribute())
-				ctx.AddSource(HintName, Source);
+			foreach (var (hintName, source) in MarkerAttributeEmitter.EmitMarkAttribute())
+				ctx.AddSource(hintName, source);
 		});
 
 		// Combine everything and validate.

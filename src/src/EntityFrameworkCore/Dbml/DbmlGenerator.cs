@@ -131,7 +131,6 @@ public static class DbmlGenerator
 	static void WriteReferences(StringBuilder sb, EfModel model, AspireC4EfDiagramOptions options)
 	{
 		Dictionary<string, (EfContext Context, EfTable Table)> byName = new(StringComparer.OrdinalIgnoreCase);
-
 		foreach (var context in model.Contexts)
 		{
 			foreach (var table in context.Tables)

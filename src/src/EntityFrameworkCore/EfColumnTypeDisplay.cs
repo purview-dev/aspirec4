@@ -30,10 +30,10 @@ static class EfColumnTypeDisplay
 		ArgumentNullException.ThrowIfNull(options);
 
 		if (string.IsNullOrEmpty(column.DomainTypeName))
-		{
 			return DatabaseType(column);
-		}
 
+		// The domain type is present, so the headline is either the domain type or the database type,
+		// depending on the configured display order.
 		return options.DomainTypeDisplay is DomainTypeDisplay.DatabaseFirst or DomainTypeDisplay.DatabaseOnly
 			? DatabaseType(column)
 			: column.DomainTypeName;
@@ -56,6 +56,7 @@ static class EfColumnTypeDisplay
 
 		var marker = column.DomainTypeKind == EfDomainTypeKind.Enum;
 
+#pragma warning disable IDE0072 // Add missing cases
 		return options.DomainTypeDisplay switch
 		{
 			DomainTypeDisplay.DomainTypeFirst => marker ? $"{DatabaseType(column)}, enum" : DatabaseType(column),
@@ -64,6 +65,7 @@ static class EfColumnTypeDisplay
 			DomainTypeDisplay.DomainTypeOnly => DatabaseType(column),
 			_ => null,
 		};
+#pragma warning restore IDE0072 // Add missing cases
 	}
 
 	/// <summary>Composes the inline label, e.g. <c>AssetId (guid)</c> or <c>ActorType (int, enum)</c>.</summary>

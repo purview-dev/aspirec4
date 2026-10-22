@@ -13,7 +13,7 @@ namespace Aspire.Hosting.AspireC4.EntityFrameworkCore.ModelDump;
 /// the real model — conventions, value converters and composite foreign keys included. The output is
 /// deliberately the diagram's own contract rather than the raw model, so the artifact stays small.
 /// </remarks>
-public static class EfModelDumpProjector
+static class EfModelDumpProjector
 {
 	const string UnknownStoreType = "unknown";
 
@@ -85,7 +85,7 @@ public static class EfModelDumpProjector
 
 		foreach (var (property, complexType) in Columns(entityType))
 		{
-			var domainType = DomainType(property, complexType);
+			var (name, kind) = DomainType(property, complexType);
 
 			columns.Add(
 				new DumpColumn
@@ -93,8 +93,8 @@ public static class EfModelDumpProjector
 					Name = property.GetColumnName(),
 					StoreType = ResolveStoreType(ProviderType(property)),
 					ClrTypeName = property.ClrType.FullName,
-					DomainTypeName = domainType.Name,
-					DomainTypeKind = domainType.Kind,
+					DomainTypeName = name,
+					DomainTypeKind = kind,
 					IsNullable = property.IsNullable,
 					IsPrimaryKey = property.IsPrimaryKey(),
 					IsUnique = uniqueProperties.Contains(property),
@@ -249,10 +249,10 @@ public static class EfModelDumpProjector
 		}
 
 		if (unwrapped == typeof(byte[]))
-		{
 			return "blob";
-		}
 
+		// The AppHost's rule for value objects is to use the provider type, which is what EF stores in the
+		// database. The provider type is already unwrapped, so the nullable check above is only for enums.
 		return unwrapped.FullName switch
 		{
 			"System.Boolean" => "bool",
