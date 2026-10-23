@@ -149,6 +149,9 @@ Options bind from the **`AspireC4:EntityFramework`** section, applied on top of 
 | `D2Command` | `null` | a local `d2` binary to export with; `null` runs the container |
 | `ContainerRuntimeCommand` | `"docker"` | the runtime for the one-shot export container; `podman` where that is what Aspire uses |
 | `ExportTimeoutSeconds` | `120` | cap on one d2 invocation |
+| `UseViewerFidelityExport` | `false` | render through the viewer in a headless browser so images match its own export. Pulls a ~3.7 GB image; `Interactive` only |
+| `ViewerExportImage` | `null` | override the browser image, including its tag |
+| `ViewerExportTimeoutSeconds` | `600` | cap on one viewer-fidelity export |
 
 The output path follows the architecture diagram: `WithLegacyLayout()` on `AddAspireC4` restores
 `./erd/gen/` as well, because there is no separate ER switch. An `OutputDirectory` set on
@@ -210,12 +213,44 @@ things follow:
 - `{FileName}.d2` is written alongside the diagram even for the other renderers, purely to be
   rendered. It is identical to what the `D2` renderer writes.
 
-Export runs in the background and **only when the generated diagram actually changed**, so a restart
-that finds the same model re-exports nothing and startup is never delayed. Failures are best-effort:
-they are logged to the diagram resource and the diagram itself is unaffected.
+Export runs in the background, so startup is never delayed, and nothing is rendered — **no container is
+started** — unless the output would differ:
+
+| Situation | Exports? |
+| --- | --- |
+| Identical model regenerated | no |
+| AppHost restarted over an unchanged model | no — a stamp file beside the images records what they were rendered from |
+| Model changed, or a format added | yes |
+| Images deleted | yes — the stamp is only trusted when the files it describes still exist |
+| `aspire publish` | **never** |
+
+Publish is skipped outright: an export is fire-and-forget, so it would be killed part-way through when
+publish exits, and publish is expected to be hermetic rather than reaching for a container runtime a
+build agent may not have.
+
+Failures are best-effort: they are logged to the diagram resource and the diagram itself is unaffected.
 
 Prefer SVG for a large schema — a raster of the whole thing is unreadable at any sensible size. The
 viewer also has **Save as SVG / PNG** buttons for exporting what is currently on screen.
+
+### Matching the viewer exactly
+
+The d2 render is a **different diagram**, not a differently-styled one: d2 draws `sql_table` shapes with
+its own theme and layout, the viewer draws React Flow cards with context colours, key badges,
+complex-type groups and crow's-foot markers. To get the file the viewer's own export produces:
+
+```csharp
+builder.AddAspireC4()
+       .WithEntityFrameworkDiagram(configure: options => options.WithViewerFidelityExport());
+```
+
+This loads the generated viewer in a headless browser and calls the same function the toolbar button
+calls, so the output is identical. **Off by default**: it pulls `mcr.microsoft.com/playwright` (around
+3.7 GB) and an export takes seconds rather than milliseconds. `ViewerExportImage` overrides the image
+for a mirror or a cached one.
+
+Applies only to `Interactive`, the renderer that has a viewer. Any other renderer exports through d2
+regardless and logs why.
 
 ## Using the viewer
 
@@ -241,3 +276,4 @@ The interactive viewer is for reading a schema, not just looking at one.
 `purview-aspirec4-quickstart` for installing AspireC4 and running the architecture diagram,
 `purview-aspirec4-configuration` for the LikeC4 options reference, and `purview-aspirec4-resources` for
 per-resource labels, relationships and grouping.
+

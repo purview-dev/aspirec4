@@ -27,6 +27,31 @@ public sealed class LikeC4PublishModeTests(Fixtures.TestAppHostFixture fixture)
 	}
 
 	[Test]
+	public async Task PublishAsync_InPublishMode_ExportsNoImages(CancellationToken cancellationToken)
+	{
+		// Export is left enabled for this run, so the setup is not what makes this pass.
+		//
+		// A caveat worth knowing: this cannot distinguish "the guard skipped it" from "the export had
+		// not finished", because an export is fire-and-forget and publish exits immediately afterwards.
+		// That race is exactly why exporting on publish is wrong, and the rule itself is asserted
+		// directly by AspireC4LifecycleHookTests.ShouldExportImages_InPublishMode_*. What this adds is
+		// that a publish still produces its model and does not block on, or trip over, an export.
+		// Arrange
+
+		// Act
+		var result = await fixture.PublishAsync(cancellationToken);
+
+		// Assert
+		await Assert.That(result.IsPublishMode).IsTrue();
+		// The model still gets generated; it is only the images that are skipped.
+		await Assert.That(File.Exists(result.ModelPath)).IsTrue();
+
+		var images = Directory.Exists(result.ImageDirectory) ? Directory.GetFiles(result.ImageDirectory) : [];
+
+		await Assert.That(images).IsEmpty();
+	}
+
+	[Test]
 	public async Task PublishAsync_InPublishMode_GeneratesC4FileWithoutStartingServer(
 		CancellationToken cancellationToken
 	)

@@ -1142,17 +1142,23 @@ async function save(dataUrl, fileName) {
 }
 
 /**
- * Renders the current diagram to an image and downloads it.
+ * Renders the current diagram to an image and returns it as a data URL.
  *
  * The crow's-foot markers are defined in a stand-alone &lt;svg&gt; outside the viewport, so a capture
  * of the viewport alone resolves every `url(#erd-…)` to nothing and loses the cardinality. A copy
  * rides along for the duration of the capture.
+ *
+ * Separate from {@link exportImage} so the AppHost's image export can render the diagram without
+ * downloading it: a headless browser has nowhere to put a download, and intercepting one to get at
+ * the bytes is a great deal of machinery for something the renderer already has in hand.
+ *
+ * @returns the data URL, or null when there is nothing laid out to capture.
  */
-async function exportImage(format, nodes, title) {
+async function renderImage(format, nodes, title) {
 	const viewport = document.querySelector(".react-flow__viewport");
 	const bounds = drawingBounds(nodes);
 
-	if (!viewport || !bounds) return false;
+	if (!viewport || !bounds) return null;
 
 	const natural = Math.max(bounds.width, bounds.height) + EXPORT_PADDING * 2;
 	const scale = Math.min(1, EXPORT_MAX_SIDE / natural);
@@ -1180,12 +1186,21 @@ async function exportImage(format, nodes, title) {
 			},
 		});
 
-		await save(dataUrl, `${(title || "erd").replaceAll(/[^\w.-]+/g, "-").toLowerCase()}.${format}`);
-
-		return true;
+		return dataUrl;
 	} finally {
 		markers?.remove();
 	}
+}
+
+/** Renders the current diagram to an image and downloads it. */
+async function exportImage(format, nodes, title) {
+	const dataUrl = await renderImage(format, nodes, title);
+
+	if (!dataUrl) return false;
+
+	await save(dataUrl, `${(title || "erd").replaceAll(/[^\w.-]+/g, "-").toLowerCase()}.${format}`);
+
+	return true;
 }
 
 function Diagram({ model }) {
@@ -1377,6 +1392,19 @@ function Diagram({ model }) {
 		},
 		[nodes],
 	);
+
+	// The hook the AppHost's viewer-fidelity export calls, so an image produced headlessly is the same
+	// one this toolbar produces. Published only once the nodes are laid out, which is what makes its
+	// presence the signal that the diagram is ready to capture.
+	useEffect(() => {
+		if (nodes.length === 0) return undefined;
+
+		globalThis.__aspirec4RenderImage = (format) => renderImage(format, nodes, document.title);
+
+		return () => {
+			delete globalThis.__aspirec4RenderImage;
+		};
+	}, [nodes]);
 
 	/**
 	 * Opens or folds every complex value object on every card.

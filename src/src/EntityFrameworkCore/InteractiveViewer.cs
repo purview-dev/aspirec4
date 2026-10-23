@@ -154,6 +154,16 @@ public static class InteractiveViewer
 		typeof(InteractiveViewer).Assembly.GetManifestResourceStream($"{Prefix}viewer.vendor.{name}.gz")
 		?? throw new InvalidOperationException($"Embedded viewer dependency '{name}.gz' was not found.");
 
+	/// <summary>
+	/// The script the viewer-fidelity image export runs inside the browser container.
+	/// </summary>
+	/// <remarks>
+	/// Kept here with the rest of the viewer's assets because it drives that viewer's own export
+	/// control, so the two have to agree on the markup — the <c>[data-export]</c> buttons and the
+	/// <c>.entity</c> node class in particular.
+	/// </remarks>
+	internal static string ViewerExportScript() => Read("export.viewer-export.mjs");
+
 	static string Read(string name)
 	{
 		using var stream =

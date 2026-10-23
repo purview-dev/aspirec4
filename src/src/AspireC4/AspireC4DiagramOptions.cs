@@ -188,9 +188,10 @@ public sealed class AspireC4DiagramOptions
 	/// <para>
 	/// The images land in <see cref="ImageExportDirectory"/>, one file per view named after the view's
 	/// id, so a diagram can be attached to a pull request or pasted into a wiki without running the
-	/// server. Export runs only when the generated model actually changed — the resource state churn
-	/// that regenerates an identical model exports nothing — and runs in the background, so it never
-	/// delays startup.
+	/// server. Export runs in the background, so it never delays startup, and only when it would
+	/// actually change something: the resource state churn that regenerates an identical model exports
+	/// nothing, and a stamp beside the images means a restart runs nothing either — not even a
+	/// container. It is also skipped entirely during a publish, which generates its output and exits.
 	/// </para>
 	/// <para>
 	/// <c>likec4 export</c> screenshots each view in a headless browser, so this takes tens of seconds

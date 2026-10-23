@@ -156,41 +156,100 @@ static class ErdImageExporter
 			return [];
 		}
 
-		// Every renderer but d2 itself produces something a headless tool cannot read, so the d2 source
-		// is written alongside it purely to be rendered. Identical content and file name to what the d2
-		// renderer writes, so enabling export never changes what that renderer already produced.
-		if (options.Renderer != ErdRenderer.D2)
+		var viaViewer = options.UseViewerFidelityExport && options.Renderer == ErdRenderer.Interactive;
+
+		if (options.UseViewerFidelityExport && !viaViewer)
 		{
-			await File.WriteAllTextAsync(
-					Path.Combine(outputDirectory, $"{options.FileName}.d2"),
-					D2DSLGenerator.Generate(D2ModelBuilder.Build(model, options), options),
-					cancellationToken
-				)
-				.ConfigureAwait(false);
+			// Only the interactive renderer writes a viewer; there is nothing to drive otherwise, so
+			// say so rather than silently producing the d2 render the consumer opted out of.
+			ErdLog.ViewerImageExportNotApplicable(logger, ErdRenderer.Interactive, options.Renderer);
 		}
 
 		var imageDirectory = ResolveImageDirectory(options, appHostDirectory);
+		var expected = formats
+			.Select(f => Path.Combine(imageDirectory, $"{ImageBaseName(options.FileName)}.{Extension(f)}"))
+			.ToArray();
+
+		// Checked before anything is written or run. The AppHost's own change detection resets every
+		// time it restarts, so without this a restart re-renders images that are already correct — and
+		// on the viewer path that means pulling and starting a multi-gigabyte browser for nothing.
+		var stamp = ImageExportStamp.Compute(
+			ErdOutput.Serialise(model),
+			options.FileName,
+			options.Renderer.ToString(),
+			viaViewer ? "viewer" : "d2",
+			string.Join(",", formats)
+		);
+
+		if (
+			await ImageExportStamp
+				.IsCurrentAsync(imageDirectory, StampName, stamp, expected, cancellationToken)
+				.ConfigureAwait(false)
+		)
+		{
+			ErdLog.ImagesUnchanged(logger, imageDirectory);
+
+			return [];
+		}
 
 		// Created here rather than left to the container runtime: a missing bind-mount source is created
 		// by the daemon as root, which a later host-side write could not then touch.
 		Directory.CreateDirectory(imageDirectory);
 
-		List<string> written = [];
+		IReadOnlyList<string> written;
 
-		foreach (var format in formats)
+		if (viaViewer)
 		{
-			var image = Path.Combine(imageDirectory, $"{ImageBaseName(options.FileName)}.{Extension(format)}");
-			var (command, arguments) = BuildInvocation(options, outputDirectory, imageDirectory, format);
-
-			if (await RunAsync(command, arguments, options, logger, cancellationToken).ConfigureAwait(false))
+			written = await ErdViewerImageExporter
+				.ExportAsync(options, outputDirectory, imageDirectory, formats, logger, cancellationToken)
+				.ConfigureAwait(false);
+		}
+		else
+		{
+			// Every renderer but d2 itself produces something a headless tool cannot read, so the d2
+			// source is written alongside it purely to be rendered. Identical content and file name to
+			// what the d2 renderer writes, so enabling export never changes what it already produced.
+			if (options.Renderer != ErdRenderer.D2)
 			{
-				written.Add(image);
-				ErdLog.ImageExported(logger, image);
+				await File.WriteAllTextAsync(
+						Path.Combine(outputDirectory, $"{options.FileName}.d2"),
+						D2DSLGenerator.Generate(D2ModelBuilder.Build(model, options), options),
+						cancellationToken
+					)
+					.ConfigureAwait(false);
 			}
+
+			List<string> rendered = [];
+
+			foreach (var format in formats)
+			{
+				var image = Path.Combine(imageDirectory, $"{ImageBaseName(options.FileName)}.{Extension(format)}");
+				var (command, arguments) = BuildInvocation(options, outputDirectory, imageDirectory, format);
+
+				if (await RunAsync(command, arguments, options, logger, cancellationToken).ConfigureAwait(false))
+				{
+					rendered.Add(image);
+					ErdLog.ImageExported(logger, image);
+				}
+			}
+
+			written = rendered;
+		}
+
+		// Only once every requested format landed: a partial export must not be mistaken for a current
+		// one, or the formats that failed would never be retried.
+		if (written.Count == formats.Count)
+		{
+			await ImageExportStamp
+				.WriteAsync(imageDirectory, StampName, stamp, cancellationToken)
+				.ConfigureAwait(false);
 		}
 
 		return written;
 	}
+
+	/// <summary>Distinguishes this diagram's stamp from the architecture diagram's in the shared folder.</summary>
+	internal const string StampName = "erd";
 
 	[System.Diagnostics.CodeAnalysis.SuppressMessage(
 		"Design",

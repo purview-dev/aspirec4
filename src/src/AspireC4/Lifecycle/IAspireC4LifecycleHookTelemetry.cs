@@ -55,4 +55,7 @@ interface IAspireC4LifecycleHookTelemetry
 
 	[Warning]
 	void FailedToExportImages(string format, string reason);
+
+	[Debug]
+	void ImagesUnchanged(string imageDirectory);
 }

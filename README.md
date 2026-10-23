@@ -141,9 +141,22 @@ renders through d2 instead.
 That headless browser has two consequences. Export takes tens of seconds and needs a Chromium: container
 mode (the default) gets one from the `ghcr.io/likec4/likec4` image, which already carries it, while
 `WithLocalCLI()` mode needs a Playwright Chromium installed on the host. And it runs in the background,
-**only when the generated model actually changed** — the resource state churn that regenerates an
-identical model exports nothing — so startup is never delayed. A failure is reported and leaves the
-generated `.c4` file untouched.
+so startup is never delayed. A failure is reported and leaves the generated `.c4` file untouched.
+
+#### When export actually runs
+
+Nothing is rendered — and **no container is started** — unless the output would differ:
+
+- **Unchanged model, same session.** The resource state churn that regenerates an identical model
+  exports nothing.
+- **Restart.** A stamp file beside the images records what they were rendered from, so restarting the
+  AppHost over an unchanged model runs nothing. Without it, every restart would re-render, because the
+  in-memory change detection starts empty each time.
+- **Changed formats, or deleted images.** Both re-export: the stamp covers the requested formats, and
+  is only trusted when the files it describes are still there.
+- **Publish.** `aspire publish` generates the model and manifest and exports nothing at all. An export
+  is fire-and-forget, so on publish it would be killed part-way through — and publish is expected to be
+  hermetic, which reaching for a container runtime a build agent may not have would break.
 
 Set `ContainerRuntimeCommand` to `podman` where that is the runtime Aspire itself is using.
 
@@ -308,6 +321,9 @@ aspirec4                 # parent row, added only when there is more than one di
 | `D2Command` | `null` | A local `d2` binary to export with; `null` runs the container. Set by `WithLocalD2CLI()` |
 | `ContainerRuntimeCommand` | `"docker"` | Runtime for the one-shot export container; `podman` where that is what Aspire uses |
 | `ExportTimeoutSeconds` | `120` | How long to wait for one d2 invocation before abandoning it |
+| `UseViewerFidelityExport` | `false` | Render images through the viewer in a headless browser so they match its own export. Pulls a ~3.7 GB browser image; `Interactive` only |
+| `ViewerExportImage` | `null` | Override the browser image, including its tag |
+| `ViewerExportTimeoutSeconds` | `600` | How long to wait for a viewer-fidelity export, which may be pulling the image |
 
 ### Renderers
 
@@ -554,12 +570,35 @@ every renderer through it gives one toolchain and one appearance. Two things fol
 - `schema.gen.d2` is written alongside the diagram even for the other renderers, purely to be rendered.
   It is byte-identical to what the `D2` renderer writes.
 
-Export runs in the background and only when the generated diagram actually changed, so startup is never
-delayed and a restart that finds the same model re-exports nothing. Failures are logged to the diagram
-resource and leave the diagram itself untouched.
+Export runs in the background, so startup is never delayed, and only when it would change something — a
+stamp beside the images means a restart over an unchanged model runs nothing at all, not even a
+container. It is skipped entirely during `aspire publish`. See
+[When export actually runs](#when-export-actually-runs). Failures are logged to the diagram resource
+and leave the diagram itself untouched.
 
 Prefer SVG for a large schema — a raster of the whole thing is unreadable at any sensible size. The
 viewer also has **Save as SVG / PNG** buttons for exporting what is currently on screen.
+
+#### Matching the viewer exactly
+
+The d2 render is a *different diagram*, not a differently-styled one: d2 draws `sql_table` shapes with
+its own theme and layout, while the viewer draws React Flow cards with context colours, key badges,
+complex-type groups and crow's-foot markers. If the exported file must be the one the viewer's own
+**Save as SVG / PNG** control produces, opt into the viewer render:
+
+```csharp
+builder.AddAspireC4()
+       .WithEntityFrameworkDiagram(configure: options => options.WithViewerFidelityExport());
+```
+
+That loads the generated viewer in a headless browser and calls the very function the toolbar button
+calls, so the file is identical. It is **off by default** because the viewer only runs in a browser:
+turning it on pulls `mcr.microsoft.com/playwright` (around 3.7 GB) and makes an export take seconds
+rather than milliseconds. Point `ViewerExportImage` at a mirror or an image you have already cached if
+the default is inconvenient.
+
+It applies only to the `Interactive` renderer — the one that has a viewer. Any other renderer exports
+through d2 regardless, and says so in the log rather than failing.
 
 ### Overriding the output directory
 
@@ -894,4 +933,5 @@ should review the following changes when upgrading:
 
 - [Homepage](https://purview.dev/projects/aspirec4/)
 - [Documentation](https://purview.dev/docs/aspirec4/)
+
 

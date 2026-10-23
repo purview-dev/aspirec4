@@ -53,6 +53,11 @@ sealed partial class AspireC4EfLifecycleHook(
 	)
 	{
 		ArgumentNullException.ThrowIfNull(eventing);
+		ArgumentNullException.ThrowIfNull(executionContext);
+
+		// Recorded before anything subscribes, because WriteDiagramAsync is reached from the publish
+		// path too and has no other way to tell the two apart.
+		_isPublishMode = executionContext.IsPublishMode;
 
 		eventing.Subscribe<BeforeStartEvent>(
 			async (evt, ct) =>
@@ -65,8 +70,9 @@ sealed partial class AspireC4EfLifecycleHook(
 				}
 
 				// Added before the first write so the command is on the row from the outset, disabled
-				// until the first export resolves a directory for it.
-				if (_options.ExportImages)
+				// until the first export resolves a directory for it. Pointless on publish, which has no
+				// dashboard to put it on and exports nothing for it to open.
+				if (_options.ExportImages && !_isPublishMode)
 				{
 					AddOpenImagesCommand(resource);
 				}
@@ -204,7 +210,8 @@ sealed partial class AspireC4EfLifecycleHook(
 		// Reached only when the diagram actually changed — the no-op write returns above — so this is
 		// the "on detected change" gate for export as well. Fire-and-forget: rendering an image shells
 		// out to d2, which must not sit between the application and its own startup.
-		if (_options.ExportImages && efModel.Contexts.Count > 0)
+		// Never on publish, which generates its output and exits — see _isPublishMode.
+		if (ShouldExportImages(_options.ExportImages, efModel.Contexts.Count, _isPublishMode))
 		{
 			// Resolved here rather than inside the export so the dashboard property published below is
 			// already correct; the export itself races the publish and could not be relied on for it.

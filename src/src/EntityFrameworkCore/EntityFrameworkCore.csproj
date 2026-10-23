@@ -34,6 +34,8 @@
 		<EmbeddedResource Include="Assets\viewer\app.js" />
 		<EmbeddedResource Include="Assets\mermaid\index.html" />
 		<EmbeddedResource Include="Assets\mermaid\mermaid-app.js" />
+		<!-- Driven inside the Playwright container by the opt-in viewer-fidelity image export. -->
+		<EmbeddedResource Include="Assets\export\viewer-export.mjs" />
 		<!--
 			Gzipped so the package carries roughly 2 MB rather than 7 MB. Regenerate after a
 			dependency bump by running the erd-vendor script in embed mode.

@@ -131,8 +131,10 @@ public sealed class AspireC4EfDiagramOptions
 	/// <para>
 	/// The images are written beside the diagram as <c>{FileName}.svg</c> and <c>{FileName}.png</c>, so a
 	/// schema can be attached to a pull request or pasted into a wiki without opening the viewer. Export
-	/// runs only when the generated diagram actually changed — a restart that produces the same model
-	/// re-exports nothing — and runs in the background, so it never delays startup.
+	/// runs in the background, so it never delays startup, and only when it would actually change
+	/// something: a stamp beside the images records what they were rendered from, so a restart that
+	/// produces the same model runs nothing at all — not even a container. It is also skipped entirely
+	/// during a publish, which generates its output and exits.
 	/// </para>
 	/// <para>
 	/// Rendering always goes through d2, whatever <see cref="Renderer"/> is in use: the interactive
@@ -190,6 +192,46 @@ public sealed class AspireC4EfDiagramOptions
 
 	/// <summary>Seconds to wait for an image export before abandoning it. Defaults to 120.</summary>
 	public int ExportTimeoutSeconds { get; set; } = 120;
+
+	/// <summary>
+	/// Whether exported images are produced by the interactive viewer itself rather than by d2. Off by
+	/// default.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// The d2 export is a different diagram, not a differently-styled one: d2 draws <c>sql_table</c>
+	/// shapes with its own theme and layout, while the viewer draws React Flow cards with context
+	/// colours, key badges, complex-type groups and crow's-foot markers. Setting this makes the exported
+	/// file identical to the one the viewer's own <b>Save as SVG / PNG</b> control produces.
+	/// </para>
+	/// <para>
+	/// The cost is a browser: the viewer only runs in one, so this pulls the Playwright image — around
+	/// 3.7 GB — and an export takes seconds rather than milliseconds. That is why it is opt-in.
+	/// Applies only to <see cref="ErdRenderer.Interactive"/>, the renderer that has a viewer; every other
+	/// renderer exports through d2 whatever this is set to.
+	/// </para>
+	/// </remarks>
+	/// <seealso cref="WithViewerFidelityExport"/>
+	public bool UseViewerFidelityExport { get; set; }
+
+	/// <summary>
+	/// Overrides the image used for the viewer-fidelity export, including its tag.
+	/// <see langword="null"/> uses the pinned Playwright image.
+	/// </summary>
+	/// <remarks>
+	/// The image has to supply both <c>node</c> and a chromium Playwright can drive. Pointing this at
+	/// something else is how a consumer uses a mirror, or an image they have already cached.
+	/// </remarks>
+	public string? ViewerExportImage { get; set; }
+
+	/// <summary>
+	/// Seconds to wait for a viewer-fidelity export. Defaults to 600.
+	/// </summary>
+	/// <remarks>
+	/// Far longer than <see cref="ExportTimeoutSeconds"/> because the first run may be pulling the
+	/// browser image. Export runs in the background, so this never caps startup.
+	/// </remarks>
+	public int ViewerExportTimeoutSeconds { get; set; } = 600;
 
 	/// <summary>
 	/// Whether the file-based renderers serve their viewer over HTTP so the dashboard can link to it.
@@ -259,6 +301,24 @@ public sealed class AspireC4EfDiagramOptions
 
 		ImageFormats = [.. formats];
 		ExportImages = formats.Length > 0;
+
+		return this;
+	}
+
+	/// <summary>
+	/// Exports images by rendering the interactive viewer in a headless browser, so the file matches
+	/// the viewer's own <b>Save as SVG / PNG</b> output exactly.
+	/// </summary>
+	/// <remarks>
+	/// Pulls a browser image of around 3.7 GB and makes each export take seconds rather than
+	/// milliseconds; see <see cref="UseViewerFidelityExport"/>. Only affects
+	/// <see cref="ErdRenderer.Interactive"/>.
+	/// </remarks>
+	/// <param name="use">Whether to render through the viewer.</param>
+	/// <returns>This options instance, for chaining.</returns>
+	public AspireC4EfDiagramOptions WithViewerFidelityExport(bool use = true)
+	{
+		UseViewerFidelityExport = use;
 
 		return this;
 	}

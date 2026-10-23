@@ -173,6 +173,7 @@ static class LikeC4ImageExporter
 		string outputDirectory,
 		string serveDirectory,
 		string appHostDirectory,
+		string modelBody,
 		(string Command, string[] Prefix)? localCLI,
 		IAspireC4LifecycleHookTelemetry telemetry,
 		CancellationToken cancellationToken
@@ -189,6 +190,22 @@ static class LikeC4ImageExporter
 		}
 
 		var imageDirectory = ResolveImageDirectory(options, appHostDirectory);
+
+		// Checked before anything is run. The AppHost's own change detection resets every time it
+		// restarts, so without this a restart re-renders views that are already correct on disk — and
+		// an export starts a LikeC4 server and a headless browser to do it.
+		var stamp = ImageExportStamp.Compute(modelBody, string.Join(",", formats.Select(FormatName)));
+
+		if (
+			await ImageExportStamp
+				.IsCurrentAsync(imageDirectory, StampName, stamp, ExistingImages(imageDirectory), cancellationToken)
+				.ConfigureAwait(false)
+		)
+		{
+			telemetry.ImagesUnchanged(imageDirectory);
+
+			return 0;
+		}
 
 		// Created here rather than left to the container runtime: a missing bind-mount source is created
 		// by the daemon as root, which a later host-side write could not then touch.
@@ -238,7 +255,44 @@ static class LikeC4ImageExporter
 			}
 		}
 
+		// Only once every requested format landed: a partial export must not be mistaken for a current
+		// one, or the formats that failed would never be retried.
+		if (exported == formats.Count)
+		{
+			await ImageExportStamp
+				.WriteAsync(imageDirectory, StampName, stamp, cancellationToken)
+				.ConfigureAwait(false);
+		}
+
 		return exported;
+	}
+
+	/// <summary>Distinguishes this diagram's stamp from the ER diagram's in the shared folder.</summary>
+	internal const string StampName = "architecture";
+
+	/// <summary>
+	/// The images this diagram has already written, which the stamp alone cannot stand in for.
+	/// </summary>
+	/// <remarks>
+	/// The view names are only known once the CLI has run, so unlike the ER diagram there is no list of
+	/// expected files to check against — the test is whether this diagram left anything behind at all.
+	/// Deleting one view's image and keeping the rest is therefore not noticed; deleting the folder is.
+	/// </remarks>
+	static IEnumerable<string> ExistingImages(string imageDirectory)
+	{
+		var missing = Path.Combine(imageDirectory, "(none)");
+
+		if (!Directory.Exists(imageDirectory))
+		{
+			return [missing];
+		}
+
+		var existing = Directory
+			.EnumerateFiles(imageDirectory, $"{AspireC4ImageExport.ArchitecturePrefix}*")
+			.Take(1)
+			.ToArray();
+
+		return existing.Length == 0 ? [missing] : existing;
 	}
 
 	/// <summary>Moves every staged image into the shared folder under its prefixed name.</summary>

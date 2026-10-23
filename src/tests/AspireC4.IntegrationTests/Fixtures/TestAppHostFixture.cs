@@ -351,7 +351,11 @@ public sealed class TestAppHostFixture : TUnit.Aspire.AspireFixture<Projects.Tes
 		string ModelPath,
 		string ManifestPath,
 		bool IsPublishMode
-	);
+	)
+	{
+		/// <summary>Where a publish-mode run would have written images, had it exported any.</summary>
+		public string ImageDirectory { get; init; } = string.Empty;
+	}
 
 	protected override bool EnableTelemetryCollection => false;
 
@@ -490,10 +494,14 @@ public sealed class TestAppHostFixture : TUnit.Aspire.AspireFixture<Projects.Tes
 		);
 
 		builder.Configuration.AddInMemoryCollection(configOptions);
-		builder.Services.PostConfigure<AspireC4DiagramOptions>(static opts =>
+
+		// Image export is deliberately left ON here, unlike the run-mode fixture: publish is supposed to
+		// skip it by itself, and disabling it would make PublishAsync_InPublishMode_ExportsNoImages pass
+		// whether or not that guard still works.
+		builder.Services.PostConfigure<AspireC4DiagramOptions>(opts =>
 		{
 			opts.FormatGeneratedFile = false;
-			opts.ExportImages = false;
+			opts.ImageExportDirectory = Path.Combine(outputDir, "images");
 		});
 
 		var app = await builder.BuildAsync(cancellationToken);
@@ -515,7 +523,10 @@ public sealed class TestAppHostFixture : TUnit.Aspire.AspireFixture<Projects.Tes
 		var modelPath = Path.Combine(modelOutputDir, "publish-model.c4");
 		var manifestPath = Path.Combine(outputDir, "aspire-manifest.json");
 
-		return new PublishResult(app, outputDir, modelPath, manifestPath, isPublishMode);
+		return new PublishResult(app, outputDir, modelPath, manifestPath, isPublishMode)
+		{
+			ImageDirectory = Path.Combine(outputDir, "images"),
+		};
 	}
 
 	public override async ValueTask DisposeAsync()

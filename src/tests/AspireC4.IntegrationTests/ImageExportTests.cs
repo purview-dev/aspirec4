@@ -206,6 +206,91 @@ public sealed class ImageExportTests
 	}
 
 	[Test]
+	public async Task ExportAsync_RunTwiceOverAnUnchangedModel_RendersOnlyOnce(CancellationToken cancellationToken)
+	{
+		// The AppHost's own change detection lives in memory and resets on every restart, so without the
+		// on-disk stamp a restart re-renders images that are already correct. On the viewer path that
+		// would mean pulling and starting a multi-gigabyte browser to reproduce the same bytes.
+		// Arrange
+		var options = new AspireC4EfDiagramOptions().WithImageExport(ErdImageFormat.Svg);
+		var svg = Path.Combine(ImagesDirectory, "schema.svg");
+
+		await ErdImageExporter.ExportAsync(CreateModel(), options, _tempDir, _tempDir, logger, cancellationToken);
+
+		var first = File.GetLastWriteTimeUtc(svg);
+
+		// Act
+		var second = await ErdImageExporter.ExportAsync(
+			CreateModel(),
+			options,
+			_tempDir,
+			_tempDir,
+			logger,
+			cancellationToken
+		);
+
+		// Assert
+		await Assert.That(second).IsEmpty();
+		await Assert.That(File.GetLastWriteTimeUtc(svg)).IsEqualTo(first);
+	}
+
+	[Test]
+	public async Task ExportAsync_AfterTheImageIsDeleted_RendersAgain(CancellationToken cancellationToken)
+	{
+		// A matching stamp alone would skip the export forever once someone cleared the folder out.
+		// Arrange
+		var options = new AspireC4EfDiagramOptions().WithImageExport(ErdImageFormat.Svg);
+		var svg = Path.Combine(ImagesDirectory, "schema.svg");
+
+		await ErdImageExporter.ExportAsync(CreateModel(), options, _tempDir, _tempDir, logger, cancellationToken);
+
+		File.Delete(svg);
+
+		// Act
+		var written = await ErdImageExporter.ExportAsync(
+			CreateModel(),
+			options,
+			_tempDir,
+			_tempDir,
+			logger,
+			cancellationToken
+		);
+
+		// Assert
+		await Assert.That(written.Count).IsEqualTo(1).Because(logger.Messages);
+		await Assert.That(File.Exists(svg)).IsTrue();
+	}
+
+	[Test]
+	public async Task ExportAsync_WhenAFormatIsAdded_RendersAgain(CancellationToken cancellationToken)
+	{
+		// The stamp covers the requested formats, not just the model: asking for a PNG as well has to
+		// render even though the model behind it has not moved.
+		// Arrange
+		await ErdImageExporter.ExportAsync(
+			CreateModel(),
+			new AspireC4EfDiagramOptions().WithImageExport(ErdImageFormat.Svg),
+			_tempDir,
+			_tempDir,
+			logger,
+			cancellationToken
+		);
+
+		// Act
+		var written = await ErdImageExporter.ExportAsync(
+			CreateModel(),
+			new AspireC4EfDiagramOptions().WithImageExport(ErdImageFormat.Svg, ErdImageFormat.Png),
+			_tempDir,
+			_tempDir,
+			logger,
+			cancellationToken
+		);
+
+		// Assert
+		await Assert.That(written.Count).IsEqualTo(2).Because(logger.Messages);
+	}
+
+	[Test]
 	public async Task ExportAsync_CustomImageDirectory_WritesThere(CancellationToken cancellationToken)
 	{
 		// Arrange
@@ -247,6 +332,73 @@ public sealed class ImageExportTests
 	}
 
 	[Test]
+	public async Task ExportAsync_ViewerFidelity_RendersThroughTheViewerItself(CancellationToken cancellationToken)
+	{
+		// The point of the opt-in path: the file is the one the viewer's own Save as SVG control
+		// produces, not a d2 render of the same model. Asserted on the markup rather than on the file
+		// merely existing, because a d2 render would also produce a plausible .svg.
+		// Arrange
+		AspireC4EfDiagramOptions options = new() { Renderer = ErdRenderer.Interactive, UseViewerFidelityExport = true };
+
+		options.ImageFormats = [ErdImageFormat.Svg];
+
+		// The viewer and its dependencies have to be on disk for a browser to load them.
+		foreach (var file in ErdOutput.Create(CreateModel(), options))
+		{
+			await File.WriteAllTextAsync(Path.Combine(_tempDir, file.FileName), file.Content, cancellationToken);
+		}
+
+		await InteractiveViewer.WriteVendorAssetsAsync(_tempDir, ErdRenderer.Interactive, cancellationToken);
+
+		// Act
+		var written = await ErdImageExporter.ExportAsync(
+			CreateModel(),
+			options,
+			_tempDir,
+			_tempDir,
+			logger,
+			cancellationToken
+		);
+
+		// Assert
+		await Assert.That(written.Count).IsEqualTo(1).Because(logger.Messages);
+
+		var svg = await File.ReadAllTextAsync(Path.Combine(ImagesDirectory, "schema.svg"), cancellationToken);
+
+		await Assert.That(svg).StartsWith("<svg");
+		// React Flow's own markup, which only the viewer produces — d2 emits none of it.
+		await Assert.That(svg).Contains("react-flow");
+		await Assert.That(svg).Contains("Orders");
+	}
+
+	[Test]
+	public async Task ExportAsync_ViewerFidelityOnANonInteractiveRenderer_FallsBackToD2(
+		CancellationToken cancellationToken
+	)
+	{
+		// Only the interactive renderer writes a viewer, so there is nothing to drive otherwise. The
+		// export still happens rather than being abandoned, and says why in the log.
+		// Arrange
+		AspireC4EfDiagramOptions options = new() { Renderer = ErdRenderer.Dbml, UseViewerFidelityExport = true };
+
+		options.ImageFormats = [ErdImageFormat.Svg];
+
+		// Act
+		var written = await ErdImageExporter.ExportAsync(
+			CreateModel(),
+			options,
+			_tempDir,
+			_tempDir,
+			logger,
+			cancellationToken
+		);
+
+		// Assert
+		await Assert.That(written.Count).IsEqualTo(1).Because(logger.Messages);
+		await Assert.That(logger.Messages).Contains("Dbml");
+	}
+
+	[Test]
 	public async Task ExportAsync_LikeC4Views_WritesAPrefixedPngPerViewIntoTheSharedFolder(
 		CancellationToken cancellationToken
 	)
@@ -265,6 +417,7 @@ public sealed class ImageExportTests
 			_tempDir,
 			_tempDir,
 			_tempDir,
+			modelBody: "stamp",
 			localCLI: null,
 			Lifecycle.IAspireC4LifecycleHookTelemetry.Mock(),
 			cancellationToken
@@ -303,6 +456,7 @@ public sealed class ImageExportTests
 			_tempDir,
 			_tempDir,
 			_tempDir,
+			modelBody: "stamp",
 			localCLI: null,
 			Lifecycle.IAspireC4LifecycleHookTelemetry.Mock(),
 			cancellationToken

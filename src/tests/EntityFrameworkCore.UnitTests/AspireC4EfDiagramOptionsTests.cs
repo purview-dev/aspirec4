@@ -115,6 +115,38 @@ public sealed class AspireC4EfDiagramOptionsTests
 	}
 
 	[Test]
+	public async Task UseViewerFidelityExport_ByDefault_IsOff()
+	{
+		// Off because it pulls a browser image of several gigabytes; the d2 render is the default.
+		// Act
+		AspireC4EfDiagramOptions options = new();
+
+		// Assert
+		await Assert.That(options.UseViewerFidelityExport).IsFalse();
+		await Assert.That(options.ViewerExportImage).IsNull();
+	}
+
+	[Test]
+	public async Task WithViewerFidelityExport_TurnsItOn()
+	{
+		// Act
+		var options = new AspireC4EfDiagramOptions().WithViewerFidelityExport();
+
+		// Assert
+		await Assert.That(options.UseViewerFidelityExport).IsTrue();
+	}
+
+	[Test]
+	public async Task WithViewerFidelityExport_False_TurnsItOff()
+	{
+		// Act
+		var options = new AspireC4EfDiagramOptions().WithViewerFidelityExport().WithViewerFidelityExport(false);
+
+		// Assert
+		await Assert.That(options.UseViewerFidelityExport).IsFalse();
+	}
+
+	[Test]
 	public async Task D2Command_ByDefault_IsUnsetSoExportUsesTheContainer()
 	{
 		// Act
