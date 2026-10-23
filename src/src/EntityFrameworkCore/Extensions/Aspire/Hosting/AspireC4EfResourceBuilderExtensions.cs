@@ -240,11 +240,20 @@ public static class AspireC4EfResourceBuilderExtensions
 
 		builder.ApplicationBuilder.Resources.Remove(diagram.InnerResource);
 
+		// Someone who has replaced the sidecar with a local binary has said that this machine renders d2
+		// without a container, so image export should take them at their word rather than pulling the
+		// image anyway. PostConfigure runs last, so this is not overwritten by configuration binding.
+		var localCommand = command ?? D2LocalServerResource.DefaultCommand;
+
+		builder.ApplicationBuilder.Services.PostConfigure<AspireC4EfDiagramOptions>(options =>
+			options.D2Command ??= localCommand
+		);
+
 		// The container variant registers no health check, so unlike the LikeC4 sidecar there is no
 		// stale service-level registration to clean up here.
 		D2LocalServerResource local = new(
 			DefaultResourceName + ServerResourceSuffix,
-			command ?? D2LocalServerResource.DefaultCommand,
+			localCommand,
 			diagram.OutputDirectory
 		);
 
@@ -264,7 +273,7 @@ public static class AspireC4EfResourceBuilderExtensions
 				context.Args.Add("--browser");
 				context.Args.Add("0");
 				context.Args.Add("--layout");
-				context.Args.Add(ToEngineName(options.LayoutEngine));
+				context.Args.Add(options.LayoutEngine.ToEngineName());
 				context.Args.Add(Path.Combine(diagram.OutputDirectory, $"{options.FileName}.d2"));
 
 				// d2 writes the compiled SVG on every pass; keeping it out of the generated-diagram
@@ -374,7 +383,7 @@ public static class AspireC4EfResourceBuilderExtensions
 				"0",
 				// dagre, the default, cannot target individual sql_table rows.
 				"--layout",
-				ToEngineName(options.LayoutEngine),
+				options.LayoutEngine.ToEngineName(),
 				file,
 				// d2 --watch writes the compiled SVG to disk on every compile, defaulting to a path
 				// beside the input. The workspace is mounted read-only, so without an explicit
@@ -385,16 +394,6 @@ public static class AspireC4EfResourceBuilderExtensions
 			)
 			.ExcludeFromManifest();
 	}
-
-#pragma warning disable IDE0072 // Add missing cases
-	static string ToEngineName(D2LayoutEngine engine) =>
-		engine switch
-		{
-			D2LayoutEngine.Dagre => "dagre",
-			D2LayoutEngine.Tala => "tala",
-			_ => "elk",
-		};
-#pragma warning restore IDE0072 // Add missing cases
 
 	/// <summary>
 	/// Resolves the configured output directory to an absolute path without a trailing separator, so it

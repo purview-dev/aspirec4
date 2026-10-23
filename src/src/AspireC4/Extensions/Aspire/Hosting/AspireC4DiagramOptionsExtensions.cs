@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using Aspire.Hosting.AspireC4.LikeC4.Icons;
 using Aspire.Hosting.AspireC4.LikeC4.Models;
+using Aspire.Hosting.AspireC4.LikeC4.Runtime;
 
 namespace Aspire.Hosting;
 
@@ -551,6 +552,70 @@ public static class AspireC4DiagramOptionsExtensions
 	)
 	{
 		options.IncludeAspireC4InternalResource = include;
+
+		return options;
+	}
+
+	/// <summary>
+	/// Restricts image export to the listed formats, replacing the PNG default.
+	/// </summary>
+	/// <remarks>
+	/// Also sets <see cref="AspireC4DiagramOptions.ExportImages"/>, so naming a format is enough to turn
+	/// export on. Passing no format turns it off, the same as <see cref="WithoutImageExport"/>.
+	/// </remarks>
+	/// <param name="options"></param>
+	/// <param name="formats">The formats to export.</param>
+	/// <returns>The same <see cref="AspireC4DiagramOptions"/> for further configuration.</returns>
+	/// <seealso cref="AspireC4DiagramOptions.ImageFormats"/>
+	[AspireExport]
+	public static AspireC4DiagramOptions WithImageExport(
+		[NotNull] this AspireC4DiagramOptions options,
+		params LikeC4ImageFormat[] formats
+	)
+	{
+		ArgumentNullException.ThrowIfNull(formats);
+
+		options.ImageFormats = [.. formats];
+		options.ExportImages = formats.Length > 0;
+
+		return options;
+	}
+
+	/// <summary>Sets the directory exported images are written to.</summary>
+	/// <param name="options"></param>
+	/// <param name="directory">
+	/// Absolute, or relative to <see cref="AspireC4DiagramOptions.OutputDirectory"/>.
+	/// </param>
+	/// <returns>The same <see cref="AspireC4DiagramOptions"/> for further configuration.</returns>
+	/// <seealso cref="AspireC4DiagramOptions.ImageExportDirectory"/>
+	[AspireExport]
+	public static AspireC4DiagramOptions WithImageExportDirectory(
+		[NotNull] this AspireC4DiagramOptions options,
+		string directory
+	)
+	{
+		ArgumentException.ThrowIfNullOrWhiteSpace(directory);
+
+		options.ImageExportDirectory = directory;
+
+		return options;
+	}
+
+	/// <summary>
+	/// Stops the views being exported as images, leaving only the generated <c>.c4</c> model.
+	/// </summary>
+	/// <remarks>
+	/// Export drives a headless browser; see <see cref="AspireC4DiagramOptions.ExportImages"/> for what
+	/// that needs. This is how a consumer who cannot, or would rather not, pay for it opts out.
+	/// </remarks>
+	/// <param name="options"></param>
+	/// <returns>The same <see cref="AspireC4DiagramOptions"/> for further configuration.</returns>
+	[AspireExport]
+	public static AspireC4DiagramOptions WithoutImageExport([NotNull] this AspireC4DiagramOptions options)
+	{
+		ArgumentNullException.ThrowIfNull(options);
+
+		options.ExportImages = false;
 
 		return options;
 	}

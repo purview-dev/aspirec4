@@ -125,6 +125,61 @@ public sealed class AspireC4EfDiagramOptions
 	public string? ContainerImageTag { get; set; }
 
 	/// <summary>
+	/// Whether the diagram is also written out as an image each time it changes. On by default.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// The images are written beside the diagram as <c>{FileName}.svg</c> and <c>{FileName}.png</c>, so a
+	/// schema can be attached to a pull request or pasted into a wiki without opening the viewer. Export
+	/// runs only when the generated diagram actually changed — a restart that produces the same model
+	/// re-exports nothing — and runs in the background, so it never delays startup.
+	/// </para>
+	/// <para>
+	/// Rendering always goes through d2, whatever <see cref="Renderer"/> is in use: the interactive
+	/// renderer is a browser application with no headless path, so an image of it could only be produced
+	/// by driving a browser. That means export needs either the <c>d2lang/d2</c> container or a local
+	/// <c>d2</c> binary (<see cref="D2Command"/>), and that the <c>{FileName}.d2</c> source is written
+	/// alongside the diagram even for the other renderers. Set to <see langword="false"/>, or use
+	/// <see cref="WithoutImageExport"/>, where neither is available.
+	/// </para>
+	/// </remarks>
+	public bool ExportImages { get; set; } = true;
+
+	/// <summary>
+	/// The formats written when <see cref="ExportImages"/> is set. Defaults to both SVG and PNG.
+	/// </summary>
+	/// <remarks>
+	/// Emptying this disables export as surely as clearing <see cref="ExportImages"/>. Populate with
+	/// <see cref="WithImageExport"/>.
+	/// </remarks>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage(
+		"Usage",
+		"CA2227:Collection properties should be read only",
+		Justification = "Settable for configuration binding and direct assignment in user code"
+	)]
+	public HashSet<ErdImageFormat> ImageFormats { get; set; } = [ErdImageFormat.Svg, ErdImageFormat.Png];
+
+	/// <summary>
+	/// A local <c>d2</c> executable to render exported images with. <see langword="null"/> (the default)
+	/// runs the <c>d2lang/d2</c> container instead.
+	/// </summary>
+	/// <remarks>
+	/// Set by <see cref="AspireC4EfResourceBuilderExtensions.WithLocalD2CLI"/>, which also replaces the
+	/// sidecar. Set it here to render images locally while leaving the sidecar — or the renderer's own
+	/// viewer — as it is.
+	/// </remarks>
+	public string? D2Command { get; set; }
+
+	/// <summary>
+	/// The container runtime used to run the one-shot export container. Defaults to <c>docker</c>.
+	/// </summary>
+	/// <remarks>Set to <c>podman</c> where that is the runtime Aspire itself is using.</remarks>
+	public string ContainerRuntimeCommand { get; set; } = "docker";
+
+	/// <summary>Seconds to wait for an image export before abandoning it. Defaults to 120.</summary>
+	public int ExportTimeoutSeconds { get; set; } = 120;
+
+	/// <summary>
 	/// Whether the file-based renderers serve their viewer over HTTP so the dashboard can link to it.
 	/// </summary>
 	/// <remarks>
@@ -175,6 +230,36 @@ public sealed class AspireC4EfDiagramOptions
 	public AspireC4EfDiagramOptions WithProjectOptInOnly()
 	{
 		DiscoverAllProjects = false;
+
+		return this;
+	}
+
+	/// <summary>Restricts image export to the listed formats, replacing the SVG and PNG default.</summary>
+	/// <remarks>
+	/// Also sets <see cref="ExportImages"/>, so naming a format is enough to turn export on. Passing no
+	/// format turns it off, the same as <see cref="WithoutImageExport"/>.
+	/// </remarks>
+	/// <param name="formats">The formats to export.</param>
+	/// <returns>This options instance, for chaining.</returns>
+	public AspireC4EfDiagramOptions WithImageExport(params ErdImageFormat[] formats)
+	{
+		ArgumentNullException.ThrowIfNull(formats);
+
+		ImageFormats = [.. formats];
+		ExportImages = formats.Length > 0;
+
+		return this;
+	}
+
+	/// <summary>Stops the diagram being exported as an image, leaving only the generated diagram.</summary>
+	/// <remarks>
+	/// This is how a consumer with no container runtime and no local <c>d2</c> opts out; see
+	/// <see cref="ExportImages"/> for why export needs one of the two.
+	/// </remarks>
+	/// <returns>This options instance, for chaining.</returns>
+	public AspireC4EfDiagramOptions WithoutImageExport()
+	{
+		ExportImages = false;
 
 		return this;
 	}

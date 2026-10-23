@@ -449,7 +449,20 @@ public sealed class TestAppHostFixture : TUnit.Aspire.AspireFixture<Projects.Tes
 		// PostConfigure wins over all Configure callbacks, including the default FormatGeneratedFile=true.
 		// The format step invokes `npx likec4 …` which traverses up the directory tree and scans the entire
 		// repository workspace when run from within the repo — hanging the BeforeStartEvent handler.
-		builder.Services.PostConfigure<AspireC4DiagramOptions>(static opts => opts.FormatGeneratedFile = false);
+		//
+		// Image export is switched off for the same reason and one more: `likec4 export` drives a headless
+		// browser for tens of seconds per run, and this fixture deletes its output directory on teardown,
+		// which would race an export still writing into it. The exporters are covered directly by
+		// ImageExportTests instead, which is where a broken mount or argument would actually show up.
+		builder.Services.PostConfigure<AspireC4DiagramOptions>(static opts =>
+		{
+			opts.FormatGeneratedFile = false;
+			opts.ExportImages = false;
+		});
+
+		builder.Services.PostConfigure<EntityFrameworkCore.AspireC4EfDiagramOptions>(static opts =>
+			opts.ExportImages = false
+		);
 	}
 
 	/// <summary>
@@ -477,7 +490,11 @@ public sealed class TestAppHostFixture : TUnit.Aspire.AspireFixture<Projects.Tes
 		);
 
 		builder.Configuration.AddInMemoryCollection(configOptions);
-		builder.Services.PostConfigure<AspireC4DiagramOptions>(static opts => opts.FormatGeneratedFile = false);
+		builder.Services.PostConfigure<AspireC4DiagramOptions>(static opts =>
+		{
+			opts.FormatGeneratedFile = false;
+			opts.ExportImages = false;
+		});
 
 		var app = await builder.BuildAsync(cancellationToken);
 		_publishApps.Add(app);

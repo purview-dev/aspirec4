@@ -5,7 +5,7 @@ description: >-
   installing AspireC4.Hosting.EntityFrameworkCore, calling WithEntityFrameworkDiagram, how the model is
   discovered (assembly metadata, an analyzer descriptor, or the opt-in build-time dump), filtering and
   excluding DbContexts, domain types (value objects and enums) and the DomainTypeDisplay option, the
-  renderers, and the dashboard integration.
+  renderers, exporting the diagram as SVG and PNG on startup, and the dashboard integration.
 metadata:
   product: AspireC4
   repository: purview-dev/aspirec4
@@ -143,6 +143,11 @@ Options bind from the **`AspireC4:EntityFramework`** section, applied on top of 
 | `ViewerServerImageTag` | `null` | pin the viewer `nginx` image tag |
 | `HideFromDashboard` | `false` | hide the sidecar and surface it as a link |
 | `DashboardLinkDisplayName` | `"ER Diagram"` | the link name when hidden |
+| `ExportImages` | `true` | write the diagram out as an image when it changes |
+| `ImageFormats` | `{Svg, Png}` | `Svg` and/or `Png` |
+| `D2Command` | `null` | a local `d2` binary to export with; `null` runs the container |
+| `ContainerRuntimeCommand` | `"docker"` | the runtime for the one-shot export container; `podman` where that is what Aspire uses |
+| `ExportTimeoutSeconds` | `120` | cap on one d2 invocation |
 
 The output path follows the architecture diagram: `WithLegacyLayout()` on `AddAspireC4` restores
 `./erd/gen/` as well, because there is no separate ER switch. An `OutputDirectory` set on
@@ -166,6 +171,37 @@ builder.AddAspireC4().WithEntityFrameworkDiagram().WithLocalD2CLI();
 
 d2 ships as a Go binary, so it must be on `PATH`; there is no npm fallback. Call `WithLocalD2CLI()`
 **after** `WithEntityFrameworkDiagram()`.
+
+## Image export
+
+`{FileName}.svg` and `{FileName}.png` are written beside the diagram whenever it changes — on by
+default — so a schema can go into a pull request or a wiki without opening the viewer.
+
+```csharp
+builder.AddAspireC4().WithEntityFrameworkDiagram(configure: options => options.WithoutImageExport());
+builder.AddAspireC4().WithEntityFrameworkDiagram(configure: options =>
+    options.WithImageExport(ErdImageFormat.Svg)
+);
+```
+
+`WithImageExport()` with no format turns export off, the same as `WithoutImageExport()`.
+
+**Export always renders through d2, whatever `Renderer` is set to.** The interactive renderer is a
+browser application with no headless path, so an image of it could only be produced by driving a
+browser; d2 is the only format that both renders images itself and keeps column-level edges. Two
+things follow:
+
+- Export needs either the `d2lang/d2` container or a local `d2` binary (`D2Command`, which
+  `WithLocalD2CLI()` sets for you). Where neither is available, call `WithoutImageExport()`.
+- `{FileName}.d2` is written alongside the diagram even for the other renderers, purely to be
+  rendered. It is identical to what the `D2` renderer writes.
+
+Export runs in the background and **only when the generated diagram actually changed**, so a restart
+that finds the same model re-exports nothing and startup is never delayed. Failures are best-effort:
+they are logged to the diagram resource and the diagram itself is unaffected.
+
+Prefer SVG for a large schema — a raster of the whole thing is unreadable at any sensible size. The
+viewer also has **Save as SVG / PNG** buttons for exporting what is currently on screen.
 
 ## Using the viewer
 

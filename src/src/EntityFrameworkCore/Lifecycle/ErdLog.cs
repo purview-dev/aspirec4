@@ -65,4 +65,15 @@ static partial class ErdLog
 			+ "written to {OutputDirectory} rather than replacing it with an empty one."
 	)]
 	public static partial void NoModelsFoundKeepingExisting(ILogger logger, string outputDirectory);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "Exported {Path}")]
+	public static partial void ImageExported(ILogger logger, string path);
+
+	[LoggerMessage(
+		Level = LogLevel.Warning,
+		Message = "Could not export the ER diagram as an image with '{Command}': {Reason}. The diagram "
+			+ "itself is unaffected. Image export needs either a container runtime or a local d2 binary; "
+			+ "call WithoutImageExport() to stop trying."
+	)]
+	public static partial void ImageExportFailed(ILogger logger, string command, string reason);
 }

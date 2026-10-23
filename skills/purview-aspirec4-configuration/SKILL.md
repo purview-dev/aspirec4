@@ -3,8 +3,8 @@ name: purview-aspirec4-configuration
 description: >-
   Use when tuning AspireC4DiagramOptions - the view and title settings, output directory and
   generated file, the LikeC4 container tag and HMR, icon inference, Aspire metadata injection and
-  dashboard links, run-state tags and styles, additional DSL files and image aliases, and the
-  security note on embedding the Aspire token.
+  dashboard links, run-state tags and styles, additional DSL files and image aliases, exporting the
+  views as images on startup, and the security note on embedding the Aspire token.
 metadata:
   product: AspireC4
   repository: purview-dev/aspirec4
@@ -124,6 +124,44 @@ puts passwords and secrets.
 | `ImageAliases` | `{}` | alias definitions (keys begin with `@`) written to `imageAliases` in the generated config |
 | `ConfigFileMetadata` | `{}` | extra metadata for the generated `likec4.config.json` |
 
+## Image export
+
+Every view is written out as an image whenever the generated model changes — on by default.
+
+| Property | Default | Description |
+| --- | --- | --- |
+| `ExportImages` | `true` | write each view out as an image when the generated model changes |
+| `ImageFormats` | `{Png}` | `Png` and/or `Jpg`. **There is no SVG** — see below |
+| `ImageExportDirectory` | `null` (`images/`) | where images are written; relative paths resolve against `OutputDirectory` |
+| `ImageExportTimeoutSeconds` | `300` | cap on one `likec4 export` invocation |
+| `ContainerRuntimeCommand` | `"docker"` | the runtime for the one-shot export container; set to `podman` where that is what Aspire uses |
+
+One file per view, named after the view id — `index.png`, `services.png`, and so on.
+
+**`likec4 export` has no SVG format.** It renders by screenshotting each view in a headless browser, and
+offers only `png` and `jpg`. For a vector, export the model and render it with another tool. The ER
+diagram *does* export SVG, because it renders through d2 — see `purview-aspirec4-entityframework`.
+
+Two consequences follow from the headless browser:
+
+- Export takes tens of seconds and needs a Chromium. Container mode (the default) gets one from the
+  `ghcr.io/likec4/likec4` image, which already carries it; **`WithLocalCLI()` mode needs a Playwright
+  Chromium installed on the host.**
+- It runs in the background and **only when the generated model actually changed**, so the resource
+  state churn that regenerates an identical model exports nothing, and startup is never delayed.
+
+Failures are best-effort: they are reported and the generated `.c4` model is unaffected.
+
+```csharp
+builder.AddAspireC4(options => options.WithoutImageExport());
+builder.AddAspireC4(options => options
+    .WithImageExport(LikeC4ImageFormat.Png, LikeC4ImageFormat.Jpg)
+    .WithImageExportDirectory("../diagrams")
+);
+```
+
+`WithImageExport()` with no format turns export off, the same as `WithoutImageExport()`.
+
 ## The fluent surface
 
 ```csharp
@@ -149,6 +187,8 @@ WithImageAliasFolder(string, string)
 WithExcludedResourceType<T>()             WithoutExcludedResourceType<T>()
 WithIncludeAspireC4InternalResource(bool)
 WithLegacyLayout()                        WithLikeC4ProjectFolder(string)
+WithImageExport(params LikeC4ImageFormat[])
+WithImageExportDirectory(string)          WithoutImageExport()
 ```
 
 ## Related skills

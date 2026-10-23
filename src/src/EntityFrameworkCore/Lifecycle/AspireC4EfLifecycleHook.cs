@@ -194,6 +194,14 @@ sealed partial class AspireC4EfLifecycleHook(
 			}
 		}
 
+		// Reached only when the diagram actually changed — the no-op write returns above — so this is
+		// the "on detected change" gate for export as well. Fire-and-forget: rendering an image shells
+		// out to d2, which must not sit between the application and its own startup.
+		if (_options.ExportImages && efModel.Contexts.Count > 0)
+		{
+			_ = Task.Run(() => ExportImagesAsync(efModel, directory, logger, cancellationToken), cancellationToken);
+		}
+
 		// This resource runs no process of its own, so it has to publish its own state or the
 		// dashboard leaves it Unknown with no logs.
 		await resourceNotificationService
