@@ -158,6 +158,33 @@ Nothing is rendered — and **no container is started** — unless the output wo
   is fire-and-forget, so on publish it would be killed part-way through — and publish is expected to be
   hermetic, which reaching for a container runtime a build agent may not have would break.
 
+#### Committing the images
+
+The images are the one piece of generated output worth tracking: a diagram that shows up in a pull
+request is documentation, and because export only runs when the diagram changes they do not churn.
+Ignore the generated directory but carve the images out of it:
+
+```gitignore
+# Note the trailing /* rather than /: git will not descend into an excluded directory, so the
+# children have to be excluded individually for the re-include to be reachable.
+**/.aspirec4/*
+!**/.aspirec4/images/
+# The stamp recording what the images were rendered from is a local cache, not documentation.
+**/.aspirec4/images/.aspirec4-*
+```
+
+The two diagrams differ in how well they cache, though both are stable in source control:
+
+- **ER diagram** — fully cached. Derived from your EF model alone, so restarting the AppHost over an
+  unchanged schema renders nothing at all. This is the one that matters most, since it is also the one
+  that can pull a browser image under `WithViewerFidelityExport()`.
+- **Architecture diagram** — re-rendered on each run, but to identical bytes. Its model is a picture of
+  a *running* system: the endpoint ports and the run-state tags settle during startup, so the model the
+  first export sees is not quite the one the last export sees. The stamp already ignores the ephemeral
+  ports; the remaining difference is the run states, and those genuinely change the picture, so they
+  are not normalised away. Measured across restarts the exported PNGs are byte-for-byte the same, so
+  git sees no change — the cost is a background render, not a dirty tree.
+
 Set `ContainerRuntimeCommand` to `podman` where that is the runtime Aspire itself is using.
 
 ## Upgrading from before 13.6

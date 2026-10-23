@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Aspire.Hosting.AspireC4;
 
@@ -20,7 +21,7 @@ namespace Aspire.Hosting.AspireC4;
 /// now export into the same directory, so a single file would have them overwriting each other's.
 /// </para>
 /// </remarks>
-static class ImageExportStamp
+static partial class ImageExportStamp
 {
 	/// <summary>The stamp file for a diagram, named so it sorts away from the images themselves.</summary>
 	internal static string FileName(string diagram) => $".aspirec4-{diagram}-images";
@@ -38,10 +39,31 @@ static class ImageExportStamp
 		ArgumentNullException.ThrowIfNull(content);
 		ArgumentNullException.ThrowIfNull(parts);
 
-		var payload = string.Join("\u0000", [content, .. parts]);
+		var payload = string.Join("\u0000", [Normalise(content), .. parts]);
 
 		return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(payload)));
 	}
+
+	/// <summary>
+	/// Removes the parts of a generated model that differ between runs without changing the picture.
+	/// </summary>
+	/// <remarks>
+	/// The architecture model embeds the endpoint URLs Aspire allocated, and those ports are different
+	/// on every run. Hashing them verbatim would invalidate the stamp every single time, which for this
+	/// diagram means starting a LikeC4 server and a headless browser to redraw something that has not
+	/// changed. The port is replaced rather than the whole URL so that a host or a scheme actually
+	/// changing is still noticed.
+	/// <para>
+	/// This does not make the architecture diagram fully cached across restarts, and is not meant to:
+	/// the run-state tags also settle during startup, and those genuinely change the picture, so
+	/// normalising them away would hide a real difference. The exported images come out byte-identical
+	/// either way; what is left is a background render, not changed output.
+	/// </para>
+	/// </remarks>
+	internal static string Normalise(string content) => EphemeralPort().Replace(content, ":<port>");
+
+	[GeneratedRegex(@"(?<=://[^/\s""']+):\d{2,5}\b")]
+	private static partial Regex EphemeralPort();
 
 	/// <summary>
 	/// Whether <paramref name="directory"/> already holds exactly these images.

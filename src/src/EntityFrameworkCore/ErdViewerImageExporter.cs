@@ -135,8 +135,9 @@ static class ErdViewerImageExporter
 				.ConfigureAwait(false);
 
 			var (command, arguments) = BuildInvocation(options, viewerDirectory, imageDirectory, scriptPath, formats);
+			var browserImage = ImageReference(options);
 
-			ErdLog.ViewerImageExportStarted(logger, ImageReference(options));
+			ErdLog.ViewerImageExportStarted(logger, browserImage);
 
 			if (!await RunAsync(command, arguments, options, logger, cancellationToken).ConfigureAwait(false))
 			{

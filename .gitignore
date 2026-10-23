@@ -674,4 +674,14 @@ BenchmarkDotNet.Artifacts/
 # AspireC4 generated diagram output (architecture diagram, ER diagram, and the ER viewer's bundled
 # JS dependencies). Regenerated on every AppHost run, and the LikeC4 model embeds ephemeral localhost
 # ports, so tracking it guarantees a dirty tree after every run.
-**/.aspirec4/
+#
+# The exported images are the exception, and are tracked deliberately: they are the artefact the
+# export exists to produce, and a diagram that is reviewable in a pull request is worth having in
+# source control. Written only when the diagram actually changes, so they do not churn — and the
+# stamp beside them ignores the ephemeral ports that would otherwise redraw them on every run.
+# Note the trailing /* rather than /: git will not descend into an excluded directory, so the
+# children have to be excluded individually for the re-include below to be reachable.
+**/.aspirec4/*
+!**/.aspirec4/images/
+# The stamp recording what the images were rendered from is a local cache, not documentation.
+**/.aspirec4/images/.aspirec4-*

@@ -165,6 +165,10 @@ static class LikeC4ImageExporter
 	/// <param name="outputDirectory">Where the generated model was written.</param>
 	/// <param name="serveDirectory">The LikeC4 project root, which is what gets exported.</param>
 	/// <param name="appHostDirectory">The AppHost directory the images directory is resolved against.</param>
+	/// <param name="modelBody">
+	/// The generated model, with its timestamp header stripped, recorded so an unchanged model renders
+	/// nothing on the next run.
+	/// </param>
 	/// <param name="localCLI">The host CLI to run, or <see langword="null"/> for the container.</param>
 	/// <param name="telemetry">Where export progress and failures are reported.</param>
 	/// <param name="cancellationToken">Cancelled on shutdown.</param>
@@ -278,7 +282,7 @@ static class LikeC4ImageExporter
 	/// expected files to check against — the test is whether this diagram left anything behind at all.
 	/// Deleting one view's image and keeping the rest is therefore not noticed; deleting the folder is.
 	/// </remarks>
-	static IEnumerable<string> ExistingImages(string imageDirectory)
+	static string[] ExistingImages(string imageDirectory)
 	{
 		var missing = Path.Combine(imageDirectory, "(none)");
 

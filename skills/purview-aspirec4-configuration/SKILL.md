@@ -180,6 +180,31 @@ Publish is skipped outright: an export is fire-and-forget, so it would be killed
 publish exits, and publish is expected to be hermetic rather than reaching for a container runtime a
 build agent may not have.
 
+### Committing the images
+
+The images are the one piece of generated output worth tracking — a diagram that shows up in a pull
+request is documentation, and they do not churn because export only runs when the diagram changes.
+Ignore the generated directory but carve them out of it:
+
+```gitignore
+# /* rather than /: git will not descend into an excluded directory, so the children have to be
+# excluded individually for the re-include to be reachable.
+**/.aspirec4/*
+!**/.aspirec4/images/
+# The stamp recording what the images were rendered from is a local cache, not documentation.
+**/.aspirec4/images/.aspirec4-*
+```
+
+Both diagrams are stable in source control, but they cache differently:
+
+- **ER diagram** — fully cached. From the EF model alone, so a restart over an unchanged schema renders
+  nothing.
+- **Architecture diagram** — re-rendered on each run, to identical bytes. Its model is a picture of a
+  *running* system: ports and run-state tags settle during startup, so the first export sees a slightly
+  different model from the last. The stamp ignores the ephemeral ports; the run states are left in
+  because they genuinely change the picture. Measured across restarts the PNGs are byte-for-byte the
+  same, so git sees nothing — the cost is a background render, not a dirty tree.
+
 Failures are best-effort: they are reported and the generated `.c4` model is unaffected.
 
 ```csharp
