@@ -723,8 +723,37 @@ static class EfModelMetadataReader
 			return null;
 		}
 
+		// A framework type is never an entity in someone's model. Any class this reader does not
+		// recognise as a scalar would otherwise be taken for a navigation and gain a table of its own,
+		// named after the framework type — and because AddReachableEntities walks a navigation's own
+		// properties, one unmapped type drags a tree of them into the diagram behind it.
+		if (IsFrameworkType(type))
+		{
+			return null;
+		}
+
 		// A class that maps to a column (string, byte[], ...) is not a navigation.
 		return !IsScalar(type) ? type : null;
+	}
+
+	/// <summary>
+	/// Whether a type belongs to the framework rather than to the model being read.
+	/// </summary>
+	/// <remarks>
+	/// Matched on the namespace root, so a user type is only ever caught by this if it was declared
+	/// directly in <c>System</c> or <c>Microsoft</c> — which EF would not map as an entity either.
+	/// </remarks>
+	static bool IsFrameworkType(Type type)
+	{
+		var @namespace = type.Namespace;
+
+		return @namespace is not null
+			&& (
+				@namespace.Equals("System", StringComparison.Ordinal)
+				|| @namespace.StartsWith("System.", StringComparison.Ordinal)
+				|| @namespace.Equals("Microsoft", StringComparison.Ordinal)
+				|| @namespace.StartsWith("Microsoft.", StringComparison.Ordinal)
+			);
 	}
 
 	static bool IsCollection(Type type) =>
@@ -896,6 +925,15 @@ static class EfModelMetadataReader
 			"System.TimeSpan" => "time",
 			"System.DateOnly" => "date",
 			"System.TimeOnly" => "time",
+			// A JSON document is a column, not a table. Without these it resolves to unknown, and an
+			// unknown class is taken for a navigation — which is how a property such as
+			// `JsonDocument Payload` used to invent an entity named after the framework type.
+			"System.Text.Json.JsonDocument"
+			or "System.Text.Json.JsonElement"
+			or "System.Text.Json.Nodes.JsonNode"
+			or "System.Text.Json.Nodes.JsonObject"
+			or "System.Text.Json.Nodes.JsonArray"
+			or "System.Text.Json.Nodes.JsonValue" => "json",
 			_ => UnknownStoreType,
 		};
 	}

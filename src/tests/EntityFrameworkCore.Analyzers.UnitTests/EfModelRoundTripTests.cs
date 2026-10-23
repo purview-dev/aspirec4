@@ -80,7 +80,90 @@ public sealed class EfModelRoundTripTests
 		return path;
 	}
 
+	/// <summary>
+	/// A model whose entity holds a JSON column and an XML one — both framework classes the analyser has
+	/// no store type for.
+	/// </summary>
+	const string FrameworkTypeSource = """
+		using System;
+		using System.Collections.Generic;
+		using Microsoft.EntityFrameworkCore;
+		using TestAnnotations;
+
+		namespace Sample;
+
+		public class Event
+		{
+			public int Id { get; set; }
+
+			public System.Text.Json.JsonDocument Payload { get; set; }
+
+			public System.Xml.Linq.XDocument Body { get; set; }
+		}
+
+		public class AppDbContext : DbContext
+		{
+			public DbSet<Event> Events { get; set; }
+		}
+		""";
+
 	// Tests
+
+	[Test]
+	public async Task RoundTrip_EntityHoldingFrameworkTypes_GainsNoTableForThem(CancellationToken cancellationToken)
+	{
+		// A class the analyser has no store type for used to be taken for a navigation, so the diagram
+		// grew a table named after the framework type — "JsonDocument" — that is in nobody's model.
+		// Asserted on the parsed tables rather than the descriptor text, because the CLR type name
+		// legitimately appears there on the column itself.
+		// Arrange
+		var path = await EmitAssemblyAsync(FrameworkTypeSource, cancellationToken);
+
+		try
+		{
+			EfModelReader.TryRead(path, out var descriptor);
+
+			// Act
+			var model = EfModelLoader.Parse(descriptor);
+
+			// Assert
+			var tables = model.Contexts[0].Tables.Select(t => t.Name).ToArray();
+
+			await Assert.That(tables).IsEquivalentTo(["Events"]);
+			await Assert.That(tables).DoesNotContain("JsonDocument");
+			await Assert.That(tables).DoesNotContain("XDocument");
+		}
+		finally
+		{
+			File.Delete(path);
+		}
+	}
+
+	[Test]
+	public async Task RoundTrip_JsonDocumentProperty_BecomesAJsonColumn(CancellationToken cancellationToken)
+	{
+		// Not merely "no table": a JSON column is a real column and belongs in the diagram as one.
+		// Arrange
+		var path = await EmitAssemblyAsync(FrameworkTypeSource, cancellationToken);
+
+		try
+		{
+			EfModelReader.TryRead(path, out var descriptor);
+
+			// Act
+			var model = EfModelLoader.Parse(descriptor);
+
+			// Assert
+			var payload = model.Contexts[0].Tables[0].Columns.FirstOrDefault(c => c.Name == "Payload");
+
+			await Assert.That(payload).IsNotNull();
+			await Assert.That(payload!.StoreType).IsEqualTo("json");
+		}
+		finally
+		{
+			File.Delete(path);
+		}
+	}
 
 	[Test]
 	public async Task RoundTrip_GeneratedAssembly_CarriesAReadableDescriptor(CancellationToken cancellationToken)

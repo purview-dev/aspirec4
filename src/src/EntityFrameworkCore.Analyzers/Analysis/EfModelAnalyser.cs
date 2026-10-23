@@ -655,8 +655,41 @@ static class EfModelAnalyser
 			return null;
 		}
 
+		// A framework type is never an entity in someone's model. Any class this analyser does not
+		// recognise as a scalar would otherwise be taken for a navigation and gain a table of its own,
+		// named after the framework type — so a single unmapped type turns into a phantom entity, and
+		// the walk then follows its properties into more of them.
+		if (IsFrameworkType(named))
+		{
+			return null;
+		}
+
 		// A class that maps to a column (string, byte[], ...) is not a navigation.
 		return named.SpecialType == SpecialType.None && !StoreTypeMap.IsScalar(named) ? Normalise(named) : null;
+	}
+
+	/// <summary>
+	/// Whether a type belongs to the framework rather than to the model being analysed.
+	/// </summary>
+	/// <remarks>
+	/// Matched on the namespace root, so a user type is only ever caught by this if it was declared
+	/// directly in <c>System</c> or <c>Microsoft</c> — which EF would not map as an entity either.
+	/// </remarks>
+	static bool IsFrameworkType(INamedTypeSymbol type)
+	{
+		var root = type.ContainingNamespace;
+
+		if (root is null || root.IsGlobalNamespace)
+		{
+			return false;
+		}
+
+		while (root.ContainingNamespace is { IsGlobalNamespace: false } parent)
+		{
+			root = parent;
+		}
+
+		return root.Name is "System" or "Microsoft";
 	}
 
 	/// <summary>
