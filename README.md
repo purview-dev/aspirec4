@@ -74,7 +74,7 @@ Configure the diagram through `AspireC4DiagramOptions`:
 | `IncludeAspireDashboardLinks` | `true` | Add Aspire dashboard links to diagram elements |
 | `ExportImages` | `true` | Write every view out as an image whenever the model changes — see [Export the views as images](#export-the-views-as-images) |
 | `ImageFormats` | `{Png}` | `Png` and/or `Jpg`. **No SVG** — `likec4 export` does not offer one |
-| `ImageExportDirectory` | `null` (`images/`) | Where images are written; relative paths resolve against `OutputDirectory` |
+| `ImageExportDirectory` | `null` (`./.aspirec4/images/`) | Where images are written; relative paths resolve against the AppHost directory. Shared with the ER diagram |
 | `ImageExportTimeoutSeconds` | `300` | How long to wait for one `likec4 export` invocation |
 | `ContainerRuntimeCommand` | `"docker"` | Runtime for the one-shot export container; `podman` where that is what Aspire uses |
 
@@ -104,15 +104,33 @@ The LikeC4 sidecar is excluded automatically. Set `WithIncludeAspireC4InternalRe
 
 ### Export the views as images
 
-On by default. Every view is written to `.aspirec4/likec4/images/` as a PNG whenever the generated model
-changes, one file per view named after the view id — so a diagram can be attached to a pull request or
-pasted into a wiki without running the server.
+On by default. Every view is written out as a PNG whenever the generated model changes, so a diagram can
+be attached to a pull request or pasted into a wiki without running the server.
+
+**Both diagrams export into one folder**, `./.aspirec4/images/`, so there is a single place to look:
+
+```text
+apphost/.aspirec4/images/
+  architecture-index.png        <- architecture diagram, one file per view
+  architecture-services.png
+  schema.svg                    <- ER diagram
+  schema.png
+```
+
+The architecture diagram's files carry an `architecture-` prefix, because `likec4 export` names each
+file after its view id and a bare `index.png` says nothing in a shared folder. The ER diagram's row in
+the dashboard carries an **Images** property with the resolved path, and an **Open Diagram Images**
+command that opens the folder — the dashboard cannot navigate to a `file://` path itself, so the
+AppHost opens it for you.
+
+`ImageExportDirectory` is resolved from the **AppHost directory**, not from `OutputDirectory`, which is
+what lets both diagrams land in the same place. Setting it on only one of the two splits them apart.
 
 ```csharp
 builder.AddAspireC4(options => options.WithoutImageExport());            // opt out
 builder.AddAspireC4(options => options
     .WithImageExport(LikeC4ImageFormat.Png, LikeC4ImageFormat.Jpg)
-    .WithImageExportDirectory("../diagrams")
+    .WithImageExportDirectory("docs/diagrams")   // relative to the AppHost directory
 );
 ```
 
@@ -286,6 +304,7 @@ aspirec4                 # parent row, added only when there is more than one di
 | `DashboardLinkDisplayName` | `"ER Diagram"` | Name used for the diagram link |
 | `ExportImages` | `true` | Write the diagram out as an image whenever it changes — see [Exporting the ER diagram as an image](#exporting-the-er-diagram-as-an-image) |
 | `ImageFormats` | `{Svg, Png}` | Formats to export. `WithImageExport(...)` |
+| `ImageExportDirectory` | `null` (`./.aspirec4/images/`) | Where images are written; relative paths resolve against the AppHost directory. Shared with the architecture diagram |
 | `D2Command` | `null` | A local `d2` binary to export with; `null` runs the container. Set by `WithLocalD2CLI()` |
 | `ContainerRuntimeCommand` | `"docker"` | Runtime for the one-shot export container; `podman` where that is what Aspire uses |
 | `ExportTimeoutSeconds` | `120` | How long to wait for one d2 invocation before abandoning it |
@@ -512,7 +531,9 @@ d2 ships as a Go binary. Unlike the LikeC4 sidecar, there is **no npm CLI fallba
 
 ### Exporting the ER diagram as an image
 
-On by default. `schema.gen.svg` and `schema.gen.png` are written beside the diagram whenever it changes.
+On by default. `schema.svg` and `schema.png` are written to `./.aspirec4/images/` — the same folder the
+architecture diagram exports to — whenever the diagram changes. The name drops the `.gen` marker, which
+earns its place on a generated source file you hand-edit beside but not on an image.
 
 ```csharp
 builder.AddAspireC4()
@@ -873,3 +894,4 @@ should review the following changes when upgrading:
 
 - [Homepage](https://purview.dev/projects/aspirec4/)
 - [Documentation](https://purview.dev/docs/aspirec4/)
+

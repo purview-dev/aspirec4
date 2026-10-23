@@ -37,32 +37,66 @@ static class ErdImageExporter
 		return [.. options.ImageFormats.Distinct().Order()];
 	}
 
+	/// <summary>The directory inside the export container that images are written to.</summary>
+	internal const string ContainerOutputPath = "/out";
+
 	/// <summary>
-	/// Builds the command and arguments that render <paramref name="format"/> from the d2 source in
-	/// <paramref name="outputDirectory"/>.
+	/// The base name of the exported images, which is <see cref="AspireC4EfDiagramOptions.FileName"/>
+	/// without the <c>.gen</c> marker.
 	/// </summary>
 	/// <remarks>
-	/// The container variant mounts the output directory read-write rather than read-only, unlike the
-	/// sidecar: the whole point of this invocation is to write the image back out beside the source.
+	/// <c>.gen</c> earns its place on a generated <c>.d2</c> or <c>.json</c> file sitting in a directory
+	/// a consumer also hand-edits. An image in the shared images folder is never hand-edited and never
+	/// mistaken for a source file, so the marker is only noise in a file name meant to be attached to
+	/// something: <c>schema.png</c> rather than <c>schema.gen.png</c>.
+	/// </remarks>
+	internal static string ImageBaseName(string fileName)
+	{
+		ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
+
+		const string generatedMarker = ".gen";
+
+		return fileName.EndsWith(generatedMarker, StringComparison.OrdinalIgnoreCase)
+			? fileName[..^generatedMarker.Length]
+			: fileName;
+	}
+
+	/// <summary>Resolves where the images are written, as an absolute path.</summary>
+	internal static string ResolveImageDirectory(AspireC4EfDiagramOptions options, string appHostDirectory)
+	{
+		ArgumentNullException.ThrowIfNull(options);
+
+		return AspireC4ImageExport.Resolve(options.ImageExportDirectory, appHostDirectory);
+	}
+
+	/// <summary>
+	/// Builds the command and arguments that render <paramref name="format"/> from the d2 source in
+	/// <paramref name="outputDirectory"/> into <paramref name="imageDirectory"/>.
+	/// </summary>
+	/// <remarks>
+	/// The container variant mounts the source read-only and the images directory writable, so the
+	/// invocation can only write where the image is meant to go.
 	/// </remarks>
 	internal static (string Command, IReadOnlyList<string> Arguments) BuildInvocation(
 		AspireC4EfDiagramOptions options,
 		string outputDirectory,
+		string imageDirectory,
 		ErdImageFormat format
 	)
 	{
 		ArgumentNullException.ThrowIfNull(options);
 		ArgumentException.ThrowIfNullOrWhiteSpace(outputDirectory);
+		ArgumentException.ThrowIfNullOrWhiteSpace(imageDirectory);
 
 		var engine = options.LayoutEngine.ToEngineName();
 		var source = $"{options.FileName}.d2";
-		var image = $"{options.FileName}.{Extension(format)}";
+		var image = $"{ImageBaseName(options.FileName)}.{Extension(format)}";
 
 		if (!string.IsNullOrWhiteSpace(options.D2Command))
 		{
 			return (
 				options.D2Command,
-				["--layout", engine, Path.Combine(outputDirectory, source), Path.Combine(outputDirectory, image)]
+				["--layout", engine, Path.Combine(outputDirectory, source), Path.Combine(imageDirectory, image)]
 			);
 		}
 
@@ -73,13 +107,18 @@ static class ErdImageExporter
 			[
 				"run",
 				"--rm",
-				"-v",
-				$"{outputDirectory}:{D2ServerResource.WorkspacePath}",
+				// --mount rather than -v: a Windows host path already contains a colon, so
+				// "C:\…\erd:/data:ro" leaves the runtime guessing where the drive letter ends and the
+				// mode begins, and it guesses wrong. --mount parses key=value and cannot be ambiguous.
+				"--mount",
+				$"type=bind,source={outputDirectory},target={D2ServerResource.WorkspacePath},readonly",
+				"--mount",
+				$"type=bind,source={imageDirectory},target={ContainerOutputPath}",
 				$"{D2ServerResource.DefaultRegistry}/{D2ServerResource.DefaultImage}:{tag}",
 				"--layout",
 				engine,
 				$"{D2ServerResource.WorkspacePath}/{source}",
-				$"{D2ServerResource.WorkspacePath}/{image}",
+				$"{ContainerOutputPath}/{image}",
 			]
 		);
 	}
@@ -91,11 +130,18 @@ static class ErdImageExporter
 	/// Best-effort throughout, like the LikeC4 formatter: an export that fails leaves the diagram itself
 	/// untouched, so the only correct response is to say so and carry on.
 	/// </remarks>
+	/// <param name="model">The model to render.</param>
+	/// <param name="options">The diagram options.</param>
+	/// <param name="outputDirectory">Where the generated diagram, and so the d2 source, lives.</param>
+	/// <param name="appHostDirectory">The AppHost directory the images directory is resolved against.</param>
+	/// <param name="logger">Where export progress and failures are reported.</param>
+	/// <param name="cancellationToken">Cancelled on shutdown.</param>
 	/// <returns>The image files written.</returns>
 	public static async Task<IReadOnlyList<string>> ExportAsync(
 		EfModel model,
 		AspireC4EfDiagramOptions options,
 		string outputDirectory,
+		string appHostDirectory,
 		ILogger logger,
 		CancellationToken cancellationToken
 	)
@@ -123,12 +169,18 @@ static class ErdImageExporter
 				.ConfigureAwait(false);
 		}
 
+		var imageDirectory = ResolveImageDirectory(options, appHostDirectory);
+
+		// Created here rather than left to the container runtime: a missing bind-mount source is created
+		// by the daemon as root, which a later host-side write could not then touch.
+		Directory.CreateDirectory(imageDirectory);
+
 		List<string> written = [];
 
 		foreach (var format in formats)
 		{
-			var image = Path.Combine(outputDirectory, $"{options.FileName}.{Extension(format)}");
-			var (command, arguments) = BuildInvocation(options, outputDirectory, format);
+			var image = Path.Combine(imageDirectory, $"{ImageBaseName(options.FileName)}.{Extension(format)}");
+			var (command, arguments) = BuildInvocation(options, outputDirectory, imageDirectory, format);
 
 			if (await RunAsync(command, arguments, options, logger, cancellationToken).ConfigureAwait(false))
 			{

@@ -1,7 +1,7 @@
 using Aspire.Hosting.AspireC4.EntityFrameworkCore;
 using Aspire.Hosting.AspireC4.EntityFrameworkCore.Models;
 using Aspire.Hosting.AspireC4.LikeC4.Runtime;
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 
 namespace Aspire.Hosting.AspireC4;
 
@@ -17,10 +17,18 @@ namespace Aspire.Hosting.AspireC4;
 /// Run via <c>just test-integration</c>, not an IDE runner, and note that the LikeC4 export starts a
 /// server and a headless browser, so it takes tens of seconds.
 /// </para>
+/// <para>
+/// Serialised with <c>[NotInParallel]</c>: every test here starts a container, and running several at
+/// once alongside the rest of the suite loads the container runtime to the point where it starts
+/// rejecting otherwise-valid invocations.
+/// </para>
 /// </remarks>
+[NotInParallel]
 public sealed class ImageExportTests
 {
 	string _tempDir = string.Empty;
+
+	readonly CapturingLogger logger = new();
 
 	[Before(Test)]
 	public void SetUp()
@@ -128,6 +136,12 @@ public sealed class ImageExportTests
 		);
 	}
 
+	/// <summary>
+	/// The shared folder both diagrams export into, relative to the temp directory standing in for the
+	/// AppHost directory.
+	/// </summary>
+	string ImagesDirectory => Path.Combine(_tempDir, ".aspirec4", "images");
+
 	// Tests
 
 	[Test]
@@ -143,16 +157,19 @@ public sealed class ImageExportTests
 			CreateModel(),
 			options,
 			_tempDir,
-			NullLogger.Instance,
+			_tempDir,
+			logger,
 			cancellationToken
 		);
 
 		// Assert
-		await Assert.That(written.Count).IsEqualTo(2);
+		await Assert.That(written.Count).IsEqualTo(2).Because(logger.Messages);
+
+		// The d2 source stays with the generated diagram; only the images move to the shared folder.
 		await Assert.That(File.Exists(Path.Combine(_tempDir, "schema.gen.d2"))).IsTrue();
 
-		var svg = Path.Combine(_tempDir, "schema.gen.svg");
-		var png = Path.Combine(_tempDir, "schema.gen.png");
+		var svg = Path.Combine(ImagesDirectory, "schema.svg");
+		var png = Path.Combine(ImagesDirectory, "schema.png");
 
 		await Assert.That(File.Exists(svg)).IsTrue();
 		await Assert.That(File.Exists(png)).IsTrue();
@@ -177,21 +194,39 @@ public sealed class ImageExportTests
 			CreateModel(),
 			options,
 			_tempDir,
-			NullLogger.Instance,
+			_tempDir,
+			logger,
 			cancellationToken
 		);
 
 		// Assert
-		await Assert.That(written.Count).IsEqualTo(1);
-		await Assert.That(File.Exists(Path.Combine(_tempDir, "schema.gen.svg"))).IsTrue();
-		await Assert.That(File.Exists(Path.Combine(_tempDir, "schema.gen.png"))).IsFalse();
+		await Assert.That(written.Count).IsEqualTo(1).Because(logger.Messages);
+		await Assert.That(File.Exists(Path.Combine(ImagesDirectory, "schema.svg"))).IsTrue();
+		await Assert.That(File.Exists(Path.Combine(ImagesDirectory, "schema.png"))).IsFalse();
+	}
+
+	[Test]
+	public async Task ExportAsync_CustomImageDirectory_WritesThere(CancellationToken cancellationToken)
+	{
+		// Arrange
+		var options = new AspireC4EfDiagramOptions().WithImageExport(ErdImageFormat.Svg);
+		options.ImageExportDirectory = "docs/diagrams";
+
+		// Act
+		await ErdImageExporter.ExportAsync(CreateModel(), options, _tempDir, _tempDir, logger, cancellationToken);
+
+		// Assert
+		await Assert
+			.That(File.Exists(Path.Combine(_tempDir, "docs", "diagrams", "schema.svg")))
+			.IsTrue()
+			.Because(logger.Messages);
 	}
 
 	[Test]
 	public async Task ExportAsync_NoFormats_WritesNothingAndRunsNoContainer(CancellationToken cancellationToken)
 	{
-		// Not merely "no images": the d2 source is written for export's benefit alone, so an export that
-		// is off must not leave one behind either.
+		// Not merely "no images": the d2 source is written for export's benefit alone, and the images
+		// folder is created by the export, so neither should be left behind when export is off.
 		// Arrange
 		AspireC4EfDiagramOptions options = new();
 		options.ImageFormats = [];
@@ -201,7 +236,8 @@ public sealed class ImageExportTests
 			CreateModel(),
 			options,
 			_tempDir,
-			NullLogger.Instance,
+			_tempDir,
+			logger,
 			cancellationToken
 		);
 
@@ -211,10 +247,13 @@ public sealed class ImageExportTests
 	}
 
 	[Test]
-	public async Task ExportAsync_LikeC4Views_WritesAPngPerView(CancellationToken cancellationToken)
+	public async Task ExportAsync_LikeC4Views_WritesAPrefixedPngPerViewIntoTheSharedFolder(
+		CancellationToken cancellationToken
+	)
 	{
-		// Covers the mount and working-directory handling against the real CLI: the export container sees
-		// the project through a read-only /data mount and writes to a separate writable /out.
+		// Covers the mount and working-directory handling against the real CLI, and the rename that
+		// follows: the CLI names each file after its view id, so a bare "index.png" would say nothing
+		// about which diagram it came from in a folder shared with the ER diagram.
 		// Arrange
 		await WriteLikeC4ProjectAsync(cancellationToken);
 
@@ -225,6 +264,7 @@ public sealed class ImageExportTests
 			options,
 			_tempDir,
 			_tempDir,
+			_tempDir,
 			localCLI: null,
 			Lifecycle.IAspireC4LifecycleHookTelemetry.Mock(),
 			cancellationToken
@@ -233,11 +273,88 @@ public sealed class ImageExportTests
 		// Assert
 		await Assert.That(exported).IsEqualTo(1);
 
-		var images = Directory.GetFiles(Path.Combine(_tempDir, "images"), "*.png");
+		var images = Directory.GetFiles(ImagesDirectory, "*.png");
 
 		await Assert.That(images).IsNotEmpty();
-		await Assert.That(images.Select(Path.GetFileName)).Contains("index.png");
+		await Assert.That(images.Select(Path.GetFileName)).Contains("architecture-index.png");
 		await Assert.That(IsPng(await File.ReadAllBytesAsync(images[0], cancellationToken))).IsTrue();
+	}
+
+	[Test]
+	public async Task ExportAsync_BothDiagrams_LandInTheSameFolder(CancellationToken cancellationToken)
+	{
+		// The whole point of the shared location: one folder to look in, with names that say which
+		// diagram each image came from.
+		// Arrange
+		await WriteLikeC4ProjectAsync(cancellationToken);
+
+		// Act
+		await ErdImageExporter.ExportAsync(
+			CreateModel(),
+			new AspireC4EfDiagramOptions().WithImageExport(ErdImageFormat.Png),
+			_tempDir,
+			_tempDir,
+			logger,
+			cancellationToken
+		);
+
+		await LikeC4ImageExporter.ExportAsync(
+			new AspireC4DiagramOptions(),
+			_tempDir,
+			_tempDir,
+			_tempDir,
+			localCLI: null,
+			Lifecycle.IAspireC4LifecycleHookTelemetry.Mock(),
+			cancellationToken
+		);
+
+		// Assert
+		var images = Directory.GetFiles(ImagesDirectory, "*.png").Select(Path.GetFileName).ToArray();
+
+		await Assert.That(images).Contains("schema.png").Because(logger.Messages);
+		await Assert.That(images).Contains("architecture-index.png");
+	}
+
+	/// <summary>
+	/// Collects what the exporter logged, so a failed export explains itself in the assertion message.
+	/// </summary>
+	/// <remarks>
+	/// Export is best-effort by design: it reports a failure and returns, so the return value alone
+	/// reduces every cause — a missing runtime, a bad mount, a d2 parse error — to the same count.
+	/// </remarks>
+	sealed class CapturingLogger : ILogger
+	{
+		readonly List<string> _messages = [];
+
+		public string Messages
+		{
+			get
+			{
+				lock (_messages)
+				{
+					return _messages.Count == 0 ? "(nothing logged)" : string.Join(" / ", _messages);
+				}
+			}
+		}
+
+		public IDisposable? BeginScope<TState>(TState state)
+			where TState : notnull => null;
+
+		public bool IsEnabled(LogLevel logLevel) => true;
+
+		public void Log<TState>(
+			LogLevel logLevel,
+			EventId eventId,
+			TState state,
+			Exception? exception,
+			Func<TState, Exception?, string> formatter
+		)
+		{
+			lock (_messages)
+			{
+				_messages.Add(formatter(state, exception));
+			}
+		}
 	}
 
 	static bool IsPng(byte[] content) =>

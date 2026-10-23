@@ -100,7 +100,14 @@ sealed partial class AspireC4LifecycleHook
 		// starts a LikeC4 server and a browser and must not sit between the application and its startup.
 		if (changed && opts.ExportImages)
 		{
-			_ = Task.Run(() => ExportImagesAsync(outputDir, serveDir, cancellationToken), cancellationToken);
+			// The same base directory the output and serve directories were resolved from, so the images
+			// land beside the ER diagram's rather than wherever this AppHost happens to have been started.
+			var appHostDirectory = Environment.CurrentDirectory;
+
+			_ = Task.Run(
+				() => ExportImagesAsync(outputDir, serveDir, appHostDirectory, cancellationToken),
+				cancellationToken
+			);
 		}
 	}
 

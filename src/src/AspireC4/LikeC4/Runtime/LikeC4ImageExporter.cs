@@ -22,9 +22,6 @@ namespace Aspire.Hosting.AspireC4.LikeC4.Runtime;
 /// </remarks>
 static class LikeC4ImageExporter
 {
-	/// <summary>The directory images are written to when none is configured.</summary>
-	internal const string DefaultImageSubfolder = "images";
-
 	/// <summary>The directory the images mount is exposed at inside the export container.</summary>
 	internal const string ContainerOutputPath = "/out";
 
@@ -52,21 +49,11 @@ static class LikeC4ImageExporter
 	}
 
 	/// <summary>Resolves the directory images are written to, as an absolute path.</summary>
-	internal static string ResolveImageDirectory(AspireC4DiagramOptions options, string outputDirectory)
+	internal static string ResolveImageDirectory(AspireC4DiagramOptions options, string appHostDirectory)
 	{
 		ArgumentNullException.ThrowIfNull(options);
-		ArgumentException.ThrowIfNullOrWhiteSpace(outputDirectory);
 
-		// Beneath the generated-output directory by default rather than beside the .c4 sources: export
-		// writes one file per view, so a project with a dozen views would otherwise bury the two or three
-		// files a consumer actually edits.
-		return string.IsNullOrWhiteSpace(options.ImageExportDirectory)
-				? Path.Combine(outputDirectory, DefaultImageSubfolder)
-			: Path.IsPathRooted(options.ImageExportDirectory)
-				? Path.TrimEndingDirectorySeparator(Path.GetFullPath(options.ImageExportDirectory))
-			: Path.TrimEndingDirectorySeparator(
-				Path.GetFullPath(Path.Combine(outputDirectory, options.ImageExportDirectory))
-			);
+		return AspireC4ImageExport.Resolve(options.ImageExportDirectory, appHostDirectory);
 	}
 
 	/// <summary>
@@ -126,10 +113,14 @@ static class LikeC4ImageExporter
 				"--rm",
 				// Read-only, like the server's mount: nothing in the source tree should be written by an
 				// export. The images land on their own writable mount instead.
-				"-v",
-				$"{workspaceRoot}:{LikeC4ServerResource.WorkspacePath}:ro",
-				"-v",
-				$"{imageDirectory}:{ContainerOutputPath}",
+				//
+				// --mount rather than -v: a Windows host path already contains a colon, so
+				// "C:\…\likec4:/data:ro" leaves the runtime guessing where the drive letter ends and the
+				// mode begins, and it guesses wrong. --mount parses key=value and cannot be ambiguous.
+				"--mount",
+				$"type=bind,source={workspaceRoot},target={LikeC4ServerResource.WorkspacePath},readonly",
+				"--mount",
+				$"type=bind,source={imageDirectory},target={ContainerOutputPath}",
 				"--workdir",
 				ToContainerPath(workspaceRoot, outputDirectory),
 				LikeC4ServerResource.GetImageReference(tag),
@@ -170,10 +161,18 @@ static class LikeC4ImageExporter
 	/// Best-effort throughout, like the formatter: a failed export leaves the generated model untouched,
 	/// so the only correct response is to report it and carry on.
 	/// </remarks>
+	/// <param name="options">The diagram options.</param>
+	/// <param name="outputDirectory">Where the generated model was written.</param>
+	/// <param name="serveDirectory">The LikeC4 project root, which is what gets exported.</param>
+	/// <param name="appHostDirectory">The AppHost directory the images directory is resolved against.</param>
+	/// <param name="localCLI">The host CLI to run, or <see langword="null"/> for the container.</param>
+	/// <param name="telemetry">Where export progress and failures are reported.</param>
+	/// <param name="cancellationToken">Cancelled on shutdown.</param>
 	public static async Task<int> ExportAsync(
 		AspireC4DiagramOptions options,
 		string outputDirectory,
 		string serveDirectory,
+		string appHostDirectory,
 		(string Command, string[] Prefix)? localCLI,
 		IAspireC4LifecycleHookTelemetry telemetry,
 		CancellationToken cancellationToken
@@ -189,7 +188,7 @@ static class LikeC4ImageExporter
 			return 0;
 		}
 
-		var imageDirectory = ResolveImageDirectory(options, outputDirectory);
+		var imageDirectory = ResolveImageDirectory(options, appHostDirectory);
 
 		// Created here rather than left to the container runtime: a missing bind-mount source is created
 		// by the daemon as root, which a later host-side write could not then touch.
@@ -200,28 +199,85 @@ static class LikeC4ImageExporter
 		foreach (var format in formats)
 		{
 			var name = FormatName(format);
-			var (command, arguments, workingDirectory) = BuildInvocation(
-				options,
-				outputDirectory,
-				serveDirectory,
-				imageDirectory,
-				format,
-				localCLI
-			);
 
-			telemetry.ExportingImages(name, imageDirectory);
+			// Exported into a staging directory and moved in afterwards, because the CLI names each file
+			// after its view id with no say in the matter. In a folder shared with the ER diagram a bare
+			// "index.png" says nothing about which diagram it came from, and could collide outright.
+			var staging = Path.Combine(Path.GetTempPath(), $"aspirec4-export-{Guid.NewGuid():N}");
 
-			if (
-				await RunAsync(command, arguments, workingDirectory, options, name, telemetry, cancellationToken)
-					.ConfigureAwait(false)
-			)
+			Directory.CreateDirectory(staging);
+
+			try
 			{
-				exported++;
-				telemetry.ImagesExported(name, imageDirectory);
+				var (command, arguments, workingDirectory) = BuildInvocation(
+					options,
+					outputDirectory,
+					serveDirectory,
+					staging,
+					format,
+					localCLI
+				);
+
+				telemetry.ExportingImages(name, imageDirectory);
+
+				if (
+					await RunAsync(command, arguments, workingDirectory, options, name, telemetry, cancellationToken)
+						.ConfigureAwait(false)
+				)
+				{
+					exported++;
+
+					MoveWithPrefix(staging, imageDirectory);
+
+					telemetry.ImagesExported(name, imageDirectory);
+				}
+			}
+			finally
+			{
+				TryDelete(staging);
 			}
 		}
 
 		return exported;
+	}
+
+	/// <summary>Moves every staged image into the shared folder under its prefixed name.</summary>
+	/// <remarks>
+	/// Overwrites, so a view that has been re-exported replaces its previous image rather than
+	/// accumulating. A view removed from the model leaves its last image behind, which is the lesser
+	/// evil: emptying the folder would also delete the ER diagram's images sitting beside them.
+	/// </remarks>
+	static void MoveWithPrefix(string staging, string imageDirectory)
+	{
+		foreach (var file in Directory.EnumerateFiles(staging))
+		{
+			var destination = Path.Combine(
+				imageDirectory,
+				AspireC4ImageExport.ArchitecturePrefix + Path.GetFileName(file)
+			);
+
+			File.Move(file, destination, overwrite: true);
+		}
+	}
+
+	[System.Diagnostics.CodeAnalysis.SuppressMessage(
+		"Design",
+		"CA1031:Do not catch general exception types",
+		Justification = "Cleaning up a temporary directory must never fail an export that otherwise succeeded"
+	)]
+	static void TryDelete(string directory)
+	{
+		try
+		{
+			if (Directory.Exists(directory))
+			{
+				Directory.Delete(directory, recursive: true);
+			}
+		}
+		catch
+		{
+			// A leftover temp directory is harmless.
+		}
 	}
 
 	[System.Diagnostics.CodeAnalysis.SuppressMessage(

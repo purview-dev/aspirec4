@@ -221,12 +221,15 @@ public sealed class AspireC4DiagramOptions
 	public HashSet<LikeC4ImageFormat> ImageFormats { get; set; } = [LikeC4ImageFormat.Png];
 
 	/// <summary>
-	/// Where exported images are written. Relative paths are resolved against
-	/// <see cref="OutputDirectory"/>; <see langword="null"/> (the default) uses <c>images/</c> beneath it.
+	/// Where exported images are written. Relative paths are resolved against the AppHost directory;
+	/// <see langword="null"/> (the default) uses <c>./.aspirec4/images/</c>.
 	/// </summary>
 	/// <remarks>
-	/// Kept out of the directory holding the <c>.c4</c> sources by default: export writes one file per
-	/// view, which in a project with a dozen views would bury the two or three files a consumer edits.
+	/// The ER diagram writes to the same folder by default, so every image AspireC4 produces is in one
+	/// place rather than buried in whichever generated-output directory produced it. The architecture
+	/// diagram's files are prefixed <c>architecture-</c> to keep the two apart. Setting this on only one
+	/// of the two diagrams splits them again, which is why the default is resolved from the AppHost
+	/// directory rather than from <see cref="OutputDirectory"/>.
 	/// </remarks>
 	public string? ImageExportDirectory { get; set; }
 

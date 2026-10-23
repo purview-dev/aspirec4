@@ -132,11 +132,28 @@ Every view is written out as an image whenever the generated model changes — o
 | --- | --- | --- |
 | `ExportImages` | `true` | write each view out as an image when the generated model changes |
 | `ImageFormats` | `{Png}` | `Png` and/or `Jpg`. **There is no SVG** — see below |
-| `ImageExportDirectory` | `null` (`images/`) | where images are written; relative paths resolve against `OutputDirectory` |
+| `ImageExportDirectory` | `null` (`./.aspirec4/images/`) | where images are written; relative paths resolve against the **AppHost directory** |
 | `ImageExportTimeoutSeconds` | `300` | cap on one `likec4 export` invocation |
 | `ContainerRuntimeCommand` | `"docker"` | the runtime for the one-shot export container; set to `podman` where that is what Aspire uses |
 
-One file per view, named after the view id — `index.png`, `services.png`, and so on.
+**Both diagrams export into the same folder**, `./.aspirec4/images/`, so there is one place to look
+rather than one per diagram:
+
+```text
+apphost/.aspirec4/images/
+  architecture-index.png        <- architecture diagram, one file per view
+  architecture-services.png
+  schema.svg                    <- ER diagram
+  schema.png
+```
+
+The architecture diagram's files carry an `architecture-` prefix, because `likec4 export` names a file
+after its view id and a bare `index.png` says nothing in a shared folder. The ER diagram row in the
+dashboard carries an **Images** property with the resolved path and an **Open Diagram Images** command
+that opens the folder.
+
+Because the default is resolved from the AppHost directory rather than from `OutputDirectory`, setting
+`ImageExportDirectory` on only one of the two diagrams splits them apart again.
 
 **`likec4 export` has no SVG format.** It renders by screenshotting each view in a headless browser, and
 offers only `png` and `jpg`. For a vector, export the model and render it with another tool. The ER
@@ -156,7 +173,7 @@ Failures are best-effort: they are reported and the generated `.c4` model is una
 builder.AddAspireC4(options => options.WithoutImageExport());
 builder.AddAspireC4(options => options
     .WithImageExport(LikeC4ImageFormat.Png, LikeC4ImageFormat.Jpg)
-    .WithImageExportDirectory("../diagrams")
+    .WithImageExportDirectory("docs/diagrams")   // relative to the AppHost directory
 );
 ```
 

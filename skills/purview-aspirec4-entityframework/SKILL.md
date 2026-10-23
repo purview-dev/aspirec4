@@ -145,6 +145,7 @@ Options bind from the **`AspireC4:EntityFramework`** section, applied on top of 
 | `DashboardLinkDisplayName` | `"ER Diagram"` | the link name when hidden |
 | `ExportImages` | `true` | write the diagram out as an image when it changes |
 | `ImageFormats` | `{Svg, Png}` | `Svg` and/or `Png` |
+| `ImageExportDirectory` | `null` (`./.aspirec4/images/`) | where images are written; relative paths resolve against the **AppHost directory**. Shared with the architecture diagram |
 | `D2Command` | `null` | a local `d2` binary to export with; `null` runs the container |
 | `ContainerRuntimeCommand` | `"docker"` | the runtime for the one-shot export container; `podman` where that is what Aspire uses |
 | `ExportTimeoutSeconds` | `120` | cap on one d2 invocation |
@@ -174,8 +175,21 @@ d2 ships as a Go binary, so it must be on `PATH`; there is no npm fallback. Call
 
 ## Image export
 
-`{FileName}.svg` and `{FileName}.png` are written beside the diagram whenever it changes — on by
-default — so a schema can go into a pull request or a wiki without opening the viewer.
+On by default, so a schema can go into a pull request or a wiki without opening the viewer. Images are
+written to **`./.aspirec4/images/`** — the same folder the architecture diagram exports to, so there is
+one place to look:
+
+```text
+apphost/.aspirec4/images/
+  schema.svg                    <- this diagram
+  schema.png
+  architecture-index.png        <- architecture diagram
+```
+
+The name drops the `.gen` marker: `schema.gen` produces `schema.svg`, not `schema.gen.svg`. The marker
+earns its place on a generated source file sitting in a directory you also hand-edit, which an image in
+the shared folder never is. The dashboard row carries an **Images** property with the resolved path and
+an **Open Diagram Images** command that opens the folder.
 
 ```csharp
 builder.AddAspireC4().WithEntityFrameworkDiagram(configure: options => options.WithoutImageExport());

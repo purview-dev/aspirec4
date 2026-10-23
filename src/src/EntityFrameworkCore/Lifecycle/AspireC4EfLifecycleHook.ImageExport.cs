@@ -9,6 +9,16 @@ sealed partial class AspireC4EfLifecycleHook
 	readonly SemaphoreSlim _exportGate = new(1, 1);
 
 	/// <summary>
+	/// Where images are being written, once export has resolved it.
+	/// </summary>
+	/// <remarks>
+	/// Published as a dashboard property and used by the open-folder command, so a consumer never has to
+	/// know the convention to find the images. Stays <see langword="null"/> while export is off, which is
+	/// what keeps the property and the command off a row that would never populate them.
+	/// </remarks>
+	volatile string? _imageDirectory;
+
+	/// <summary>
 	/// Incremented for every requested export, so a run that is still queued when a newer model arrives
 	/// can stand down rather than render a diagram that has already been superseded.
 	/// </summary>
@@ -22,7 +32,13 @@ sealed partial class AspireC4EfLifecycleHook
 	/// the diagram changed: an export is worth the d2 invocation only when there is something new to
 	/// render.
 	/// </remarks>
-	async Task ExportImagesAsync(EfModel model, string directory, ILogger logger, CancellationToken cancellationToken)
+	async Task ExportImagesAsync(
+		EfModel model,
+		string directory,
+		string appHostDirectory,
+		ILogger logger,
+		CancellationToken cancellationToken
+	)
 	{
 		var version = Interlocked.Increment(ref _exportVersion);
 
@@ -46,7 +62,7 @@ sealed partial class AspireC4EfLifecycleHook
 			}
 
 			await ErdImageExporter
-				.ExportAsync(model, _options, directory, logger, cancellationToken)
+				.ExportAsync(model, _options, directory, appHostDirectory, logger, cancellationToken)
 				.ConfigureAwait(false);
 		}
 		finally

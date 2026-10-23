@@ -160,6 +160,18 @@ public sealed class AspireC4EfDiagramOptions
 	public HashSet<ErdImageFormat> ImageFormats { get; set; } = [ErdImageFormat.Svg, ErdImageFormat.Png];
 
 	/// <summary>
+	/// Where exported images are written. Relative paths are resolved against the AppHost directory;
+	/// <see langword="null"/> (the default) uses <c>./.aspirec4/images/</c>.
+	/// </summary>
+	/// <remarks>
+	/// The architecture diagram writes to the same folder by default, so every image AspireC4 produces is
+	/// in one place. It matters most here: the interactive renderer writes its own <c>index.html</c>,
+	/// <c>app.js</c> and <c>vendor/</c> into <see cref="OutputDirectory"/>, and an image among those is
+	/// easy to miss.
+	/// </remarks>
+	public string? ImageExportDirectory { get; set; }
+
+	/// <summary>
 	/// A local <c>d2</c> executable to render exported images with. <see langword="null"/> (the default)
 	/// runs the <c>d2lang/d2</c> container instead.
 	/// </summary>

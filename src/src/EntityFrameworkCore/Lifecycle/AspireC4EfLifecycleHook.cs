@@ -64,6 +64,13 @@ sealed partial class AspireC4EfLifecycleHook(
 					return;
 				}
 
+				// Added before the first write so the command is on the row from the outset, disabled
+				// until the first export resolves a directory for it.
+				if (_options.ExportImages)
+				{
+					AddOpenImagesCommand(resource);
+				}
+
 				var contexts = await WriteDiagramAsync(evt.Model, resource, ct).ConfigureAwait(false);
 
 				// Backstop for the descriptor lookup. The diagram is built from each contributing
@@ -199,7 +206,14 @@ sealed partial class AspireC4EfLifecycleHook(
 		// out to d2, which must not sit between the application and its own startup.
 		if (_options.ExportImages && efModel.Contexts.Count > 0)
 		{
-			_ = Task.Run(() => ExportImagesAsync(efModel, directory, logger, cancellationToken), cancellationToken);
+			// Resolved here rather than inside the export so the dashboard property published below is
+			// already correct; the export itself races the publish and could not be relied on for it.
+			_imageDirectory = ErdImageExporter.ResolveImageDirectory(_options, resource.AppHostDirectory);
+
+			_ = Task.Run(
+				() => ExportImagesAsync(efModel, directory, resource.AppHostDirectory, logger, cancellationToken),
+				cancellationToken
+			);
 		}
 
 		// This resource runs no process of its own, so it has to publish its own state or the
@@ -249,6 +263,10 @@ sealed partial class AspireC4EfLifecycleHook(
 			new("Output", directory),
 			new("Contexts", contexts),
 			new("Tables", tables),
+			// Shown so the folder can be found without knowing the convention; the command beside it
+			// opens the same path. Omitted entirely when export is off, rather than advertising a
+			// directory that will stay empty.
+			.. _imageDirectory is { } images ? (ResourcePropertySnapshot[])[new("Images", images)] : [],
 		];
 
 		// Regeneration republishes on every contributing project restart, so this has to be an upsert:

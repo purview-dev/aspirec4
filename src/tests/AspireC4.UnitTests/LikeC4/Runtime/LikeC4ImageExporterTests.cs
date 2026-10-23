@@ -67,32 +67,35 @@ public sealed class LikeC4ImageExporterTests
 	}
 
 	[Test]
-	public async Task ResolveImageDirectory_ByDefault_IsImagesBeneathTheOutputDirectory()
+	public async Task ResolveImageDirectory_ByDefault_IsTheSharedImagesFolder()
 	{
+		// The ER diagram resolves to the same path from the same AppHost directory, which is what puts
+		// every image AspireC4 produces in one place.
 		// Arrange
 		var options = CreateOptions();
-		var outputDirectory = OutputDirectory();
+		var appHost = P("apphost");
 
 		// Act
-		var result = LikeC4ImageExporter.ResolveImageDirectory(options, outputDirectory);
+		var result = LikeC4ImageExporter.ResolveImageDirectory(options, appHost);
 
 		// Assert
-		await Assert.That(result).IsEqualTo(Path.Combine(outputDirectory, "images"));
+		await Assert.That(result).IsEqualTo(Path.Combine(appHost, ".aspirec4", "images"));
 	}
 
 	[Test]
-	public async Task ResolveImageDirectory_RelativePath_IsResolvedAgainstTheOutputDirectory()
+	public async Task ResolveImageDirectory_RelativePath_IsResolvedAgainstTheAppHostDirectory()
 	{
+		// Against the AppHost directory, not OutputDirectory: the two diagrams have different output
+		// directories, so resolving from there could never land them in the same folder.
 		// Arrange
 		var options = CreateOptions();
-		options.ImageExportDirectory = "../diagrams";
-		var outputDirectory = OutputDirectory();
+		options.ImageExportDirectory = "docs/diagrams";
 
 		// Act
-		var result = LikeC4ImageExporter.ResolveImageDirectory(options, outputDirectory);
+		var result = LikeC4ImageExporter.ResolveImageDirectory(options, P("apphost"));
 
 		// Assert
-		await Assert.That(result).IsEqualTo(P("apphost", ".aspirec4", "diagrams"));
+		await Assert.That(result).IsEqualTo(P("apphost", "docs", "diagrams"));
 	}
 
 	[Test]
@@ -104,7 +107,7 @@ public sealed class LikeC4ImageExporterTests
 		options.ImageExportDirectory = absolute;
 
 		// Act
-		var result = LikeC4ImageExporter.ResolveImageDirectory(options, OutputDirectory());
+		var result = LikeC4ImageExporter.ResolveImageDirectory(options, P("apphost"));
 
 		// Assert
 		await Assert.That(result).IsEqualTo(absolute);
@@ -159,8 +162,8 @@ public sealed class LikeC4ImageExporterTests
 
 		// Assert
 		await Assert.That(workspaceRoot).IsEqualTo(outputDirectory);
-		await Assert.That(arguments).Contains($"{outputDirectory}:/data:ro");
-		await Assert.That(arguments).Contains($"{imageDirectory}:/out");
+		await Assert.That(arguments).Contains($"type=bind,source={outputDirectory},target=/data,readonly");
+		await Assert.That(arguments).Contains($"type=bind,source={imageDirectory},target=/out");
 		await Assert.That(arguments).Contains("-o");
 		await Assert.That(arguments).Contains("/out");
 	}
@@ -238,7 +241,7 @@ public sealed class LikeC4ImageExporterTests
 
 		// Assert
 		await Assert.That(workspaceRoot).IsEqualTo(P("apphost"));
-		await Assert.That(arguments).Contains($"{P("apphost")}:/data:ro");
+		await Assert.That(arguments).Contains($"type=bind,source={P("apphost")},target=/data,readonly");
 		await Assert.That(arguments).Contains("/data/.aspirec4/likec4");
 	}
 

@@ -22,7 +22,12 @@ sealed partial class AspireC4LifecycleHook
 	/// transition, so a long export can easily be overtaken; superseded runs stand down rather than
 	/// queueing up behind each other and writing older output last.
 	/// </remarks>
-	async Task ExportImagesAsync(string outputDirectory, string serveDirectory, CancellationToken cancellationToken)
+	async Task ExportImagesAsync(
+		string outputDirectory,
+		string serveDirectory,
+		string appHostDirectory,
+		CancellationToken cancellationToken
+	)
 	{
 		var version = Interlocked.Increment(ref _exportVersion);
 
@@ -53,6 +58,7 @@ sealed partial class AspireC4LifecycleHook
 				options.Value,
 				outputDirectory,
 				serveDirectory,
+				appHostDirectory,
 				localCLI,
 				telemetry,
 				cancellationToken

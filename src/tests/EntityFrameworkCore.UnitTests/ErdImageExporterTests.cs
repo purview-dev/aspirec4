@@ -93,14 +93,74 @@ public sealed class ErdImageExporterTests
 	}
 
 	[Test]
+	[Arguments("schema.gen", "schema")]
+	[Arguments("my-schema", "my-schema")]
+	[Arguments("SCHEMA.GEN", "SCHEMA")]
+	public async Task ImageBaseName_DropsTheGeneratedMarker(string fileName, string expected)
+	{
+		// The ".gen" marker earns its place on a source file a consumer edits beside; on an image in the
+		// shared folder it is only noise in a name meant to be attached to something.
+		// Act
+		var result = ErdImageExporter.ImageBaseName(fileName);
+
+		// Assert
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	[Test]
+	public async Task ResolveImageDirectory_ByDefault_IsTheSharedImagesFolder()
+	{
+		// Both diagrams default here, so an override on only one of them is what splits them apart.
+		// Arrange
+		var options = CreateOptions();
+		var appHost = P("apphost");
+
+		// Act
+		var result = ErdImageExporter.ResolveImageDirectory(options, appHost);
+
+		// Assert
+		await Assert.That(result).IsEqualTo(Path.Combine(appHost, ".aspirec4", "images"));
+	}
+
+	[Test]
+	public async Task ResolveImageDirectory_RelativePath_IsResolvedAgainstTheAppHostDirectory()
+	{
+		// Arrange
+		var options = CreateOptions();
+		options.ImageExportDirectory = "docs/diagrams";
+
+		// Act
+		var result = ErdImageExporter.ResolveImageDirectory(options, P("apphost"));
+
+		// Assert
+		await Assert.That(result).IsEqualTo(P("apphost", "docs", "diagrams"));
+	}
+
+	[Test]
+	public async Task ResolveImageDirectory_AbsolutePath_IsUsedAsGiven()
+	{
+		// Arrange
+		var options = CreateOptions();
+		var absolute = P("artifacts", "diagrams");
+		options.ImageExportDirectory = absolute;
+
+		// Act
+		var result = ErdImageExporter.ResolveImageDirectory(options, P("apphost"));
+
+		// Assert
+		await Assert.That(result).IsEqualTo(absolute);
+	}
+
+	[Test]
 	public async Task BuildInvocation_WithNoLocalCommand_RunsTheD2Container()
 	{
 		// Arrange
 		var options = CreateOptions();
 		var directory = P("apphost", ".aspirec4", "erd");
+		var images = P("apphost", ".aspirec4", "images");
 
 		// Act
-		var (command, arguments) = ErdImageExporter.BuildInvocation(options, directory, ErdImageFormat.Svg);
+		var (command, arguments) = ErdImageExporter.BuildInvocation(options, directory, images, ErdImageFormat.Svg);
 
 		// Assert
 		await Assert.That(command).IsEqualTo("docker");
@@ -109,31 +169,35 @@ public sealed class ErdImageExporterTests
 			.IsEquivalentTo([
 				"run",
 				"--rm",
-				"-v",
-				$"{directory}:/data",
+				"--mount",
+				$"type=bind,source={directory},target=/data,readonly",
+				"--mount",
+				$"type=bind,source={images},target=/out",
 				$"docker.io/d2lang/d2:{D2ServerResource.DefaultTag}",
 				"--layout",
 				"elk",
 				"/data/schema.gen.d2",
-				"/data/schema.gen.svg",
+				"/out/schema.svg",
 			]);
 	}
 
 	[Test]
-	public async Task BuildInvocation_InContainerMode_MountsTheOutputDirectoryWritable()
+	public async Task BuildInvocation_InContainerMode_MountsTheSourceReadOnlyAndImagesWritable()
 	{
-		// Unlike the sidecar's read-only mount: the whole point is to write the image back beside the
-		// source, which a ":ro" suffix here would silently prevent.
+		// The source tree has nothing to gain from being writable, and the image must not land back
+		// among the viewer assets — which is exactly what a single writable /data mount would allow.
 		// Arrange
 		var options = CreateOptions();
 		var directory = P("apphost", ".aspirec4", "erd");
+		var images = P("apphost", ".aspirec4", "images");
 
 		// Act
-		var (_, arguments) = ErdImageExporter.BuildInvocation(options, directory, ErdImageFormat.Png);
+		var (_, arguments) = ErdImageExporter.BuildInvocation(options, directory, images, ErdImageFormat.Png);
 
 		// Assert
-		await Assert.That(arguments).Contains($"{directory}:/data");
-		await Assert.That(arguments).DoesNotContain($"{directory}:/data:ro");
+		await Assert.That(arguments).Contains($"type=bind,source={directory},target=/data,readonly");
+		await Assert.That(arguments).Contains($"type=bind,source={images},target=/out");
+		await Assert.That(arguments).Contains("/out/schema.png");
 	}
 
 	[Test]
@@ -141,10 +205,14 @@ public sealed class ErdImageExporterTests
 	{
 		// Arrange
 		var options = CreateOptions(containerImageTag: "v0.8.1");
-		var directory = P("apphost", ".aspirec4", "erd");
 
 		// Act
-		var (_, arguments) = ErdImageExporter.BuildInvocation(options, directory, ErdImageFormat.Svg);
+		var (_, arguments) = ErdImageExporter.BuildInvocation(
+			options,
+			P("apphost", ".aspirec4", "erd"),
+			P("apphost", ".aspirec4", "images"),
+			ErdImageFormat.Svg
+		);
 
 		// Assert
 		await Assert.That(arguments).Contains("docker.io/d2lang/d2:v0.8.1");
@@ -161,6 +229,7 @@ public sealed class ErdImageExporterTests
 		var (command, _) = ErdImageExporter.BuildInvocation(
 			options,
 			P("apphost", ".aspirec4", "erd"),
+			P("apphost", ".aspirec4", "images"),
 			ErdImageFormat.Svg
 		);
 
@@ -169,14 +238,15 @@ public sealed class ErdImageExporterTests
 	}
 
 	[Test]
-	public async Task BuildInvocation_WithLocalCommand_RunsTheBinaryWithHostPaths()
+	public async Task BuildInvocation_WithLocalCommand_ReadsTheSourceAndWritesIntoTheImagesFolder()
 	{
 		// Arrange
 		var options = CreateOptions(d2Command: "d2");
 		var directory = P("apphost", ".aspirec4", "erd");
+		var images = P("apphost", ".aspirec4", "images");
 
 		// Act
-		var (command, arguments) = ErdImageExporter.BuildInvocation(options, directory, ErdImageFormat.Png);
+		var (command, arguments) = ErdImageExporter.BuildInvocation(options, directory, images, ErdImageFormat.Png);
 
 		// Assert
 		await Assert.That(command).IsEqualTo("d2");
@@ -186,7 +256,7 @@ public sealed class ErdImageExporterTests
 				"--layout",
 				"elk",
 				Path.Combine(directory, "schema.gen.d2"),
-				Path.Combine(directory, "schema.gen.png"),
+				Path.Combine(images, "schema.png"),
 			]);
 	}
 
@@ -204,6 +274,7 @@ public sealed class ErdImageExporterTests
 		var (_, arguments) = ErdImageExporter.BuildInvocation(
 			options,
 			P("apphost", ".aspirec4", "erd"),
+			P("apphost", ".aspirec4", "images"),
 			ErdImageFormat.Svg
 		);
 
@@ -214,15 +285,17 @@ public sealed class ErdImageExporterTests
 	[Test]
 	public async Task BuildInvocation_CustomFileName_NamesBothTheSourceAndTheImage()
 	{
+		// A name without the ".gen" marker is carried through to the image untouched.
 		// Arrange
 		var options = CreateOptions(d2Command: "d2", fileName: "my-schema");
 		var directory = P("apphost", ".aspirec4", "erd");
+		var images = P("apphost", ".aspirec4", "images");
 
 		// Act
-		var (_, arguments) = ErdImageExporter.BuildInvocation(options, directory, ErdImageFormat.Svg);
+		var (_, arguments) = ErdImageExporter.BuildInvocation(options, directory, images, ErdImageFormat.Svg);
 
 		// Assert
 		await Assert.That(arguments).Contains(Path.Combine(directory, "my-schema.d2"));
-		await Assert.That(arguments).Contains(Path.Combine(directory, "my-schema.svg"));
+		await Assert.That(arguments).Contains(Path.Combine(images, "my-schema.svg"));
 	}
 }
