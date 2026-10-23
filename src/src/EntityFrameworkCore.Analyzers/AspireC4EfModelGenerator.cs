@@ -83,8 +83,19 @@ public sealed class AspireC4EfModelGenerator : IIncrementalGenerator
 		);
 	}
 
+	/// <summary>Whether a type is a <c>DbContext</c> the diagram should show.</summary>
+	/// <remarks>
+	/// An abstract or open-generic context — the <c>DbContextBase&lt;T&gt;</c> a real context derives from
+	/// — is never instantiated and owns no tables of its own, so describing it adds an empty node to the
+	/// diagram beside the context that actually has the model, and reports it as having no entity types.
+	/// </remarks>
 	static bool DerivesFromDbContext(INamedTypeSymbol symbol)
 	{
+		if (symbol.IsAbstract || symbol.IsUnboundGenericType || symbol.TypeParameters.Length > 0)
+		{
+			return false;
+		}
+
 		for (var current = symbol.BaseType; current is not null; current = current.BaseType)
 		{
 			if (current.ToDisplayString() == EfTypes.DbContext)

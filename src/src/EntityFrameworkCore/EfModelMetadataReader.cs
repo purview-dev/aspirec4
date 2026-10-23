@@ -250,8 +250,19 @@ static class EfModelMetadataReader
 		}
 	}
 
+	/// <summary>Whether a type is a <c>DbContext</c> the diagram should show.</summary>
+	/// <remarks>
+	/// An abstract or open-generic context — the <c>DbContextBase&lt;T&gt;</c> a real context derives from
+	/// — is never instantiated and owns no tables of its own, so reading it adds an empty node to the
+	/// diagram beside the context that actually has the model.
+	/// </remarks>
 	static bool IsDbContext(Type type)
 	{
+		if (type.IsAbstract || type.IsGenericTypeDefinition || type.ContainsGenericParameters)
+		{
+			return false;
+		}
+
 		try
 		{
 			for (var current = type.BaseType; current is not null; current = current.BaseType)
@@ -516,7 +527,8 @@ static class EfModelMetadataReader
 			var column =
 				(explicitName is null ? null : table.Columns.FirstOrDefault(c => c.PropertyName == explicitName))
 				?? table.Columns.FirstOrDefault(c => c.PropertyName == navigation.Name + "Id")
-				?? table.Columns.FirstOrDefault(c => c.PropertyName == target.Name + "Id");
+				?? table.Columns.FirstOrDefault(c => c.PropertyName == target.Name + "Id")
+				?? SharedPrimaryKeyColumn(table, target);
 
 			if (column is null)
 			{
@@ -525,13 +537,15 @@ static class EfModelMetadataReader
 
 			column.IsForeignKey = true;
 
+			var isUnique = (column.IsPrimaryKey && isSingleColumnKey) || column.IsUnique;
+
 			table.ForeignKeys.Add(
 				new ForeignKeyShape
 				{
 					PrincipalEntity = target.FullName ?? target.Name,
 					NavigationName = navigation.Name,
-					PrincipalNavigationName = PrincipalNavigation(target, dependent),
-					IsUnique = (column.IsPrimaryKey && isSingleColumnKey) || column.IsUnique,
+					PrincipalNavigationName = PrincipalNavigation(target, dependent, isUnique),
+					IsUnique = isUnique,
 					IsRequired = !column.IsNullable,
 					Columns = [column.Name],
 				}
@@ -540,11 +554,88 @@ static class EfModelMetadataReader
 	}
 
 	/// <summary>
+	/// The dependent's own primary key, when that key doubles as the foreign key to the principal.
+	/// </summary>
+	/// <remarks>
+	/// A shared-primary-key one-to-one — <c>RepositoryState.Id</c> being the <c>Asset</c> it describes —
+	/// declares no <c>&lt;Navigation&gt;Id</c> property, so the usual column lookup finds nothing and the
+	/// relationship disappears entirely. What identifies it is the dependent having borrowed the
+	/// principal's identity: the principal's key type is its own identifier, and the dependent is keyed by
+	/// that same type. A primitive key is deliberately not enough, because every entity keyed by
+	/// <c>Guid</c> or <c>int</c> would then match every other one.
+	/// </remarks>
+	static ColumnShape? SharedPrimaryKeyColumn(TableShape table, Type principal)
+	{
+		var keyColumns = table.Columns.Where(c => c.IsPrimaryKey).ToList();
+
+		if (keyColumns.Count != 1 || PrimaryKeyType(principal) is not { } principalKeyType)
+		{
+			return null;
+		}
+
+		return
+			ValueObjectType(principalKeyType) is not null
+			&& IsOwnIdentifier(principal.Name, principalKeyType.Name)
+			&& keyColumns[0].ClrTypeName == principalKeyType.FullName
+			? keyColumns[0]
+			: null;
+	}
+
+	/// <summary>
+	/// Whether a key type is the entity's own identifier, judged by name: <c>AssetId</c> belongs to
+	/// <c>Asset</c> — or <c>AssetEntity</c> — and so marks that entity as the owner of the identity
+	/// rather than a borrower of someone else's.
+	/// </summary>
+	static bool IsOwnIdentifier(string entityName, string keyTypeName)
+	{
+		if (!keyTypeName.EndsWith("Id", StringComparison.Ordinal))
+		{
+			return false;
+		}
+
+		var stem = keyTypeName[..^"Id".Length];
+		var owner = entityName.EndsWith("Entity", StringComparison.Ordinal)
+			? entityName[..^"Entity".Length]
+			: entityName;
+
+		return stem.Length > 0 && string.Equals(stem, owner, StringComparison.Ordinal);
+	}
+
+	/// <summary>The type of an entity's single primary key property, following the same conventions as
+	/// <see cref="ApplyPrimaryKeys"/>; <see langword="null"/> for a composite or unrecognised key.</summary>
+	static Type? PrimaryKeyType(Type entity)
+	{
+		List<PropertyInfo> properties = [.. entity.GetProperties(BindingFlags.Public | BindingFlags.Instance)];
+		List<PropertyInfo> keyed = [.. properties.Where(p => HasAttribute(p, "Key"))];
+
+		if (keyed.Count > 0)
+		{
+			return keyed.Count == 1 ? keyed[0].PropertyType : null;
+		}
+
+		return properties
+			.FirstOrDefault(p =>
+				string.Equals(p.Name, "Id", StringComparison.OrdinalIgnoreCase)
+				|| string.Equals(p.Name, entity.Name + "Id", StringComparison.OrdinalIgnoreCase)
+			)
+			?.PropertyType;
+	}
+
+	/// <summary>
 	/// The principal-side navigation: a collection on the principal whose element is the dependent.
 	/// </summary>
-	static string? PrincipalNavigation(Type principal, Type dependent)
+	/// <param name="principal">The entity the foreign key points at.</param>
+	/// <param name="dependent">The entity the foreign key lives on.</param>
+	/// <param name="isUnique">
+	/// Whether the foreign key is unique. A one-to-one has no collection to find, so its inverse is a
+	/// reference to the dependent — which is only safe to read as the inverse when the key says the
+	/// relationship is one-to-one, otherwise any two entities that point at each other would pair up.
+	/// </param>
+	static string? PrincipalNavigation(Type principal, Type dependent, bool isUnique)
 	{
-		foreach (var property in principal.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+		List<PropertyInfo> properties = [.. principal.GetProperties(BindingFlags.Public | BindingFlags.Instance)];
+
+		foreach (var property in properties)
 		{
 			if (IsCollection(property.PropertyType) && property.PropertyType.GetGenericArguments()[0] == dependent)
 			{
@@ -552,7 +643,7 @@ static class EfModelMetadataReader
 			}
 		}
 
-		return null;
+		return isUnique ? properties.FirstOrDefault(p => p.PropertyType == dependent)?.Name : null;
 	}
 
 	/// <summary>

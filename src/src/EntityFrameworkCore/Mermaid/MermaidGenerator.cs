@@ -170,8 +170,9 @@ public static class MermaidGenerator
 					continue;
 				}
 
-				// The label carries the column names, because Mermaid cannot attach an edge to a row.
-				var label = EfRelationshipName.Label(foreignKey);
+				// The label carries the column names, because Mermaid cannot attach an edge to a row. The
+				// relationship is written principal-first, so the label is ordered to match.
+				var label = EfRelationshipName.Label(foreignKey, EfRelationshipDirection.PrincipalToDependent);
 
 				sb.Append('\t')
 					.Append(Identifier(foreignKey.PrincipalTable))

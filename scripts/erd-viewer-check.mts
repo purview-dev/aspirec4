@@ -238,9 +238,13 @@ try {
 					: `${tightest.id} has ${tightest.pad}px`,
 			);
 
+			// The gap between stacked tables is where the relationship labels sit, so it has to clear a
+			// label rather than merely separate two borders. Tables no relationship connects are laid
+			// out as separate components and packed, a seam that needs its own spacing: at ELK's default
+			// of 20 those groups all but touch.
 			check(
 				"stacked tables stay visually separate",
-				spacing.closest.gap >= 40,
+				spacing.closest.gap >= 100,
 				`${spacing.closest.pair} — ${spacing.closest.gap}px`,
 			);
 
@@ -284,6 +288,10 @@ try {
 
 			// A table's offset within its context box, which is what a remembered arrangement has to
 			// preserve — and what a reload must reproduce.
+			//
+			// Divided back out by the viewport scale, so the result is in layout pixels: the view is
+			// zoomed to fit, so a screen-pixel offset shrinks as the schema grows and any threshold
+			// against it would hold only for diagrams small enough to render at 1:1.
 			const offsetInContext = (target: any, id: string) =>
 				target.evaluate((wanted: string) => {
 					const node = document.querySelector(`.react-flow__node-entity[data-id="${wanted}"]`);
@@ -303,13 +311,48 @@ try {
 
 					if (!context) return null;
 
+					const viewport = document.querySelector<HTMLElement>(".react-flow__viewport")!;
+					const scale = viewport.getBoundingClientRect().width / viewport.offsetWidth;
 					const box = (context as HTMLElement).getBoundingClientRect();
 
-					return { x: Math.round(n.left - box.left), y: Math.round(n.top - box.top) };
+					return {
+						x: Math.round((n.left - box.left) / scale),
+						y: Math.round((n.top - box.top) / scale),
+					};
 				}, id);
 
-			const card = page.locator(".react-flow__node-entity").first();
-			const draggedId = (await card.getAttribute("data-id"))!;
+			// Deliberately not the topmost table in its container: fitContexts pins a container's top to
+			// whichever table is highest, so dragging that one carries the whole container with it and
+			// its offset never changes — which would leave the reload check below passing whether or not
+			// anything was actually remembered.
+			const draggedId = (await page.evaluate(() => {
+				const cards = [...document.querySelectorAll<HTMLElement>(".react-flow__node-entity")].map((n) => ({
+					id: n.dataset.id ?? "?",
+					box: n.getBoundingClientRect(),
+				}));
+
+				for (const container of document.querySelectorAll<HTMLElement>(".react-flow__node-context")) {
+					const rect = container.getBoundingClientRect();
+					const own = cards.filter(
+						(n) =>
+							n.box.left >= rect.left &&
+							n.box.right <= rect.right &&
+							n.box.top >= rect.top &&
+							n.box.bottom <= rect.bottom,
+					);
+
+					if (own.length < 2) continue;
+
+					return own.reduce((lowest, n) => (n.box.top > lowest.box.top ? n : lowest)).id;
+				}
+
+				return null;
+			}))!;
+
+			check("a container holds more than one table to drag", draggedId !== null, draggedId ?? "none found");
+
+			const card = page.locator(`.react-flow__node-entity[data-id="${draggedId}"]`);
+			const origin = await offsetInContext(page, draggedId);
 			const start = (await card.boundingBox())!;
 
 			await page.mouse.move(start.x + 40, start.y + 12);
@@ -320,7 +363,11 @@ try {
 
 			const before = await offsetInContext(page, draggedId);
 
-			check("a table can be dragged", (before?.y ?? 0) > 40, `offset ${before?.y ?? "?"}px in its context`);
+			check(
+				"a table can be dragged",
+				origin !== null && before !== null && before.y - origin.y > 40,
+				`offset ${origin?.y ?? "?"}px → ${before?.y ?? "?"}px in its context`,
+			);
 
 			check(
 				"the context box follows the table it holds",
@@ -370,6 +417,168 @@ try {
 			await page.waitForTimeout(500);
 
 			check("columns mode restores the columns", (await page.locator(".entity .col").count()) > 0);
+
+			// ── Complex value objects ─────────────────────────────────────────────────────────
+			//
+			// EF flattens a complex value object into one column per member, named {Property}_{Member},
+			// so a card otherwise shows a run of prefixed rows that says nothing about what they are.
+			// They are folded under the property that owns them, which only means anything if the fold
+			// opens, closes, survives a reload, and does not disturb the layout around it.
+
+			const groups = await page.locator(".entity .col.group").count();
+
+			if (groups === 0) {
+				check("the model flattens a complex value object", false, "no group rows — nothing to check");
+			} else {
+				const group = page.locator(".entity .col.group").first();
+				const groupCard = page.locator(".react-flow__node-entity", { has: page.locator(".col.group") }).first();
+				const groupCardId = (await groupCard.getAttribute("data-id"))!;
+
+				check("complex value objects are folded under their property", groups > 0, `${groups} group rows`);
+
+				check(
+					"a folded group starts closed",
+					(await page.locator(".entity .col.member").count()) === 0 &&
+						(await page.locator(".entity .col.group.open").count()) === 0,
+				);
+
+				// The count is what a closed group says about what it is holding: without it the row
+				// claims a value object and gives no reason to open it.
+				const closedLabel = await group.locator(".type").innerText();
+
+				check("a closed group reports how many members it holds", /\(\d+\)$/.test(closedLabel), closedLabel);
+
+				const widthBefore = (await groupCard.boundingBox())!.width;
+				const heightBefore = (await groupCard.boundingBox())!.height;
+
+				await group.locator(".chevron").click();
+				await page.waitForTimeout(350);
+
+				const members = await page.locator(".entity .col.member").count();
+
+				check("the chevron opens one group", members > 0, `${members} member rows`);
+
+				const openLabel = await group.locator(".type").innerText();
+
+				check(
+					"an open group drops the count",
+					!/\(\d+\)$/.test(openLabel) && openLabel.length > 0,
+					openLabel,
+				);
+
+				// A member of an open group is shown as its database type alone: the group row above it
+				// already names the value object, and repeating it on every member crowds out the one
+				// thing those rows exist to say.
+				const repeated = await page
+					.locator(".entity .col.member .type")
+					.evaluateAll((els, name) => els.map((e) => e.textContent ?? "").filter((t) => t.includes(name)), openLabel);
+
+				check(
+					"a member does not repeat its group's value object",
+					repeated.length === 0,
+					repeated.slice(0, 2).join(", ") || `members read as plain types beside ${openLabel}`,
+				);
+
+				// Members are indented so the card still reads as a list of the table's own columns.
+				const indented = await page.evaluate(() => {
+					const member = document.querySelector<HTMLElement>(".entity .col.member .col-name");
+					const column = document.querySelector<HTMLElement>(".entity .col:not(.member):not(.group) .col-name");
+					if (!member || !column) return null;
+
+					return Math.round(member.getBoundingClientRect().left - column.getBoundingClientRect().left);
+				});
+
+				check("members are indented beneath their property", (indented ?? 0) > 0, `${indented ?? "?"}px`);
+
+				const opened = (await groupCard.boundingBox())!;
+
+				// The card is measured as though every group were open, so opening one only ever changes
+				// its height. A width that moved would mean the arrangement around it has to shift too.
+				check(
+					"opening a group does not re-widen the card",
+					Math.abs(opened.width - widthBefore) < 2,
+					`${Math.round(widthBefore)}px → ${Math.round(opened.width)}px`,
+				);
+
+				check(
+					"opening a group makes room for the members",
+					opened.height > heightBefore + 2,
+					`${Math.round(heightBefore)}px → ${Math.round(opened.height)}px`,
+				);
+
+				// The open set rides with the saved arrangement, so a reload reopens what the reader left
+				// open rather than folding the card back up under them.
+				await page.reload({ waitUntil: "networkidle" });
+				await page.waitForSelector(".entity", { timeout: 20000 });
+
+				check(
+					"an opened group survives a reload",
+					(await page.locator(".entity .col.member").count()) > 0,
+					`${await page.locator(".entity .col.member").count()} member rows`,
+				);
+
+				// ── Expand all / Collapse all ─────────────────────────────────────────────────
+
+				const COMPLEX = '[aria-label="Complex value objects"]';
+
+				await chooseIn(page, COMPLEX, "Collapse all");
+				await page.waitForTimeout(350);
+
+				check(
+					"Collapse all folds every group",
+					(await page.locator(".entity .col.member").count()) === 0,
+					"no member rows",
+				);
+
+				await chooseIn(page, COMPLEX, "Expand all");
+				await page.waitForTimeout(350);
+
+				const allOpen = await page.locator(".entity .col.group.open").count();
+
+				check("Expand all opens every group", allOpen === groups, `${allOpen} of ${groups} open`);
+
+				await chooseIn(page, COMPLEX, "Collapse all");
+				await page.waitForTimeout(350);
+
+				// ── Search reaches a folded member ────────────────────────────────────────────
+				//
+				// A hit inside a closed group would otherwise be counted and then not shown. The groups
+				// opened this way are held apart from the reader's own, so clearing the search folds
+				// them back rather than leaving the card as the search left it.
+
+				const memberColumn = await page.evaluate((id) => {
+					const card = document.querySelector(`.react-flow__node-entity[data-id="${id}"]`);
+					const name = card?.querySelector(".col.group .col-name")?.textContent ?? "";
+
+					return name ? `${name}_` : "";
+				}, groupCardId);
+
+				if (memberColumn) {
+					// Searching the flattened column's own prefix can only be satisfied by a folded member.
+					await page.fill(".toolbar input", memberColumn);
+					await page.waitForTimeout(400);
+
+					check(
+						"a search match inside a folded group opens it",
+						(await page.locator(".entity .col.member").count()) > 0,
+						`searching "${memberColumn}"`,
+					);
+
+					check(
+						"the revealed member is marked as the hit",
+						(await page.locator(".entity .col.member.hit").count()) > 0,
+					);
+
+					await page.locator(".toolbar input").press("Escape");
+					await page.waitForTimeout(400);
+
+					check(
+						"clearing the search folds it back",
+						(await page.locator(".entity .col.member").count()) === 0,
+						"back to closed",
+					);
+				}
+			}
 
 			// ── Search ────────────────────────────────────────────────────────────────────────
 			//

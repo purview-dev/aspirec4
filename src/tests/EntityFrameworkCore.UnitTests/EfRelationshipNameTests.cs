@@ -24,45 +24,85 @@ public sealed class EfRelationshipNameTests
 			ConstraintName = constraint,
 		};
 
+	static string Label(
+		EfForeignKey foreignKey,
+		EfRelationshipDirection direction = EfRelationshipDirection.DependentToPrincipal
+	) => EfRelationshipName.Label(foreignKey, direction);
+
 	// Tests
 
 	[Test]
 	public async Task Label_BothNavigations_NamesBothDirections()
 	{
 		// Act
-		var label = EfRelationshipName.Label(CreateForeignKey(dependent: "Customer", principal: "Orders"));
+		var label = Label(CreateForeignKey(dependent: "Customer", principal: "Orders"));
 
 		// Assert
 		await Assert.That(label).IsEqualTo("Customer ⇄ Orders");
 	}
 
 	[Test]
-	public async Task Label_DependentNavigationOnly_MarksTheOtherEnd()
+	public async Task Label_BothNavigationsFromThePrincipal_NamesThatEndFirst()
 	{
-		// The end the model does not declare is marked rather than hidden: an unnamed direction is
-		// information.
+		// The label names a direction of travel, so the end nearest the start of the edge comes first or
+		// the arrow in the label disagrees with the arrow on the edge.
 		// Act
-		var label = EfRelationshipName.Label(CreateForeignKey(dependent: "Customer"));
+		var label = Label(
+			CreateForeignKey(dependent: "Customer", principal: "Orders"),
+			EfRelationshipDirection.PrincipalToDependent
+		);
 
 		// Assert
-		await Assert.That(label).IsEqualTo("Customer → ?");
+		await Assert.That(label).IsEqualTo("Orders ⇄ Customer");
 	}
 
 	[Test]
-	public async Task Label_PrincipalNavigationOnly_MarksTheOtherEnd()
+	public async Task Label_DependentNavigationOnly_PointsAlongTheEdge()
 	{
 		// Act
-		var label = EfRelationshipName.Label(CreateForeignKey(principal: "Orders"));
+		var label = Label(CreateForeignKey(dependent: "Customer"));
 
 		// Assert
-		await Assert.That(label).IsEqualTo("? → Orders");
+		await Assert.That(label).IsEqualTo("Customer →");
+	}
+
+	[Test]
+	public async Task Label_DependentNavigationOnlyFromThePrincipal_PointsBackAlongTheEdge()
+	{
+		// The only declared navigation is travelled against the edge, and the undeclared end is left
+		// unnamed rather than marked: a placeholder there reads as a relationship nobody could resolve.
+		// Act
+		var label = Label(CreateForeignKey(dependent: "Customer"), EfRelationshipDirection.PrincipalToDependent);
+
+		// Assert
+		await Assert.That(label).IsEqualTo("← Customer");
+	}
+
+	[Test]
+	public async Task Label_PrincipalNavigationOnly_PointsBackAlongTheEdge()
+	{
+		// Act
+		var label = Label(CreateForeignKey(principal: "Orders"));
+
+		// Assert
+		await Assert.That(label).IsEqualTo("← Orders");
+	}
+
+	[Test]
+	public async Task Label_PrincipalNavigationOnlyFromThePrincipal_PointsAlongTheEdge()
+	{
+		// Act
+		var label = Label(CreateForeignKey(principal: "Orders"), EfRelationshipDirection.PrincipalToDependent);
+
+		// Assert
+		await Assert.That(label).IsEqualTo("Orders →");
 	}
 
 	[Test]
 	public async Task Label_NoNavigation_UsesTheConstraintName()
 	{
 		// Act
-		var label = EfRelationshipName.Label(CreateForeignKey(constraint: "FK_Orders_Customers"));
+		var label = Label(CreateForeignKey(constraint: "FK_Orders_Customers"));
 
 		// Assert
 		await Assert.That(label).IsEqualTo("FK_Orders_Customers");
@@ -72,7 +112,7 @@ public sealed class EfRelationshipNameTests
 	public async Task Label_NothingKnown_FallsBackToTheColumns()
 	{
 		// Act
-		var label = EfRelationshipName.Label(CreateForeignKey());
+		var label = Label(CreateForeignKey());
 
 		// Assert
 		await Assert.That(label).IsEqualTo("CustomerId");

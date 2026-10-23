@@ -152,7 +152,9 @@ public static class D2ModelBuilder
 							SourceColumn = foreignKey.Columns[i],
 							TargetTable = targetPath,
 							TargetColumn = foreignKey.PrincipalColumns[i],
-							Label = EfRelationshipName.Label(foreignKey),
+							// The edge is attached to the column holding the foreign key, so it runs from
+							// the dependent and its label reads in that order.
+							Label = EfRelationshipName.Label(foreignKey, EfRelationshipDirection.DependentToPrincipal),
 						};
 
 						// Composite keys and multiple navigations can describe the same column pair.

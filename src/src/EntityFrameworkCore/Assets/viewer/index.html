@@ -345,6 +345,41 @@
 				font-size: 11px;
 			}
 
+			/*
+			 * A complex value object is folded under the property that owns it: the group row discloses
+			 * its members, which are indented and set in the muted colour so the card still reads as a
+			 * list of the table's own columns.
+			 */
+			.entity .col.group .name {
+				gap: 4px;
+			}
+
+			/* Sized for the glyph, not for the text beside it: a 9px triangle reads as a speck. */
+			.entity .col .chevron {
+				flex: none;
+				width: 14px;
+				padding: 0;
+				border: 0;
+				background: none;
+				color: var(--muted);
+				font-size: 11px;
+				line-height: 1;
+				text-align: left;
+				cursor: pointer;
+			}
+
+			.entity .col .chevron:hover {
+				color: var(--fg);
+			}
+
+			.entity .col.member {
+				padding-left: 30px;
+			}
+
+			.entity .col.member .col-name {
+				color: var(--muted);
+			}
+
 			/* Colour separates what a column does: key, reference, uniqueness. */
 			.badge {
 				flex: none;

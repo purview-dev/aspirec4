@@ -84,6 +84,45 @@ public sealed class EfModelMetadataReaderTests
 		await Assert.That(products.Columns.Single(c => c.Name == "unit_price").StoreType).IsEqualTo("decimal(18,4)");
 	}
 
+	// Base contexts and base entities
+
+	[Test]
+	public async Task ReadFromAssembly_AbstractGenericBaseContext_IsNotReadAsAContext()
+	{
+		// A base context is never instantiated and owns no model of its own, so describing it would add
+		// an empty node to the diagram beside the context that actually has one.
+		// Act
+		var contexts = Read(typeof(SalesDbContext));
+
+		// Assert
+		await Assert.That(contexts.Select(c => c.Name)).DoesNotContain("ValueObjectDbContextBase`1");
+		await Assert.That(contexts.Any(c => c.Tables.Count == 0)).IsFalse();
+	}
+
+	[Test]
+	public async Task ReadFromAssembly_DbSetDeclaredOnTheBaseContext_StillProducesItsTable()
+	{
+		// Act
+		var context = Context(Read(typeof(SalesDbContext)), "ValueObjectDbContext");
+
+		// Assert
+		await Assert.That(context.Tables.Select(t => t.Name)).Contains("ValueAudits");
+	}
+
+	[Test]
+	public async Task ReadFromAssembly_PropertiesDeclaredOnABaseEntity_BecomeColumns()
+	{
+		// The key and the audit columns are usually declared once on a base entity; without them the
+		// table has no primary key and nothing to relate.
+		// Act
+		var audits = Table(Context(Read(typeof(SalesDbContext)), "ValueObjectDbContext"), "ValueAudits");
+
+		// Assert
+		await Assert.That(audits.Columns.Select(c => c.Name)).Contains("RecordedAt");
+		await Assert.That(audits.Columns.Single(c => c.Name == "Id").IsPrimaryKey).IsTrue();
+		await Assert.That(audits.Columns.Single(c => c.Name == "Id").DomainTypeName).IsEqualTo("ValueAuditId");
+	}
+
 	// Scalar value objects
 
 	[Test]
@@ -124,6 +163,76 @@ public sealed class EfModelMetadataReaderTests
 		// Assert
 		await Assert.That(foreignKey.NavigationName).IsEqualTo("Customer");
 		await Assert.That(foreignKey.PrincipalNavigationName).IsEqualTo("Orders");
+	}
+
+	// Shared-primary-key one-to-one
+
+	[Test]
+	public async Task ReadFromAssembly_RecoversSharedPrimaryKeyRelationship()
+	{
+		// The dependent's key is the foreign key, so there is no <Navigation>Id column to match: without
+		// recognising the borrowed identity the relationship disappears from the diagram entirely.
+		// Act
+		var profiles = Table(Context(Read(typeof(SalesDbContext)), "ValueObjectDbContext"), "ValueCustomerProfiles");
+
+		// Assert
+		var foreignKey = profiles.ForeignKeys.Single();
+		await Assert.That(foreignKey.PrincipalTable).IsEqualTo("ValueCustomers");
+		await Assert.That(foreignKey.Columns.Single()).IsEqualTo("Id");
+		await Assert.That(foreignKey.IsUnique).IsTrue();
+	}
+
+	[Test]
+	public async Task ReadFromAssembly_NamesASharedPrimaryKeyRelationshipFromBothReferences()
+	{
+		// A one-to-one has no collection on the principal, so the inverse is a reference navigation.
+		// Act
+		var foreignKey = Table(Context(Read(typeof(SalesDbContext)), "ValueObjectDbContext"), "ValueCustomerProfiles")
+			.ForeignKeys.Single();
+
+		// Assert
+		await Assert.That(foreignKey.NavigationName).IsEqualTo("Customer");
+		await Assert.That(foreignKey.PrincipalNavigationName).IsEqualTo("Profile");
+	}
+
+	[Test]
+	public async Task ReadFromAssembly_RecoversASharedPrimaryKeyAcrossEntitySuffixedTypes()
+	{
+		// A persistence model names its types with an Entity suffix while its identifiers do not, so the
+		// suffix has to be discounted before the key can be recognised as the principal's own.
+		// Act
+		var states = Table(Context(Read(typeof(SalesDbContext)), "ValueObjectDbContext"), "ValueSiteStates");
+
+		// Assert
+		var foreignKey = states.ForeignKeys.Single();
+		await Assert.That(foreignKey.PrincipalTable).IsEqualTo("ValueSites");
+		await Assert.That(foreignKey.NavigationName).IsEqualTo("Site");
+		await Assert.That(foreignKey.PrincipalNavigationName).IsEqualTo("State");
+		await Assert.That(foreignKey.IsUnique).IsTrue();
+	}
+
+	[Test]
+	public async Task ReadFromAssembly_DoesNotInvertASharedPrimaryKeyAcrossEntitySuffixedTypes()
+	{
+		// Act
+		var sites = Table(Context(Read(typeof(SalesDbContext)), "ValueObjectDbContext"), "ValueSites");
+
+		// Assert
+		await Assert.That(sites.ForeignKeys).IsEmpty();
+		await Assert.That(sites.Columns.Single(c => c.Name == "Id").IsForeignKey).IsFalse();
+	}
+
+	[Test]
+	public async Task ReadFromAssembly_DoesNotInvertASharedPrimaryKeyRelationship()
+	{
+		// The principal owns the identity the dependent borrowed, so its own key is never a foreign key —
+		// the key types alone are symmetric and would otherwise pair the relationship up twice.
+		// Act
+		var customers = Table(Context(Read(typeof(SalesDbContext)), "ValueObjectDbContext"), "ValueCustomers");
+
+		// Assert
+		await Assert.That(customers.ForeignKeys).IsEmpty();
+		await Assert.That(customers.Columns.Single(c => c.Name == "Id").IsForeignKey).IsFalse();
 	}
 
 	[Test]
