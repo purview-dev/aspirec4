@@ -1,3 +1,5 @@
+using Aspire.Hosting.AspireC4.LikeC4.Runtime;
+
 namespace Aspire.Hosting;
 
 public sealed partial class AspireC4DiagramOptionsExtensionsTests
@@ -408,6 +410,89 @@ public sealed partial class AspireC4DiagramOptionsExtensionsTests
 
 		// Assert
 		await Assert.That(sut.IncludeDefaultStateStyles).IsFalse();
+	}
+
+	[Test]
+	public async Task ExportImages_ByDefault_IsOnForPng()
+	{
+		// Act
+		var sut = CreateSut();
+
+		// Assert
+		await Assert.That(sut.ExportImages).IsTrue();
+		await Assert.That(sut.ImageFormats).IsEquivalentTo([LikeC4ImageFormat.Png]);
+		await Assert.That(sut.ImageExportDirectory).IsNull();
+	}
+
+	[Test]
+	public async Task WithImageExport_ReplacesTheDefaultFormats_AndReturnsThis()
+	{
+		// Arrange
+		var sut = CreateSut();
+
+		// Act
+		var result = sut.WithImageExport(LikeC4ImageFormat.Jpg);
+
+		// Assert
+		await Assert.That(sut.ImageFormats).IsEquivalentTo([LikeC4ImageFormat.Jpg]);
+		await Assert.That(sut.ExportImages).IsTrue();
+		await Assert.That(result).IsSameReferenceAs(sut);
+	}
+
+	[Test]
+	public async Task WithImageExport_NoFormats_TurnsExportOff()
+	{
+		// Naming no format is a request for no images, not a request for the default.
+		// Arrange
+		var sut = CreateSut();
+
+		// Act
+		sut.WithImageExport();
+
+		// Assert
+		await Assert.That(sut.ExportImages).IsFalse();
+		await Assert.That(sut.ImageFormats).IsEmpty();
+	}
+
+	[Test]
+	public async Task WithoutImageExport_TurnsExportOff_AndReturnsThis()
+	{
+		// Arrange
+		var sut = CreateSut();
+
+		// Act
+		var result = sut.WithoutImageExport();
+
+		// Assert
+		await Assert.That(sut.ExportImages).IsFalse();
+		await Assert.That(result).IsSameReferenceAs(sut);
+	}
+
+	[Test]
+	public async Task WithImageExportDirectory_SetsProperty_AndReturnsThis()
+	{
+		// Arrange
+		var sut = CreateSut();
+
+		// Act
+		var result = sut.WithImageExportDirectory("../diagrams");
+
+		// Assert
+		await Assert.That(sut.ImageExportDirectory).IsEqualTo("../diagrams");
+		await Assert.That(result).IsSameReferenceAs(sut);
+	}
+
+	[Test]
+	[Arguments(null)]
+	[Arguments("")]
+	[Arguments("   ")]
+	public async Task WithImageExportDirectory_BlankPath_Throws(string? directory)
+	{
+		// Arrange
+		var sut = CreateSut();
+
+		// Act & Assert
+		await Assert.That(() => sut.WithImageExportDirectory(directory!)).Throws<ArgumentException>();
 	}
 
 	static AspireC4DiagramOptions CreateSut() => new();

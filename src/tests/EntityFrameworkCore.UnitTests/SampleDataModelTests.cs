@@ -364,7 +364,9 @@ public sealed class SampleDataModelTests
 		// Assert
 		await Assert.That(foreignKey.NavigationName).IsEqualTo("Customer");
 		await Assert.That(foreignKey.PrincipalNavigationName).IsEqualTo("Orders");
-		await Assert.That(EfRelationshipName.Label(foreignKey)).IsEqualTo("Customer ⇄ Orders");
+		await Assert
+			.That(EfRelationshipName.Label(foreignKey, EfRelationshipDirection.DependentToPrincipal))
+			.IsEqualTo("Customer ⇄ Orders");
 	}
 
 	[Test]

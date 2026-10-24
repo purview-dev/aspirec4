@@ -10,5 +10,7 @@ sealed partial class AspireC4LifecycleHook
 			_debounceCts?.Dispose();
 			_debounceCts = null;
 		}
+
+		_exportGate.Dispose();
 	}
 }

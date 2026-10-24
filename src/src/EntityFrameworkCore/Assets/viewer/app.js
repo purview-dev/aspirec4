@@ -65,17 +65,19 @@ function dependentMarker(fk) {
  * The relationship's name, in both directions.
  *
  * A foreign key has a navigation on the dependent and usually an inverse collection on the principal.
- * Where the model declares only one, the other is marked "?" rather than hidden — an unnamed
- * direction is information. Only when neither is declared does it fall back to the constraint name,
- * and then to the columns.
+ * Edges here are drawn principal -> dependent, so the principal's navigation is named first and the
+ * arrow in the label agrees with the arrow on the edge. Where the model declares only one end, only
+ * that one is named: a single arrow says which way it can be travelled, and nothing claims the other
+ * direction exists. Only when neither is declared does it fall back to the constraint name, and then
+ * to the columns.
  */
 function relationshipLabel(fk) {
-	const dependent = fk.navigationName;
-	const principal = fk.principalNavigationName;
+	const forward = fk.principalNavigationName;
+	const reverse = fk.navigationName;
 
-	if (dependent && principal) return `${dependent} ⇄ ${principal}`;
-	if (dependent) return `${dependent} → ?`;
-	if (principal) return `? → ${principal}`;
+	if (forward && reverse) return `${forward} ⇄ ${reverse}`;
+	if (forward) return `${forward} →`;
+	if (reverse) return `← ${reverse}`;
 	if (fk.constraintName) return fk.constraintName;
 
 	return (fk.columns ?? []).join(", ");
@@ -166,6 +168,93 @@ const columnBadges = (col) => {
 
 const isEnumColumn = (col) => col.domainTypeKind === "Enum";
 
+const COMPLEX_KIND = "ComplexValueObject";
+
+/** The property a flattened complex member belongs to: the segment before the first underscore. */
+const complexOwner = (col) => col.name.split("_")[0];
+
+/**
+ * Folds a table's flattened complex value-object columns under the property that owns them.
+ *
+ * EF maps a complex value object into its owner's table as one column per member, named
+ * `{Property}_{Member}`, so a card otherwise shows a run of rows that belong together while saying
+ * nothing about what they are. The owning prefixes are collected first, because a member whose own
+ * type is an enum or a nested value object carries that type rather than the enclosing one and would
+ * not be recognised on its own.
+ *
+ * @returns rows in model order: a column row per ordinary column, a group row per complex property.
+ */
+function rowPlan(table) {
+	const columns = table.columns ?? [];
+	const owners = new Set(columns.filter((c) => c.domainTypeKind === COMPLEX_KIND).map(complexOwner));
+	const rows = [];
+	const groups = new Map();
+
+	for (const col of columns) {
+		const owner = complexOwner(col);
+
+		if (!col.name.includes("_") || !owners.has(owner)) {
+			rows.push({ kind: "column", key: col.name, col });
+
+			continue;
+		}
+
+		let group = groups.get(owner);
+
+		if (!group) {
+			group = { kind: "group", key: owner, name: owner, typeName: null, columns: [] };
+
+			groups.set(owner, group);
+			rows.push(group);
+		}
+
+		// The outermost member names the group: a nested value object's own members carry the inner type,
+		// so the shallowest member is the one that reports the property's own type.
+		const shallow = !col.name.slice(owner.length + 1).includes("_");
+
+		if (group.typeName === null && col.domainTypeKind === COMPLEX_KIND && shallow) {
+			group.typeName = col.domainTypeName;
+		}
+
+		group.columns.push(col);
+	}
+
+	for (const group of groups.values()) {
+		group.typeName ??= group.columns[0]?.domainTypeName ?? "";
+	}
+
+	return rows;
+}
+
+/** Whether any table flattens a complex value object, and so has anything to expand. */
+const hasComplexColumns = (tables) =>
+	tables.some((t) => (t.columns ?? []).some((c) => c.domainTypeKind === COMPLEX_KIND));
+
+/** The member name shown inside its group, with the owning property's prefix removed. */
+const memberName = (group, col) => col.name.slice(group.name.length + 1);
+
+/** A group row's type cell: the value object, and when it is closed what it is holding. */
+const groupType = (group, open) => (open ? group.typeName : `${group.typeName} (${group.columns.length})`);
+
+/** The group keys a card is showing: the reader's own, plus any opened to reveal a search match. */
+const expandedOf = (data) => new Set([...(data.expanded ?? []), ...(data.forced ?? [])]);
+
+/**
+ * A row's type cell and the tooltip beside it.
+ *
+ * A member of an open group whose domain type is the group's own value object is shown as its database
+ * type alone: the group row above it already names the value object, and repeating it on every member
+ * crowds out the one thing those rows are there to say.
+ *
+ * @param group the group the row belongs to, or null for a column of the table itself.
+ */
+function rowType(col, group) {
+	const own = group && col.domainTypeKind === COMPLEX_KIND && col.domainTypeName === group.typeName;
+	const shown = own ? { ...col, domainTypeName: null, domainTypeKind: null } : col;
+
+	return { text: columnType(shown), annotation: columnAnnotation(shown) };
+}
+
 const bothShown = () =>
 	DOMAIN_TYPE_DISPLAY === "DomainTypeFirst" || DOMAIN_TYPE_DISPLAY === "DatabaseFirst";
 
@@ -202,7 +291,132 @@ const columnType = (col) => {
 	return t;
 };
 
-function EntityNode({ data, selected }) {
+/** One ordinary column row, or one member of an opened complex value object. */
+function ColumnRow({ col, name, type, needle, className }) {
+	return h(
+		"div",
+		{
+			// A table can match on a column the reader cannot see the reason for, so the row that caused
+			// the hit is marked rather than only the card around it.
+			className: `col${className}${needle && col.name.toLowerCase().includes(needle) ? " hit" : ""}`,
+		},
+		h(
+			"span",
+			{ className: "name" },
+			h("span", { className: "col-name" }, name),
+			...columnBadges(col).map((k) => h("span", { className: `badge ${k}`, key: k }, k.toUpperCase())),
+		),
+		h(
+			"span",
+			{
+				className: "type",
+				// The database type stays reachable even when the domain type is the headline.
+				title: !bothShown() && type.annotation ? type.annotation : undefined,
+			},
+			type.text,
+		),
+	);
+}
+
+/**
+ * The rows a card draws, with each complex value object folded under a row that opens it.
+ *
+ * The group's own row is a button rather than a decoration: a reader following a relationship into a
+ * table wants the flattened members on demand, not a run of prefixed columns they have to reassemble.
+ */
+function cardRowElements(data, onToggle) {
+	const expanded = expandedOf(data);
+	const elements = [];
+
+	for (const row of rowPlan(data.table)) {
+		if (row.kind === "column") {
+			elements.push(
+				h(ColumnRow, {
+					key: row.key,
+					col: row.col,
+					name: row.col.name,
+					type: rowType(row.col, null),
+					needle: data.needle,
+					className: "",
+				}),
+			);
+
+			continue;
+		}
+
+		const open = expanded.has(row.key);
+
+		elements.push(
+			h(
+				"div",
+				{ key: row.key, className: `col group${open ? " open" : ""}` },
+				h(
+					"span",
+					{ className: "name" },
+					h(
+						"button",
+						{
+							type: "button",
+							className: "chevron",
+							"aria-expanded": open,
+							title: `${open ? "Collapse" : "Expand"} ${row.name}`,
+							onClick: (event) => {
+								// The card is draggable and selectable; neither should happen on a disclosure.
+								event.stopPropagation();
+								onToggle(row.key);
+							},
+						},
+						open ? "▾" : "▸",
+					),
+					h("span", { className: "col-name" }, row.name),
+				),
+				h("span", { className: "type" }, groupType(row, open)),
+			),
+		);
+
+		if (!open) continue;
+
+		for (const col of row.columns) {
+			elements.push(
+				h(ColumnRow, {
+					key: col.name,
+					col,
+					name: memberName(row, col),
+					type: rowType(col, row),
+					needle: data.needle,
+					className: " member",
+				}),
+			);
+		}
+	}
+
+	return elements;
+}
+
+function EntityNode({ id, data, selected }) {
+	const { setNodes } = useReactFlow();
+
+	/** Opens or closes one group on this card, and re-sizes it to what it now draws. */
+	const onToggle = useCallback(
+		(key) =>
+			setNodes((nodes) =>
+				saveFrom(
+					fitContexts(
+						nodes.map((node) => {
+							if (node.id !== id) return node;
+
+							const expanded = new Set(node.data.expanded ?? []);
+
+							if (!expanded.delete(key)) expanded.add(key);
+
+							return resizeEntity({ ...node, data: { ...node.data, expanded: [...expanded] } });
+						}),
+					),
+				),
+			),
+		[id, setNodes],
+	);
+
 	return h(
 		"div",
 		{
@@ -226,34 +440,7 @@ function EntityNode({ data, selected }) {
 			data.table.schema ? h("span", { className: "schema" }, data.table.schema) : null,
 		),
 		// "names" mode is the overview: the header alone, so a large schema can be read at a glance.
-		data.tables === "names"
-			? null
-			: (data.table.columns ?? []).map((col) =>
-					h(
-						"div",
-						{
-							// A table can match on a column the reader cannot see the reason for, so the row
-							// that caused the hit is marked rather than only the card around it.
-							className: `col${data.needle && col.name.toLowerCase().includes(data.needle) ? " hit" : ""}`,
-							key: col.name,
-						},
-						h(
-							"span",
-							{ className: "name" },
-							h("span", { className: "col-name" }, col.name),
-							...columnBadges(col).map((k) => h("span", { className: `badge ${k}`, key: k }, k.toUpperCase())),
-						),
-						h(
-							"span",
-							{
-								className: "type",
-								// The database type stays reachable even when the domain type is the headline.
-								title: !bothShown() && columnAnnotation(col) ? columnAnnotation(col) : undefined,
-							},
-							columnType(col),
-						),
-					),
-				),
+		data.tables === "names" ? null : cardRowElements(data, onToggle),
 		h(Handle, { type: "source", position: Position.Bottom, isConnectable: false }),
 	);
 }
@@ -304,6 +491,11 @@ const BADGE_PADDING = 8;
 const BADGE_LETTER_SPACING = 0.04;
 const MEASURE_BUFFER = 3;
 
+// Mirroring index.html: the chevron's box and the indent a grouped member row carries.
+const CHEVRON_WIDTH = 14;
+const CHEVRON_GAP = 4;
+const MEMBER_INDENT = 18;
+
 const textWidth = (text, font) => {
 	if (!text) return 0;
 
@@ -312,7 +504,24 @@ const textWidth = (text, font) => {
 	return measureContext.measureText(text).width;
 };
 
-/** The width a table's card needs for every column name, badge and type to fit. */
+/** The width one column row needs, as a name, its badges and its type. */
+function columnRowWidth(col, name, indent, type) {
+	let row = indent + textWidth(name, FONT_SANS);
+
+	for (const badge of columnBadges(col)) {
+		const text = badge.toUpperCase();
+		row += BADGE_GAP + textWidth(text, FONT_BADGE) + BADGE_PADDING + text.length * 9 * BADGE_LETTER_SPACING;
+	}
+
+	return row + COLUMN_GAP + textWidth(type, FONT_TYPE);
+}
+
+/**
+ * The width a table's card needs for every column name, badge and type to fit.
+ *
+ * A collapsed group is measured as though it were open, so expanding one never re-widens the card and
+ * nothing has to be laid out again to accommodate it.
+ */
 function cardWidth(table, tables) {
 	let widest = textWidth(table.name, FONT_HEADER);
 
@@ -320,20 +529,46 @@ function cardWidth(table, tables) {
 
 	// In names mode only the header is drawn, so only the header has to fit.
 	if (tables !== "names") {
-		for (const col of table.columns ?? []) {
-			let row = textWidth(col.name, FONT_SANS);
+		for (const row of rowPlan(table)) {
+			if (row.kind === "column") {
+				widest = Math.max(widest, columnRowWidth(row.col, row.col.name, 0, rowType(row.col, null).text));
 
-			for (const badge of columnBadges(col)) {
-				const text = badge.toUpperCase();
-				row += BADGE_GAP + textWidth(text, FONT_BADGE) + BADGE_PADDING + text.length * 9 * BADGE_LETTER_SPACING;
+				continue;
 			}
 
-			row += COLUMN_GAP + textWidth(columnType(col), FONT_TYPE);
-			widest = Math.max(widest, row);
+			// The closed form carries the member count, so it is the wider of the two.
+			widest = Math.max(
+				widest,
+				CHEVRON_WIDTH +
+					CHEVRON_GAP +
+					textWidth(row.name, FONT_SANS) +
+					COLUMN_GAP +
+					textWidth(groupType(row, false), FONT_TYPE),
+			);
+
+			for (const col of row.columns) {
+				widest = Math.max(
+					widest,
+					columnRowWidth(col, memberName(row, col), MEMBER_INDENT, rowType(col, row).text),
+				);
+			}
 		}
 	}
 
 	return Math.ceil(widest + CARD_PADDING * 2 + ENTITY_BORDER + MEASURE_BUFFER);
+}
+
+/** How many rows a card draws: a closed group is one row, an open one is itself plus its members. */
+function cardRows(table, tables, expanded) {
+	if (tables === "names") return 0;
+
+	let rows = 0;
+
+	for (const row of rowPlan(table)) {
+		rows += row.kind === "column" ? 1 : 1 + (expanded.has(row.key) ? row.columns.length : 0);
+	}
+
+	return rows;
 }
 
 /**
@@ -343,13 +578,11 @@ function cardWidth(table, tables) {
  * references itself, because the self-loop needs a gutter beside the card.
  *
  * @param tables the table display mode: "columns" draws every column, "names" only the header.
+ * @param expanded the complex value-object groups this card is showing the members of.
  */
-const cardSize = (table, tables) => ({
+const cardSize = (table, tables, expanded = new Set()) => ({
 	width: Math.max(ENTITY_MIN_WIDTH, cardWidth(table, tables)),
-	height:
-		ENTITY_BORDER +
-		ENTITY_HEADER_HEIGHT +
-		(tables === "names" ? 0 : (table.columns?.length ?? 0) * ENTITY_ROW_HEIGHT),
+	height: ENTITY_BORDER + ENTITY_HEADER_HEIGHT + cardRows(table, tables, expanded) * ENTITY_ROW_HEIGHT,
 });
 
 const SELF_LOOP_REACH = 280;
@@ -419,7 +652,7 @@ const entitySize = (table, selfReferencing, tables) => {
  * what ELK returns.
  */
 /** The container's own margin around its tables, mirroring the ELK padding above. */
-const CONTEXT_PADDING = { top: 52, right: 28, bottom: 28, left: 28 };
+const CONTEXT_PADDING = { top: 56, right: 32, bottom: 32, left: 32 };
 
 /**
  * A node's current size. A manual resize sets the node's own width and height, which then wins over
@@ -429,6 +662,30 @@ const nodeWidth = (node) =>
 	node.width ?? node.measured?.width ?? node.data?.card?.width ?? ENTITY_MIN_WIDTH;
 
 const nodeHeight = (node) => node.height ?? node.measured?.height ?? node.data?.card?.height ?? 0;
+
+/**
+ * Re-sizes an entity for the groups it is currently showing.
+ *
+ * Only the height moves: a card is measured as though every group were open, so opening one never
+ * changes its width and the arrangement around it stays put. A card the reader has resized by hand
+ * keeps the size they gave it.
+ */
+function resizeEntity(node) {
+	if (node.type !== "entity" || node.height != null) return node;
+
+	// Only the row count changes, so the height is recomputed directly rather than re-measuring every
+	// name and type through the canvas — this runs for every card on every keystroke of a search.
+	const rows = cardRows(node.data.table, node.data.tables, expandedOf(node.data));
+	const height = ENTITY_BORDER + ENTITY_HEADER_HEIGHT + rows * ENTITY_ROW_HEIGHT;
+
+	if (node.data.card?.height === height && node.style?.height === height) return node;
+
+	return {
+		...node,
+		style: { ...node.style, height },
+		data: { ...node.data, card: { ...node.data.card, height } },
+	};
+}
 
 /**
  * Resizes and moves each context container so it wraps its own tables, preserving every table's
@@ -541,6 +798,9 @@ function saveLayout(nodes, tables, mode) {
 					entry.height = node.height;
 				}
 
+				// Which groups the reader opened, but not the ones a search opened for them.
+				if (node.data?.expanded?.length > 0) entry.expanded = node.data.expanded;
+
 				entities[node.id] = entry;
 			}
 		}
@@ -568,6 +828,29 @@ function loadLayout(tables, mode) {
 	}
 }
 
+/**
+ * Persists the arrangement using the tables carried by the nodes themselves.
+ *
+ * Folding a group changes a card's height, so it has to be saved like a drag or a resize — but it is
+ * toggled from inside the card, which has no access to the model. Every entity node holds its own
+ * table and the display mode, which is all the fingerprint needs.
+ *
+ * @returns the nodes it was given, so a caller can save and return in one step.
+ */
+function saveFrom(nodes) {
+	const entities = nodes.filter((node) => node.type === "entity");
+
+	if (entities.length > 0) {
+		saveLayout(
+			nodes,
+			entities.map((node) => node.data.table),
+			entities[0].data.tables,
+		);
+	}
+
+	return nodes;
+}
+
 /** Rebuilds the graph from a saved arrangement, dropping anything the model no longer has. */
 function restoreLayout(saved, tables, colourOf, mode) {
 	const nodes = [];
@@ -592,7 +875,8 @@ function restoreLayout(saved, tables, colourOf, mode) {
 
 		if (!table || !known.has(id)) continue;
 
-		const card = cardSize(table, mode);
+		const expanded = position.expanded ?? [];
+		const card = cardSize(table, mode, new Set(expanded));
 		const manual = position.width != null || position.height != null;
 		const width = manual ? position.width : card.width;
 		const height = manual ? position.height : card.height;
@@ -606,7 +890,16 @@ function restoreLayout(saved, tables, colourOf, mode) {
 			// stays un-sized and keeps following its content.
 			...(manual ? { width, height } : {}),
 			style: { width, height },
-			data: { table, colour: colourOf(table.context), match: "", needle: "", card, tables: mode },
+			data: {
+				table,
+				colour: colourOf(table.context),
+				match: "",
+				needle: "",
+				card,
+				tables: mode,
+				expanded,
+				forced: [],
+			},
 		});
 	}
 
@@ -639,7 +932,7 @@ async function layout(tables, edges, colourOf, mode) {
 			// one row was already closer to that ratio than wrapping would be, and 1.4 produced a
 			// ragged three-plus-one. A target squarer than the viewport is what actually wraps.
 			"elk.aspectRatio": "1.1",
-			"elk.spacing.nodeNode": "60",
+			"elk.spacing.nodeNode": "88",
 		},
 		children: contexts.map((context) => ({
 			id: `ctx:${context}`,
@@ -648,9 +941,23 @@ async function layout(tables, edges, colourOf, mode) {
 				"elk.direction": "DOWN",
 				// Top carries the label that sits on the border line; the other three are even, so the
 				// container reads as a frame around its tables rather than a box they are pushed into.
-				"elk.padding": "[top=52,left=28,bottom=28,right=28]",
-				"elk.spacing.nodeNode": "48",
-				"elk.layered.spacing.nodeNodeBetweenLayers": "76",
+				"elk.padding": "[top=56,left=32,bottom=32,right=32]",
+				// The gap between layers carries the relationship labels, which are drawn at the middle
+				// of an edge over their own background: too little room and a label lands on the card
+				// below it. The sideways gap only has to separate two cards, so it is smaller.
+				"elk.spacing.nodeNode": "72",
+				"elk.layered.spacing.nodeNodeBetweenLayers": "120",
+				// Tables that no relationship connects form separate components, which ELK lays out one
+				// by one and then packs — a seam the between-layer spacing never reaches. Left at its
+				// default of 20 those groups sit almost touching, which reads as one crowded block
+				// rather than as the unrelated groups they are.
+				"elk.spacing.componentComponent": "120",
+				// Edges routed around a card keep clear of it rather than running along its border, and
+				// parallel edges stay far enough apart to be followed individually.
+				"elk.spacing.edgeNode": "40",
+				"elk.layered.spacing.edgeNodeBetweenLayers": "40",
+				"elk.spacing.edgeEdge": "24",
+				"elk.layered.spacing.edgeEdgeBetweenLayers": "24",
 			},
 			children: tables
 				.filter((t) => t.context === context)
@@ -694,7 +1001,8 @@ async function layout(tables, edges, colourOf, mode) {
 				parentId: container.id,
 				position: { x: child.x ?? 0, y: child.y ?? 0 },
 				style: { width: card.width, height: card.height },
-				data: { table, colour, match: "", needle: "", card, tables: mode },
+				// Complex value objects start folded: a fresh card shows the table, not its interiors.
+				data: { table, colour, match: "", needle: "", card, tables: mode, expanded: [], forced: [] },
 			});
 		}
 	}
@@ -834,17 +1142,23 @@ async function save(dataUrl, fileName) {
 }
 
 /**
- * Renders the current diagram to an image and downloads it.
+ * Renders the current diagram to an image and returns it as a data URL.
  *
  * The crow's-foot markers are defined in a stand-alone &lt;svg&gt; outside the viewport, so a capture
  * of the viewport alone resolves every `url(#erd-…)` to nothing and loses the cardinality. A copy
  * rides along for the duration of the capture.
+ *
+ * Separate from {@link exportImage} so the AppHost's image export can render the diagram without
+ * downloading it: a headless browser has nowhere to put a download, and intercepting one to get at
+ * the bytes is a great deal of machinery for something the renderer already has in hand.
+ *
+ * @returns the data URL, or null when there is nothing laid out to capture.
  */
-async function exportImage(format, nodes, title) {
+async function renderImage(format, nodes, title) {
 	const viewport = document.querySelector(".react-flow__viewport");
 	const bounds = drawingBounds(nodes);
 
-	if (!viewport || !bounds) return false;
+	if (!viewport || !bounds) return null;
 
 	const natural = Math.max(bounds.width, bounds.height) + EXPORT_PADDING * 2;
 	const scale = Math.min(1, EXPORT_MAX_SIDE / natural);
@@ -872,16 +1186,26 @@ async function exportImage(format, nodes, title) {
 			},
 		});
 
-		await save(dataUrl, `${(title || "erd").replaceAll(/[^\w.-]+/g, "-").toLowerCase()}.${format}`);
-
-		return true;
+		return dataUrl;
 	} finally {
 		markers?.remove();
 	}
 }
 
+/** Renders the current diagram to an image and downloads it. */
+async function exportImage(format, nodes, title) {
+	const dataUrl = await renderImage(format, nodes, title);
+
+	if (!dataUrl) return false;
+
+	await save(dataUrl, `${(title || "erd").replaceAll(/[^\w.-]+/g, "-").toLowerCase()}.${format}`);
+
+	return true;
+}
+
 function Diagram({ model }) {
 	const tables = useMemo(() => flatten(model), [model]);
+	const complex = useMemo(() => hasComplexColumns(tables), [tables]);
 	const [nodes, setNodes, onNodesChange] = useNodesState([]);
 	const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 	const [query, setQuery] = useState("");
@@ -963,16 +1287,37 @@ function Diagram({ model }) {
 		const hits = new Set(matches);
 
 		setNodes((nodes) =>
-			nodes.map((n) => {
-				// Containers are never dimmed; doing so would wash out the tables inside them.
-				if (n.type !== "entity") return n;
+			fitContexts(
+				nodes.map((n) => {
+					// Containers are never dimmed; doing so would wash out the tables inside them.
+					if (n.type !== "entity") return n;
 
-				const match = !needle ? "" : n.id === current ? "hit current" : hits.has(n.id) ? "hit" : "dimmed";
+					const match = !needle ? "" : n.id === current ? "hit current" : hits.has(n.id) ? "hit" : "dimmed";
 
-				if (n.data.match === match && n.data.needle === needle) return n;
+					// A match inside a folded complex value object would otherwise be reported and then not
+					// shown. The groups opened this way are held apart from the reader's own, so clearing
+					// the search folds them back rather than leaving the card as the search left it.
+					const forced = !needle
+						? []
+						: rowPlan(n.data.table)
+								.filter(
+									(row) =>
+										row.kind === "group" && row.columns.some((c) => c.name.toLowerCase().includes(needle)),
+								)
+								.map((row) => row.key);
 
-				return { ...n, data: { ...n.data, match, needle } };
-			}),
+					if (
+						n.data.match === match &&
+						n.data.needle === needle &&
+						n.data.forced?.length === forced.length &&
+						forced.every((key) => n.data.forced.includes(key))
+					) {
+						return n;
+					}
+
+					return resizeEntity({ ...n, data: { ...n.data, match, needle, forced } });
+				}),
+			),
 		);
 
 		// A relationship is only fully in play when both of its ends are, so an edge recedes with
@@ -1046,6 +1391,52 @@ function Diagram({ model }) {
 			}
 		},
 		[nodes],
+	);
+
+	// The hook the AppHost's viewer-fidelity export calls, so an image produced headlessly is the same
+	// one this toolbar produces. Published only once the nodes are laid out, which is what makes its
+	// presence the signal that the diagram is ready to capture.
+	useEffect(() => {
+		if (nodes.length === 0) return undefined;
+
+		globalThis.__aspirec4RenderImage = (format) => renderImage(format, nodes, document.title);
+
+		return () => {
+			delete globalThis.__aspirec4RenderImage;
+		};
+	}, [nodes]);
+
+	/**
+	 * Opens or folds every complex value object on every card.
+	 *
+	 * The arrangement is saved straight away: the cards have changed height, so a reload that restored
+	 * the previous one would reopen the diagram with the containers fitted to the wrong sizes.
+	 */
+	const groupKeys = useCallback(
+		(table) =>
+			rowPlan(table)
+				.filter((row) => row.kind === "group")
+				.map((row) => row.key),
+		[],
+	);
+
+	const setAllExpanded = useCallback(
+		(open) =>
+			setNodes((current) =>
+				saveFrom(
+					fitContexts(
+						current.map((node) =>
+							node.type === "entity"
+								? resizeEntity({
+										...node,
+										data: { ...node.data, expanded: open ? groupKeys(node.data.table) : [] },
+									})
+								: node,
+						),
+					),
+				),
+			),
+		[setNodes, groupKeys],
 	);
 
 	/** A segmented choice over a settings key, shared by the toolbar and the settings panel. */
@@ -1137,6 +1528,36 @@ function Diagram({ model }) {
 			h("span", { className: "sep" }),
 			h("span", { className: "count" }, "View"),
 			segmented("tables", TABLES, "View"),
+			// Only shown when the model has something to fold, so it is not dead chrome on a diagram
+			// whose tables are all plain columns.
+			...(complex && settings.tables !== "names"
+				? [
+						h("span", { className: "sep" }),
+						h("span", { className: "count" }, "Complex"),
+						h(
+							"div",
+							{ className: "segmented", role: "group", "aria-label": "Complex value objects" },
+							h(
+								"button",
+								{
+									type: "button",
+									title: "Show the members of every complex value object",
+									onClick: () => setAllExpanded(true),
+								},
+								"Expand all",
+							),
+							h(
+								"button",
+								{
+									type: "button",
+									title: "Fold every complex value object back to its property",
+									onClick: () => setAllExpanded(false),
+								},
+								"Collapse all",
+							),
+						),
+					]
+				: []),
 			h("span", { className: "sep" }),
 			h("span", { className: "count" }, "Export"),
 			...["png", "svg"].map((format) =>

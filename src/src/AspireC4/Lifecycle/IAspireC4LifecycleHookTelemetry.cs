@@ -46,4 +46,16 @@ interface IAspireC4LifecycleHookTelemetry
 
 	[Debug]
 	void DiagramOptionsSnapshotApplied(string outputDirectoryName, bool formatGeneratedFile, bool disableHmr);
+
+	[Debug]
+	void ExportingImages(string format, string imageDirectory);
+
+	[Info]
+	void ImagesExported(string format, string imageDirectory);
+
+	[Warning]
+	void FailedToExportImages(string format, string reason);
+
+	[Debug]
+	void ImagesUnchanged(string imageDirectory);
 }

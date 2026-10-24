@@ -57,6 +57,15 @@ static class StoreTypeMap
 				"System.TimeSpan" => "time",
 				"System.DateOnly" => "date",
 				"System.TimeOnly" => "time",
+				// A JSON document is a column, not a table. Without these it resolves to Unknown, and an
+				// unknown class is taken for a navigation — which is how a property such as
+				// `JsonDocument Payload` used to invent an entity named after the framework type.
+				"System.Text.Json.JsonDocument"
+				or "System.Text.Json.JsonElement"
+				or "System.Text.Json.Nodes.JsonNode"
+				or "System.Text.Json.Nodes.JsonObject"
+				or "System.Text.Json.Nodes.JsonArray"
+				or "System.Text.Json.Nodes.JsonValue" => "json",
 				_ => Unknown,
 			};
 	}

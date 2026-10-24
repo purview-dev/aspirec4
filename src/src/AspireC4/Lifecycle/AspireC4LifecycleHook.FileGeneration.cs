@@ -55,7 +55,8 @@ sealed partial class AspireC4LifecycleHook
 		// is identical to what was last written.  This prevents needless git noise when state
 		// changes bounce resources through transitional states that end up back where they started.
 		var newRawBody = StripHeader(dsl);
-		if (!string.Equals(_lastRawBody, newRawBody, StringComparison.Ordinal))
+		var changed = !string.Equals(_lastRawBody, newRawBody, StringComparison.Ordinal);
+		if (changed)
 		{
 			_lastRawBody = newRawBody;
 			await File.WriteAllTextAsync(outputPath, dsl, cancellationToken);
@@ -93,6 +94,22 @@ sealed partial class AspireC4LifecycleHook
 		}
 
 		telemetry.LikeC4ModelWritten(outputPath);
+
+		// Gated on the same comparison as the write itself: exporting is expensive enough that it is
+		// worth doing only when there is a new model to render. Fire-and-forget, because the export
+		// starts a LikeC4 server and a browser and must not sit between the application and its startup.
+		// Never on publish, which generates the model and exits — see _isPublishMode.
+		if (ShouldExportImages(changed, opts.ExportImages, _isPublishMode))
+		{
+			// The same base directory the output and serve directories were resolved from, so the images
+			// land beside the ER diagram's rather than wherever this AppHost happens to have been started.
+			var appHostDirectory = Environment.CurrentDirectory;
+
+			_ = Task.Run(
+				() => ExportImagesAsync(outputDir, serveDir, appHostDirectory, newRawBody, cancellationToken),
+				cancellationToken
+			);
+		}
 	}
 
 	/// <summary>

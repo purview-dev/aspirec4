@@ -5,7 +5,7 @@ description: >-
   installing AspireC4.Hosting.EntityFrameworkCore, calling WithEntityFrameworkDiagram, how the model is
   discovered (assembly metadata, an analyzer descriptor, or the opt-in build-time dump), filtering and
   excluding DbContexts, domain types (value objects and enums) and the DomainTypeDisplay option, the
-  renderers, and the dashboard integration.
+  renderers, exporting the diagram as SVG and PNG on startup, and the dashboard integration.
 metadata:
   product: AspireC4
   repository: purview-dev/aspirec4
@@ -143,6 +143,15 @@ Options bind from the **`AspireC4:EntityFramework`** section, applied on top of 
 | `ViewerServerImageTag` | `null` | pin the viewer `nginx` image tag |
 | `HideFromDashboard` | `false` | hide the sidecar and surface it as a link |
 | `DashboardLinkDisplayName` | `"ER Diagram"` | the link name when hidden |
+| `ExportImages` | `true` | write the diagram out as an image when it changes |
+| `ImageFormats` | `{Svg, Png}` | `Svg` and/or `Png` |
+| `ImageExportDirectory` | `null` (`./.aspirec4/images/`) | where images are written; relative paths resolve against the **AppHost directory**. Shared with the architecture diagram |
+| `D2Command` | `null` | a local `d2` binary to export with; `null` runs the container |
+| `ContainerRuntimeCommand` | `"docker"` | the runtime for the one-shot export container; `podman` where that is what Aspire uses |
+| `ExportTimeoutSeconds` | `120` | cap on one d2 invocation |
+| `UseViewerFidelityExport` | `false` | render through the viewer in a headless browser so images match its own export. Pulls a ~3.7 GB image; `Interactive` only |
+| `ViewerExportImage` | `null` | override the browser image, including its tag |
+| `ViewerExportTimeoutSeconds` | `600` | cap on one viewer-fidelity export |
 
 The output path follows the architecture diagram: `WithLegacyLayout()` on `AddAspireC4` restores
 `./erd/gen/` as well, because there is no separate ER switch. An `OutputDirectory` set on
@@ -166,6 +175,82 @@ builder.AddAspireC4().WithEntityFrameworkDiagram().WithLocalD2CLI();
 
 d2 ships as a Go binary, so it must be on `PATH`; there is no npm fallback. Call `WithLocalD2CLI()`
 **after** `WithEntityFrameworkDiagram()`.
+
+## Image export
+
+On by default, so a schema can go into a pull request or a wiki without opening the viewer. Images are
+written to **`./.aspirec4/images/`** — the same folder the architecture diagram exports to, so there is
+one place to look:
+
+```text
+apphost/.aspirec4/images/
+  schema.svg                    <- this diagram
+  schema.png
+  architecture-index.png        <- architecture diagram
+```
+
+The name drops the `.gen` marker: `schema.gen` produces `schema.svg`, not `schema.gen.svg`. The marker
+earns its place on a generated source file sitting in a directory you also hand-edit, which an image in
+the shared folder never is. The dashboard row carries an **Images** property with the resolved path and
+an **Open Diagram Images** command that opens the folder.
+
+```csharp
+builder.AddAspireC4().WithEntityFrameworkDiagram(configure: options => options.WithoutImageExport());
+builder.AddAspireC4().WithEntityFrameworkDiagram(configure: options =>
+    options.WithImageExport(ErdImageFormat.Svg)
+);
+```
+
+`WithImageExport()` with no format turns export off, the same as `WithoutImageExport()`.
+
+**Export always renders through d2, whatever `Renderer` is set to.** The interactive renderer is a
+browser application with no headless path, so an image of it could only be produced by driving a
+browser; d2 is the only format that both renders images itself and keeps column-level edges. Two
+things follow:
+
+- Export needs either the `d2lang/d2` container or a local `d2` binary (`D2Command`, which
+  `WithLocalD2CLI()` sets for you). Where neither is available, call `WithoutImageExport()`.
+- `{FileName}.d2` is written alongside the diagram even for the other renderers, purely to be
+  rendered. It is identical to what the `D2` renderer writes.
+
+Export runs in the background, so startup is never delayed, and nothing is rendered — **no container is
+started** — unless the output would differ:
+
+| Situation | Exports? |
+| --- | --- |
+| Identical model regenerated | no |
+| AppHost restarted over an unchanged model | no — a stamp file beside the images records what they were rendered from |
+| Model changed, or a format added | yes |
+| Images deleted | yes — the stamp is only trusted when the files it describes still exist |
+| `aspire publish` | **never** |
+
+Publish is skipped outright: an export is fire-and-forget, so it would be killed part-way through when
+publish exits, and publish is expected to be hermetic rather than reaching for a container runtime a
+build agent may not have.
+
+Failures are best-effort: they are logged to the diagram resource and the diagram itself is unaffected.
+
+Prefer SVG for a large schema — a raster of the whole thing is unreadable at any sensible size. The
+viewer also has **Save as SVG / PNG** buttons for exporting what is currently on screen.
+
+### Matching the viewer exactly
+
+The d2 render is a **different diagram**, not a differently-styled one: d2 draws `sql_table` shapes with
+its own theme and layout, the viewer draws React Flow cards with context colours, key badges,
+complex-type groups and crow's-foot markers. To get the file the viewer's own export produces:
+
+```csharp
+builder.AddAspireC4()
+       .WithEntityFrameworkDiagram(configure: options => options.WithViewerFidelityExport());
+```
+
+This loads the generated viewer in a headless browser and calls the same function the toolbar button
+calls, so the output is identical. **Off by default**: it pulls `mcr.microsoft.com/playwright` (around
+3.7 GB) and an export takes seconds rather than milliseconds. `ViewerExportImage` overrides the image
+for a mirror or a cached one.
+
+Applies only to `Interactive`, the renderer that has a viewer. Any other renderer exports through d2
+regardless and logs why.
 
 ## Using the viewer
 
@@ -191,3 +276,4 @@ The interactive viewer is for reading a schema, not just looking at one.
 `purview-aspirec4-quickstart` for installing AspireC4 and running the architecture diagram,
 `purview-aspirec4-configuration` for the LikeC4 options reference, and `purview-aspirec4-resources` for
 per-resource labels, relationships and grouping.
+

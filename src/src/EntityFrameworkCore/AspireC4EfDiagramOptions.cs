@@ -125,6 +125,115 @@ public sealed class AspireC4EfDiagramOptions
 	public string? ContainerImageTag { get; set; }
 
 	/// <summary>
+	/// Whether the diagram is also written out as an image each time it changes. On by default.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// The images are written beside the diagram as <c>{FileName}.svg</c> and <c>{FileName}.png</c>, so a
+	/// schema can be attached to a pull request or pasted into a wiki without opening the viewer. Export
+	/// runs in the background, so it never delays startup, and only when it would actually change
+	/// something: a stamp beside the images records what they were rendered from, so a restart that
+	/// produces the same model runs nothing at all — not even a container. It is also skipped entirely
+	/// during a publish, which generates its output and exits.
+	/// </para>
+	/// <para>
+	/// Rendering always goes through d2, whatever <see cref="Renderer"/> is in use: the interactive
+	/// renderer is a browser application with no headless path, so an image of it could only be produced
+	/// by driving a browser. That means export needs either the <c>d2lang/d2</c> container or a local
+	/// <c>d2</c> binary (<see cref="D2Command"/>), and that the <c>{FileName}.d2</c> source is written
+	/// alongside the diagram even for the other renderers. Set to <see langword="false"/>, or use
+	/// <see cref="WithoutImageExport"/>, where neither is available.
+	/// </para>
+	/// </remarks>
+	public bool ExportImages { get; set; } = true;
+
+	/// <summary>
+	/// The formats written when <see cref="ExportImages"/> is set. Defaults to both SVG and PNG.
+	/// </summary>
+	/// <remarks>
+	/// Emptying this disables export as surely as clearing <see cref="ExportImages"/>. Populate with
+	/// <see cref="WithImageExport"/>.
+	/// </remarks>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage(
+		"Usage",
+		"CA2227:Collection properties should be read only",
+		Justification = "Settable for configuration binding and direct assignment in user code"
+	)]
+	public HashSet<ErdImageFormat> ImageFormats { get; set; } = [ErdImageFormat.Svg, ErdImageFormat.Png];
+
+	/// <summary>
+	/// Where exported images are written. Relative paths are resolved against the AppHost directory;
+	/// <see langword="null"/> (the default) uses <c>./.aspirec4/images/</c>.
+	/// </summary>
+	/// <remarks>
+	/// The architecture diagram writes to the same folder by default, so every image AspireC4 produces is
+	/// in one place. It matters most here: the interactive renderer writes its own <c>index.html</c>,
+	/// <c>app.js</c> and <c>vendor/</c> into <see cref="OutputDirectory"/>, and an image among those is
+	/// easy to miss.
+	/// </remarks>
+	public string? ImageExportDirectory { get; set; }
+
+	/// <summary>
+	/// A local <c>d2</c> executable to render exported images with. <see langword="null"/> (the default)
+	/// runs the <c>d2lang/d2</c> container instead.
+	/// </summary>
+	/// <remarks>
+	/// Set by <see cref="AspireC4EfResourceBuilderExtensions.WithLocalD2CLI"/>, which also replaces the
+	/// sidecar. Set it here to render images locally while leaving the sidecar — or the renderer's own
+	/// viewer — as it is.
+	/// </remarks>
+	public string? D2Command { get; set; }
+
+	/// <summary>
+	/// The container runtime used to run the one-shot export container. Defaults to <c>docker</c>.
+	/// </summary>
+	/// <remarks>Set to <c>podman</c> where that is the runtime Aspire itself is using.</remarks>
+	public string ContainerRuntimeCommand { get; set; } = "docker";
+
+	/// <summary>Seconds to wait for an image export before abandoning it. Defaults to 120.</summary>
+	public int ExportTimeoutSeconds { get; set; } = 120;
+
+	/// <summary>
+	/// Whether exported images are produced by the interactive viewer itself rather than by d2. Off by
+	/// default.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// The d2 export is a different diagram, not a differently-styled one: d2 draws <c>sql_table</c>
+	/// shapes with its own theme and layout, while the viewer draws React Flow cards with context
+	/// colours, key badges, complex-type groups and crow's-foot markers. Setting this makes the exported
+	/// file identical to the one the viewer's own <b>Save as SVG / PNG</b> control produces.
+	/// </para>
+	/// <para>
+	/// The cost is a browser: the viewer only runs in one, so this pulls the Playwright image — around
+	/// 3.7 GB — and an export takes seconds rather than milliseconds. That is why it is opt-in.
+	/// Applies only to <see cref="ErdRenderer.Interactive"/>, the renderer that has a viewer; every other
+	/// renderer exports through d2 whatever this is set to.
+	/// </para>
+	/// </remarks>
+	/// <seealso cref="WithViewerFidelityExport"/>
+	public bool UseViewerFidelityExport { get; set; }
+
+	/// <summary>
+	/// Overrides the image used for the viewer-fidelity export, including its tag.
+	/// <see langword="null"/> uses the pinned Playwright image.
+	/// </summary>
+	/// <remarks>
+	/// The image has to supply both <c>node</c> and a chromium Playwright can drive. Pointing this at
+	/// something else is how a consumer uses a mirror, or an image they have already cached.
+	/// </remarks>
+	public string? ViewerExportImage { get; set; }
+
+	/// <summary>
+	/// Seconds to wait for a viewer-fidelity export. Defaults to 600.
+	/// </summary>
+	/// <remarks>
+	/// Far longer than <see cref="ExportTimeoutSeconds"/> because the first run may be pulling the
+	/// browser image. Export runs in the background, so this never caps startup.
+	/// </remarks>
+	public int ViewerExportTimeoutSeconds { get; set; } = 600;
+
+	/// <summary>
 	/// Whether the file-based renderers serve their viewer over HTTP so the dashboard can link to it.
 	/// </summary>
 	/// <remarks>
@@ -175,6 +284,54 @@ public sealed class AspireC4EfDiagramOptions
 	public AspireC4EfDiagramOptions WithProjectOptInOnly()
 	{
 		DiscoverAllProjects = false;
+
+		return this;
+	}
+
+	/// <summary>Restricts image export to the listed formats, replacing the SVG and PNG default.</summary>
+	/// <remarks>
+	/// Also sets <see cref="ExportImages"/>, so naming a format is enough to turn export on. Passing no
+	/// format turns it off, the same as <see cref="WithoutImageExport"/>.
+	/// </remarks>
+	/// <param name="formats">The formats to export.</param>
+	/// <returns>This options instance, for chaining.</returns>
+	public AspireC4EfDiagramOptions WithImageExport(params ErdImageFormat[] formats)
+	{
+		ArgumentNullException.ThrowIfNull(formats);
+
+		ImageFormats = [.. formats];
+		ExportImages = formats.Length > 0;
+
+		return this;
+	}
+
+	/// <summary>
+	/// Exports images by rendering the interactive viewer in a headless browser, so the file matches
+	/// the viewer's own <b>Save as SVG / PNG</b> output exactly.
+	/// </summary>
+	/// <remarks>
+	/// Pulls a browser image of around 3.7 GB and makes each export take seconds rather than
+	/// milliseconds; see <see cref="UseViewerFidelityExport"/>. Only affects
+	/// <see cref="ErdRenderer.Interactive"/>.
+	/// </remarks>
+	/// <param name="use">Whether to render through the viewer.</param>
+	/// <returns>This options instance, for chaining.</returns>
+	public AspireC4EfDiagramOptions WithViewerFidelityExport(bool use = true)
+	{
+		UseViewerFidelityExport = use;
+
+		return this;
+	}
+
+	/// <summary>Stops the diagram being exported as an image, leaving only the generated diagram.</summary>
+	/// <remarks>
+	/// This is how a consumer with no container runtime and no local <c>d2</c> opts out; see
+	/// <see cref="ExportImages"/> for why export needs one of the two.
+	/// </remarks>
+	/// <returns>This options instance, for chaining.</returns>
+	public AspireC4EfDiagramOptions WithoutImageExport()
+	{
+		ExportImages = false;
 
 		return this;
 	}

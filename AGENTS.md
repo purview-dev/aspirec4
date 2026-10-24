@@ -101,6 +101,22 @@ just test-e2e-cli           # All local CLI runtimes only
 just test-e2e-npm           # Single CLI runtime (also -pnpm, -yarn, -bun, -deno)
 ```
 
+### ER diagram viewer
+
+The interactive viewer under `src/src/EntityFrameworkCore/Assets/viewer/` only runs in a browser, so
+`just test` proves nothing about it. Drive it with Playwright instead — **never hand-roll a driver**:
+
+```sh
+just erd-check             # Drive the viewer in Chromium and assert it renders, lays out and searches
+just erd-mermaid-check     # The same for the Mermaid preview
+just erd-vendor            # Rebuild the viewer's bundled JavaScript (--embed refreshes the shipped copies)
+just erd-svg <input>       # Render an emitted Mermaid .mmd to SVG in a one-shot container
+```
+
+`erd-check` defaults to the model at `src/src/TestAppHost/.aspirec4/erd/schema.gen.json`, written by
+`dotnet run --project src/src/TestAppHost`. Requires `bunx playwright install chromium` once. See the
+`erd-viewer` skill in `.github/skills/` before changing the viewer or its checks.
+
 ### Other
 
 ```sh
@@ -311,6 +327,12 @@ that is the one delivery route.
 gitignored; `skills-lock.json` is the tracked record of what was installed there. This repository's
 own skills are never installed into it - that would leave two copies to drift apart. Read them at
 their authored path, `skills/<name>/SKILL.md`.
+
+`.github/skills/` is a third, separate place: skills about working *in* this repository, which would
+be meaningless to a consumer who installed the published set. `release` and `erd-viewer` live there.
+A skill that tells you how to run this repo's own tooling belongs in `.github/skills/`, never in
+`skills/` - `SkillTests` requires everything under `skills/` to carry the `purview-aspirec4` prefix
+because those names land in a directory shared with every skill a developer has installed.
 
 ```bash
 npx skills add purview-dev/aspirec4

@@ -65,4 +65,39 @@ static partial class ErdLog
 			+ "written to {OutputDirectory} rather than replacing it with an empty one."
 	)]
 	public static partial void NoModelsFoundKeepingExisting(ILogger logger, string outputDirectory);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "Exported {Path}")]
+	public static partial void ImageExported(ILogger logger, string path);
+
+	[LoggerMessage(
+		Level = LogLevel.Information,
+		Message = "The images in {OutputDirectory} already match this diagram; nothing was rendered."
+	)]
+	public static partial void ImagesUnchanged(ILogger logger, string outputDirectory);
+
+	[LoggerMessage(
+		Level = LogLevel.Information,
+		Message = "Rendering the ER diagram through the viewer with {Image}. The first run pulls the "
+			+ "image, so it takes considerably longer than later ones."
+	)]
+	public static partial void ViewerImageExportStarted(ILogger logger, string image);
+
+	[LoggerMessage(
+		Level = LogLevel.Warning,
+		Message = "Viewer-fidelity export only applies to the {Interactive} renderer; {Renderer} has no "
+			+ "viewer to render. Exporting through d2 instead."
+	)]
+	public static partial void ViewerImageExportNotApplicable(
+		ILogger logger,
+		ErdRenderer interactive,
+		ErdRenderer renderer
+	);
+
+	[LoggerMessage(
+		Level = LogLevel.Warning,
+		Message = "Could not export the ER diagram as an image with '{Command}': {Reason}. The diagram "
+			+ "itself is unaffected. Image export needs either a container runtime or a local d2 binary; "
+			+ "call WithoutImageExport() to stop trying."
+	)]
+	public static partial void ImageExportFailed(ILogger logger, string command, string reason);
 }

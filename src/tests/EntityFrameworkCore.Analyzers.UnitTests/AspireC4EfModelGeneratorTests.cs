@@ -252,6 +252,140 @@ public sealed class AspireC4EfModelGeneratorTests
 		await Assert.That(descriptor).Contains("\\\"principalTable\\\":\\\"Users\\\"");
 	}
 
+	const string InheritedSource = """
+		using System;
+		using System.Collections.Generic;
+		using Microsoft.EntityFrameworkCore;
+
+		namespace Sample;
+
+		public class UserBase { public int Id { get; set; } public DateTime CreatedAt { get; set; } }
+
+		public class User : UserBase { public string Name { get; set; } }
+
+		public abstract class AppDbContextBase<TContext> : DbContext
+			where TContext : DbContext
+		{
+			public DbSet<User> Users { get; set; }
+		}
+
+		public class AppDbContext : AppDbContextBase<AppDbContext> { }
+		""";
+
+	[Test]
+	public async Task RunGenerator_WithDbSetOnABaseContext_StillDescribesItsTable(CancellationToken cancellationToken)
+	{
+		// Roslyn's GetMembers returns only what a type declares, so a context whose sets live on a shared
+		// base would otherwise describe no tables at all.
+		// Act
+		var descriptor = await GenerateDescriptorAsync(InheritedSource, cancellationToken);
+
+		// Assert
+		await Assert.That(descriptor).Contains("\\\"name\\\":\\\"Users\\\"");
+	}
+
+	[Test]
+	public async Task RunGenerator_WithPropertiesOnABaseEntity_DescribesThemAsColumns(
+		CancellationToken cancellationToken
+	)
+	{
+		// The key and the audit columns are usually declared once on a base entity; without them the table
+		// has no primary key and nothing to relate.
+		// Act
+		var descriptor = await GenerateDescriptorAsync(InheritedSource, cancellationToken);
+
+		// Assert
+		await Assert.That(descriptor).Contains("\\\"name\\\":\\\"CreatedAt\\\"");
+		await Assert.That(descriptor).Contains("\\\"isPrimaryKey\\\":true");
+	}
+
+	[Test]
+	public async Task RunGenerator_WithAbstractGenericBaseContext_DescribesOnlyTheRealContext(
+		CancellationToken cancellationToken
+	)
+	{
+		// A base context is never instantiated and owns no model of its own, so describing it would add an
+		// empty node to the diagram and report it as having no entity types.
+		// Act
+		var descriptor = await GenerateDescriptorAsync(InheritedSource, cancellationToken);
+
+		// Assert
+		await Assert.That(descriptor).Contains("\\\"name\\\":\\\"AppDbContext\\\"");
+		await Assert.That(descriptor).DoesNotContain("AppDbContextBase");
+	}
+
+	const string SharedPrimaryKeyEntities =
+		"public readonly record struct AssetId { public int Value { get; init; } } "
+		+ "public class Asset { public AssetId Id { get; set; } public RepositoryState State { get; set; } } "
+		+ "public class RepositoryState { public AssetId Id { get; set; } public Asset Asset { get; set; } }";
+
+	const string SharedPrimaryKeySets =
+		"public DbSet<Asset> Assets { get; set; } public DbSet<RepositoryState> RepositoryStates { get; set; }";
+
+	[Test]
+	public async Task RunGenerator_WithSharedPrimaryKey_ProducesForeignKeyFromTheKeyItself(
+		CancellationToken cancellationToken
+	)
+	{
+		// The dependent's key is the foreign key, so there is no <Navigation>Id property to match: without
+		// recognising the borrowed identity the relationship is dropped altogether.
+		// Arrange
+		var source = CreateContextSource(entities: SharedPrimaryKeyEntities, sets: SharedPrimaryKeySets);
+
+		// Act
+		var descriptor = await GenerateDescriptorAsync(source, cancellationToken);
+
+		// Assert
+		await Assert.That(descriptor).Contains("\\\"principalTable\\\":\\\"Assets\\\"");
+		await Assert.That(descriptor).Contains("\\\"navigationName\\\":\\\"Asset\\\"");
+		await Assert.That(descriptor).Contains("\\\"principalNavigationName\\\":\\\"State\\\"");
+	}
+
+	[Test]
+	public async Task RunGenerator_WithSharedPrimaryKeyAcrossEntitySuffixedTypes_ProducesForeignKey(
+		CancellationToken cancellationToken
+	)
+	{
+		// A persistence model names its types with an Entity suffix while its identifiers do not, so the
+		// suffix has to be discounted before AssetId can be recognised as AssetEntity's own key.
+		// Arrange
+		var source = CreateContextSource(
+			entities: "public readonly record struct AssetId { public int Value { get; init; } } "
+				+ "public class AssetEntity { public AssetId Id { get; set; } "
+				+ "public RepositoryStateEntity RepositoryState { get; set; } } "
+				+ "public class RepositoryStateEntity { public AssetId Id { get; set; } "
+				+ "public bool IsArchived { get; set; } public AssetEntity Asset { get; set; } }",
+			sets: "public DbSet<AssetEntity> Assets { get; set; } "
+				+ "public DbSet<RepositoryStateEntity> RepositoryStates { get; set; }"
+		);
+
+		// Act
+		var descriptor = await GenerateDescriptorAsync(source, cancellationToken);
+
+		// Assert — exactly one foreign key, declared by RepositoryStates and named from both ends
+		await Assert.That(CountOccurrences(descriptor, "principalTable")).IsEqualTo(1);
+		await Assert.That(descriptor).Contains("\\\"principalTable\\\":\\\"Assets\\\"");
+		await Assert.That(descriptor).Contains("\\\"navigationName\\\":\\\"Asset\\\"");
+		await Assert.That(descriptor).Contains("\\\"principalNavigationName\\\":\\\"RepositoryState\\\"");
+	}
+
+	[Test]
+	public async Task RunGenerator_WithSharedPrimaryKey_DoesNotInvertTheRelationship(
+		CancellationToken cancellationToken
+	)
+	{
+		// Both ends are keyed by the same identifier, so the key types alone are symmetric; only the
+		// principal owns that identity, and it must not also declare the foreign key.
+		// Arrange
+		var source = CreateContextSource(entities: SharedPrimaryKeyEntities, sets: SharedPrimaryKeySets);
+
+		// Act
+		var descriptor = await GenerateDescriptorAsync(source, cancellationToken);
+
+		// Assert — exactly one foreign key, declared by RepositoryStates
+		await Assert.That(CountOccurrences(descriptor, "principalTable")).IsEqualTo(1);
+	}
+
 	[Test]
 	public async Task RunGenerator_WithEnumProperty_MarksItAsAnEnum(CancellationToken cancellationToken)
 	{

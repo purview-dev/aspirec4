@@ -165,6 +165,55 @@ sealed partial class AspireC4EfLifecycleHook
 
 	const string OpenViewerCommand = "aspirec4-open-er-diagram";
 
+	const string OpenImagesCommand = "aspirec4-open-images";
+
+	/// <summary>
+	/// Adds a command that opens the folder the exported images are written to.
+	/// </summary>
+	/// <remarks>
+	/// Both diagrams export into the same folder, so this is added once — by this hook, which owns the
+	/// only dashboard row guaranteed to exist whenever export is on. The dashboard cannot navigate to a
+	/// <c>file://</c> path from its own origin, so the AppHost opens the folder itself, exactly as the
+	/// open-viewer command opens the viewer.
+	/// </remarks>
+	internal void AddOpenImagesCommand(AspireC4EfResource resource)
+	{
+		if (resource.Annotations.OfType<ResourceCommandAnnotation>().Any(a => a.Name == OpenImagesCommand))
+		{
+			return;
+		}
+
+		resource.Annotations.Add(
+			new ResourceCommandAnnotation(
+				name: OpenImagesCommand,
+				displayName: "Open Diagram Images",
+				updateState: _ =>
+					_imageDirectory is not null ? ResourceCommandState.Enabled : ResourceCommandState.Disabled,
+				executeCommand: _ =>
+				{
+					var path = _imageDirectory;
+
+					if (path is null || !Directory.Exists(path))
+					{
+						return Task.FromResult(
+							CommandResults.Failure($"No images have been exported yet ({path ?? "no path"}).")
+						);
+					}
+
+					Process.Start(new ProcessStartInfo(path) { UseShellExecute = true })?.Dispose();
+
+					return Task.FromResult(CommandResults.Success());
+				},
+				displayDescription: "Opens the folder holding the exported architecture and ER diagram images.",
+				parameter: null,
+				confirmationMessage: null,
+				iconName: "Image",
+				iconVariant: IconVariant.Filled,
+				isHighlighted: false
+			)
+		);
+	}
+
 	/// <summary>
 	/// Waits for the d2 sidecar to publish its URL, then surfaces that URL on every contributing
 	/// project — both as a dashboard link and as a link on the project's architecture-diagram element.

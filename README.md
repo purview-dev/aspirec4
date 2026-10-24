@@ -72,6 +72,11 @@ Configure the diagram through `AspireC4DiagramOptions`:
 | `HideFromDashboard` | `false` | Hide the LikeC4 sidecar from the Aspire dashboard |
 | `DashboardLinkDisplayName` | `"Architecture Diagram"` | Name used for the diagram link when hidden from the dashboard |
 | `IncludeAspireDashboardLinks` | `true` | Add Aspire dashboard links to diagram elements |
+| `ExportImages` | `true` | Write every view out as an image whenever the model changes — see [Export the views as images](#export-the-views-as-images) |
+| `ImageFormats` | `{Png}` | `Png` and/or `Jpg`. **No SVG** — `likec4 export` does not offer one |
+| `ImageExportDirectory` | `null` (`./.aspirec4/images/`) | Where images are written; relative paths resolve against the AppHost directory. Shared with the ER diagram |
+| `ImageExportTimeoutSeconds` | `300` | How long to wait for one `likec4 export` invocation |
+| `ContainerRuntimeCommand` | `"docker"` | Runtime for the one-shot export container; `podman` where that is what Aspire uses |
 
 ## Common options
 
@@ -96,6 +101,91 @@ builder.AddAspireC4(options => options.WithHMRDisabled());
 ### Exclude the sidecar from the diagram
 
 The LikeC4 sidecar is excluded automatically. Set `WithIncludeAspireC4InternalResource(true)` in the options callback if you want to inspect it.
+
+### Export the views as images
+
+On by default. Every view is written out as a PNG whenever the generated model changes, so a diagram can
+be attached to a pull request or pasted into a wiki without running the server.
+
+**Both diagrams export into one folder**, `./.aspirec4/images/`, so there is a single place to look:
+
+```text
+apphost/.aspirec4/images/
+  architecture-index.png        <- architecture diagram, one file per view
+  architecture-services.png
+  schema.svg                    <- ER diagram
+  schema.png
+```
+
+The architecture diagram's files carry an `architecture-` prefix, because `likec4 export` names each
+file after its view id and a bare `index.png` says nothing in a shared folder. The ER diagram's row in
+the dashboard carries an **Images** property with the resolved path, and an **Open Diagram Images**
+command that opens the folder — the dashboard cannot navigate to a `file://` path itself, so the
+AppHost opens it for you.
+
+`ImageExportDirectory` is resolved from the **AppHost directory**, not from `OutputDirectory`, which is
+what lets both diagrams land in the same place. Setting it on only one of the two splits them apart.
+
+```csharp
+builder.AddAspireC4(options => options.WithoutImageExport());            // opt out
+builder.AddAspireC4(options => options
+    .WithImageExport(LikeC4ImageFormat.Png, LikeC4ImageFormat.Jpg)
+    .WithImageExportDirectory("docs/diagrams")   // relative to the AppHost directory
+);
+```
+
+**There is no SVG option for the architecture diagram.** `likec4 export` renders by screenshotting each
+view in a headless browser and offers only `png` and `jpg`. The ER diagram *does* export SVG, because it
+renders through d2 instead.
+
+That headless browser has two consequences. Export takes tens of seconds and needs a Chromium: container
+mode (the default) gets one from the `ghcr.io/likec4/likec4` image, which already carries it, while
+`WithLocalCLI()` mode needs a Playwright Chromium installed on the host. And it runs in the background,
+so startup is never delayed. A failure is reported and leaves the generated `.c4` file untouched.
+
+#### When export actually runs
+
+Nothing is rendered — and **no container is started** — unless the output would differ:
+
+- **Unchanged model, same session.** The resource state churn that regenerates an identical model
+  exports nothing.
+- **Restart.** A stamp file beside the images records what they were rendered from, so restarting the
+  AppHost over an unchanged model runs nothing. Without it, every restart would re-render, because the
+  in-memory change detection starts empty each time.
+- **Changed formats, or deleted images.** Both re-export: the stamp covers the requested formats, and
+  is only trusted when the files it describes are still there.
+- **Publish.** `aspire publish` generates the model and manifest and exports nothing at all. An export
+  is fire-and-forget, so on publish it would be killed part-way through — and publish is expected to be
+  hermetic, which reaching for a container runtime a build agent may not have would break.
+
+#### Committing the images
+
+The images are the one piece of generated output worth tracking: a diagram that shows up in a pull
+request is documentation, and because export only runs when the diagram changes they do not churn.
+Ignore the generated directory but carve the images out of it:
+
+```gitignore
+# Note the trailing /* rather than /: git will not descend into an excluded directory, so the
+# children have to be excluded individually for the re-include to be reachable.
+**/.aspirec4/*
+!**/.aspirec4/images/
+# The stamp recording what the images were rendered from is a local cache, not documentation.
+**/.aspirec4/images/.aspirec4-*
+```
+
+The two diagrams differ in how well they cache, though both are stable in source control:
+
+- **ER diagram** — fully cached. Derived from your EF model alone, so restarting the AppHost over an
+  unchanged schema renders nothing at all. This is the one that matters most, since it is also the one
+  that can pull a browser image under `WithViewerFidelityExport()`.
+- **Architecture diagram** — re-rendered on each run, but to identical bytes. Its model is a picture of
+  a *running* system: the endpoint ports and the run-state tags settle during startup, so the model the
+  first export sees is not quite the one the last export sees. The stamp already ignores the ephemeral
+  ports; the remaining difference is the run states, and those genuinely change the picture, so they
+  are not normalised away. Measured across restarts the exported PNGs are byte-for-byte the same, so
+  git sees no change — the cost is a background render, not a dirty tree.
+
+Set `ContainerRuntimeCommand` to `podman` where that is the runtime Aspire itself is using.
 
 ## Upgrading from before 13.6
 
@@ -252,6 +342,15 @@ aspirec4                 # parent row, added only when there is more than one di
 | `ViewerServerImageTag` | `null` (`1.29-alpine`) | Pin the `nginx` image tag used to serve the viewer |
 | `HideFromDashboard` | `false` | Hide the d2 sidecar from the Aspire dashboard |
 | `DashboardLinkDisplayName` | `"ER Diagram"` | Name used for the diagram link |
+| `ExportImages` | `true` | Write the diagram out as an image whenever it changes — see [Exporting the ER diagram as an image](#exporting-the-er-diagram-as-an-image) |
+| `ImageFormats` | `{Svg, Png}` | Formats to export. `WithImageExport(...)` |
+| `ImageExportDirectory` | `null` (`./.aspirec4/images/`) | Where images are written; relative paths resolve against the AppHost directory. Shared with the architecture diagram |
+| `D2Command` | `null` | A local `d2` binary to export with; `null` runs the container. Set by `WithLocalD2CLI()` |
+| `ContainerRuntimeCommand` | `"docker"` | Runtime for the one-shot export container; `podman` where that is what Aspire uses |
+| `ExportTimeoutSeconds` | `120` | How long to wait for one d2 invocation before abandoning it |
+| `UseViewerFidelityExport` | `false` | Render images through the viewer in a headless browser so they match its own export. Pulls a ~3.7 GB browser image; `Interactive` only |
+| `ViewerExportImage` | `null` | Override the browser image, including its tag |
+| `ViewerExportTimeoutSeconds` | `600` | How long to wait for a viewer-fidelity export, which may be pulling the image |
 
 ### Renderers
 
@@ -472,6 +571,61 @@ d2 ships as a Go binary. Unlike the LikeC4 sidecar, there is **no npm CLI fallba
 `@d2lang/d2` npm package is a WASM library with no executable. Install d2 (scoop, Homebrew,
 `install.sh`, or `go install`) so it is on `PATH`, or pass an explicit path:
 `WithLocalD2CLI("/opt/d2/bin/d2")`.
+
+### Exporting the ER diagram as an image
+
+On by default. `schema.svg` and `schema.png` are written to `./.aspirec4/images/` — the same folder the
+architecture diagram exports to — whenever the diagram changes. The name drops the `.gen` marker, which
+earns its place on a generated source file you hand-edit beside but not on an image.
+
+```csharp
+builder.AddAspireC4()
+       .WithEntityFrameworkDiagram(configure: options => options.WithoutImageExport());
+
+builder.AddAspireC4()
+       .WithEntityFrameworkDiagram(configure: options => options.WithImageExport(ErdImageFormat.Svg));
+```
+
+**Export always renders through d2, whatever `Renderer` is set to.** The interactive renderer is a
+browser application with no headless path, so an image of it could only be produced by driving a
+browser; d2 is the only format that both renders images itself and keeps column-level edges, so routing
+every renderer through it gives one toolchain and one appearance. Two things follow:
+
+- Export needs either the `d2lang/d2` container or a local `d2` binary. `WithLocalD2CLI()` sets
+  `D2Command` for you; set it directly to render locally while leaving the sidecar or viewer alone.
+  Where neither is available, call `WithoutImageExport()`.
+- `schema.gen.d2` is written alongside the diagram even for the other renderers, purely to be rendered.
+  It is byte-identical to what the `D2` renderer writes.
+
+Export runs in the background, so startup is never delayed, and only when it would change something — a
+stamp beside the images means a restart over an unchanged model runs nothing at all, not even a
+container. It is skipped entirely during `aspire publish`. See
+[When export actually runs](#when-export-actually-runs). Failures are logged to the diagram resource
+and leave the diagram itself untouched.
+
+Prefer SVG for a large schema — a raster of the whole thing is unreadable at any sensible size. The
+viewer also has **Save as SVG / PNG** buttons for exporting what is currently on screen.
+
+#### Matching the viewer exactly
+
+The d2 render is a *different diagram*, not a differently-styled one: d2 draws `sql_table` shapes with
+its own theme and layout, while the viewer draws React Flow cards with context colours, key badges,
+complex-type groups and crow's-foot markers. If the exported file must be the one the viewer's own
+**Save as SVG / PNG** control produces, opt into the viewer render:
+
+```csharp
+builder.AddAspireC4()
+       .WithEntityFrameworkDiagram(configure: options => options.WithViewerFidelityExport());
+```
+
+That loads the generated viewer in a headless browser and calls the very function the toolbar button
+calls, so the file is identical. It is **off by default** because the viewer only runs in a browser:
+turning it on pulls `mcr.microsoft.com/playwright` (around 3.7 GB) and makes an export take seconds
+rather than milliseconds. Point `ViewerExportImage` at a mirror or an image you have already cached if
+the default is inconvenient.
+
+It applies only to the `Interactive` renderer — the one that has a viewer. Any other renderer exports
+through d2 regardless, and says so in the log rather than failing.
 
 ### Overriding the output directory
 
@@ -806,3 +960,5 @@ should review the following changes when upgrading:
 
 - [Homepage](https://purview.dev/projects/aspirec4/)
 - [Documentation](https://purview.dev/docs/aspirec4/)
+
+

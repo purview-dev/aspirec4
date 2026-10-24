@@ -53,6 +53,11 @@ sealed partial class AspireC4EfLifecycleHook(
 	)
 	{
 		ArgumentNullException.ThrowIfNull(eventing);
+		ArgumentNullException.ThrowIfNull(executionContext);
+
+		// Recorded before anything subscribes, because WriteDiagramAsync is reached from the publish
+		// path too and has no other way to tell the two apart.
+		_isPublishMode = executionContext.IsPublishMode;
 
 		eventing.Subscribe<BeforeStartEvent>(
 			async (evt, ct) =>
@@ -62,6 +67,14 @@ sealed partial class AspireC4EfLifecycleHook(
 				if (resource is null)
 				{
 					return;
+				}
+
+				// Added before the first write so the command is on the row from the outset, disabled
+				// until the first export resolves a directory for it. Pointless on publish, which has no
+				// dashboard to put it on and exports nothing for it to open.
+				if (_options.ExportImages && !_isPublishMode)
+				{
+					AddOpenImagesCommand(resource);
 				}
 
 				var contexts = await WriteDiagramAsync(evt.Model, resource, ct).ConfigureAwait(false);
@@ -194,6 +207,22 @@ sealed partial class AspireC4EfLifecycleHook(
 			}
 		}
 
+		// Reached only when the diagram actually changed — the no-op write returns above — so this is
+		// the "on detected change" gate for export as well. Fire-and-forget: rendering an image shells
+		// out to d2, which must not sit between the application and its own startup.
+		// Never on publish, which generates its output and exits — see _isPublishMode.
+		if (ShouldExportImages(_options.ExportImages, efModel.Contexts.Count, _isPublishMode))
+		{
+			// Resolved here rather than inside the export so the dashboard property published below is
+			// already correct; the export itself races the publish and could not be relied on for it.
+			_imageDirectory = ErdImageExporter.ResolveImageDirectory(_options, resource.AppHostDirectory);
+
+			_ = Task.Run(
+				() => ExportImagesAsync(efModel, directory, resource.AppHostDirectory, logger, cancellationToken),
+				cancellationToken
+			);
+		}
+
 		// This resource runs no process of its own, so it has to publish its own state or the
 		// dashboard leaves it Unknown with no logs.
 		await resourceNotificationService
@@ -241,6 +270,10 @@ sealed partial class AspireC4EfLifecycleHook(
 			new("Output", directory),
 			new("Contexts", contexts),
 			new("Tables", tables),
+			// Shown so the folder can be found without knowing the convention; the command beside it
+			// opens the same path. Omitted entirely when export is off, rather than advertising a
+			// directory that will stay empty.
+			.. _imageDirectory is { } images ? (ResourcePropertySnapshot[])[new("Images", images)] : [],
 		];
 
 		// Regeneration republishes on every contributing project restart, so this has to be an upsert:

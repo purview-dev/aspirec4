@@ -73,6 +73,10 @@ sealed partial class AspireC4LifecycleHook(
 		CancellationToken cancellationToken
 	)
 	{
+		// Recorded before anything subscribes, because WriteC4FileAsync is reached from the publish path
+		// too and has no other way to tell the two apart.
+		_isPublishMode = executionContext.IsPublishMode;
+
 		eventing.Subscribe<BeforeStartEvent>(
 			async (evt, ct) =>
 			{

@@ -1,5 +1,6 @@
 using Aspire.Hosting.AspireC4.LikeC4.Icons;
 using Aspire.Hosting.AspireC4.LikeC4.Models;
+using Aspire.Hosting.AspireC4.LikeC4.Runtime;
 
 namespace Aspire.Hosting.AspireC4;
 
@@ -178,6 +179,79 @@ public sealed class AspireC4DiagramOptions
 	/// Has no effect when <see cref="ContainerImageTag"/> is set to a specific version tag.
 	/// </remarks>
 	public bool CheckLatestImageVersion { get; set; } = true;
+
+	/// <summary>
+	/// When <see langword="true"/> (default), every LikeC4 view is written out as an image each time the
+	/// generated model changes.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// The images land in <see cref="ImageExportDirectory"/>, one file per view named after the view's
+	/// id, so a diagram can be attached to a pull request or pasted into a wiki without running the
+	/// server. Export runs in the background, so it never delays startup, and only when it would
+	/// actually change something: the resource state churn that regenerates an identical model exports
+	/// nothing, and a stamp beside the images means a restart runs nothing either — not even a
+	/// container. It is also skipped entirely during a publish, which generates its output and exits.
+	/// </para>
+	/// <para>
+	/// <c>likec4 export</c> screenshots each view in a headless browser, so this takes tens of seconds
+	/// and needs a Chromium. The default container mode gets one from the
+	/// <c>ghcr.io/likec4/likec4</c> image, which already carries it;
+	/// <see cref="AspireC4ResourceExtensions.WithLocalCLI"/> mode needs a Playwright Chromium installed
+	/// on the host instead. Set to <see langword="false"/>, or use
+	/// <see cref="AspireC4DiagramOptionsExtensions.WithoutImageExport"/>, to opt out.
+	/// </para>
+	/// </remarks>
+	public bool ExportImages { get; set; } = true;
+
+	/// <summary>
+	/// The formats written when <see cref="ExportImages"/> is set. Defaults to
+	/// <see cref="LikeC4ImageFormat.Png"/>.
+	/// </summary>
+	/// <remarks>
+	/// There is no SVG option: <c>likec4 export</c> offers only <c>png</c> and <c>jpg</c>, because it
+	/// renders by screenshotting the view rather than emitting vector output. Emptying this disables
+	/// export as surely as clearing <see cref="ExportImages"/>. Populate with
+	/// <see cref="AspireC4DiagramOptionsExtensions.WithImageExport"/>.
+	/// </remarks>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage(
+		"Usage",
+		"CA2227:Collection properties should be read only",
+		Justification = "Settable for configuration binding and direct assignment in user code"
+	)]
+	public HashSet<LikeC4ImageFormat> ImageFormats { get; set; } = [LikeC4ImageFormat.Png];
+
+	/// <summary>
+	/// Where exported images are written. Relative paths are resolved against the AppHost directory;
+	/// <see langword="null"/> (the default) uses <c>./.aspirec4/images/</c>.
+	/// </summary>
+	/// <remarks>
+	/// The ER diagram writes to the same folder by default, so every image AspireC4 produces is in one
+	/// place rather than buried in whichever generated-output directory produced it. The architecture
+	/// diagram's files are prefixed <c>architecture-</c> to keep the two apart. Setting this on only one
+	/// of the two diagrams splits them again, which is why the default is resolved from the AppHost
+	/// directory rather than from <see cref="OutputDirectory"/>.
+	/// </remarks>
+	public string? ImageExportDirectory { get; set; }
+
+	/// <summary>
+	/// Maximum number of seconds to wait for one <c>likec4 export</c> invocation. Defaults to 300.
+	/// </summary>
+	/// <remarks>
+	/// Much larger than <see cref="ExternalProcessTimeoutSeconds"/>, which caps the formatter: export
+	/// starts a LikeC4 server and a browser before it renders anything, so a cold run takes far longer
+	/// than a format pass. Export runs in the background, so this never caps startup.
+	/// </remarks>
+	public int ImageExportTimeoutSeconds { get; set; } = 300;
+
+	/// <summary>
+	/// The container runtime used to run the one-shot export container. Defaults to <c>docker</c>.
+	/// </summary>
+	/// <remarks>
+	/// Set to <c>podman</c> where that is the runtime Aspire itself is using. Ignored in local CLI mode,
+	/// which runs no container.
+	/// </remarks>
+	public string ContainerRuntimeCommand { get; set; } = "docker";
 
 	/// <summary>
 	/// Enables automatic icon inference for known resource types and technologies.
