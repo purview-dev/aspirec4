@@ -45,6 +45,6 @@
 		<PackageVersion Include="TUnit.Aspire" Version="$(TUnitVersion)" />
 		<PackageVersion Include="TUnit.Core" Version="$(TUnitVersion)" />
 		<PackageVersion Include="TUnit.Mocks" Version="$(TUnitVersion)" />
-		<PackageVersion Include="Purview.Skills.Testing" Version="1.1.0" />
+		<PackageVersion Include="Purview.Skills.Testing" Version="1.2.0" />
 	</ItemGroup>
 </Project>
