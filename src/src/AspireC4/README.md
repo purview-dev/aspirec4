@@ -14,6 +14,14 @@ the Aspire dashboard.
 - Optional: a local Node.js CLI runtime (`npx`, `pnpm`, `yarn`, `bun` or `deno`) if you call
   `.WithLocalCLI()` instead.
 
+Container image exports verify bind sharing through `Purview.Containers.Environment`, using
+`alpine:3.19` by default. Offline environments must preload the probe image or set
+`CONTAINER_ENVIRONMENT_PROBE_IMAGE`. For a daemon inside WSL or a shared remote filesystem,
+also install `Purview.Containers.Aspire` and call `builder.AddContainerEnvironment()`
+to adapt the live sidecar's mounts. See the
+[container environment guide](https://github.com/purview-dev/containers/blob/main/src/src/Environment/Sdk/README.md)
+for verified path mappings, write permissions and remote-host limitations.
+
 ## Installation
 
 Add the package to the **AppHost** project:

@@ -1,5 +1,7 @@
 using Aspire.Hosting.AspireC4.EntityFrameworkCore.D2;
 using Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Generators;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 
 namespace Aspire.Hosting.AspireC4.EntityFrameworkCore.Analyzers;
 
@@ -63,11 +65,52 @@ public sealed class EfModelRoundTripTests
 	{
 		using var result = await GenerateAsync(source, cancellationToken: cancellationToken);
 
+		return EmitAssembly(result.CompilationResult.Compilation, cancellationToken);
+	}
+
+	static PortableExecutableReference CreateFriendAssemblyReference(
+		Compilation compilation,
+		CancellationToken cancellationToken
+	)
+	{
+		var attributeTree = compilation.SyntaxTrees.Single(tree =>
+			Path.GetFileName(tree.FilePath) == "AspireC4EfModelAttribute.g.cs"
+		);
+		var friendTree = CSharpSyntaxTree.ParseText(
+			"""
+			[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Persistence.IntegrationTests")]
+			""",
+			(CSharpParseOptions)attributeTree.Options,
+			cancellationToken: cancellationToken
+		);
+		var referencedCompilation = compilation
+			.RemoveSyntaxTrees([
+				.. compilation.SyntaxTrees.Where(tree =>
+					tree != attributeTree && Path.GetFileName(tree.FilePath) != "EmbeddedAttribute.g.cs"
+				),
+			])
+			.WithAssemblyName("Persistence")
+			.AddSyntaxTrees(friendTree);
+		using MemoryStream stream = new();
+		var emit = referencedCompilation.Emit(stream, cancellationToken: cancellationToken);
+
+		if (!emit.Success)
+		{
+			throw new InvalidOperationException(
+				"Reference emit failed: " + string.Join("; ", emit.Diagnostics.Select(d => d.ToString()))
+			);
+		}
+
+		return MetadataReference.CreateFromImage(stream.ToArray());
+	}
+
+	static string EmitAssembly(Compilation compilation, CancellationToken cancellationToken)
+	{
 		var path = Path.Combine(Path.GetTempPath(), $"aspirec4-roundtrip-{Guid.NewGuid():N}.dll");
 
 		using (FileStream stream = new(path, FileMode.Create, FileAccess.Write))
 		{
-			var emit = result.CompilationResult.Compilation.Emit(stream, cancellationToken: cancellationToken);
+			var emit = compilation.Emit(stream, cancellationToken: cancellationToken);
 
 			if (!emit.Success)
 			{
@@ -108,6 +151,48 @@ public sealed class EfModelRoundTripTests
 		""";
 
 	// Tests
+
+	[Test]
+	public async Task RoundTrip_ReferencedFriendAssemblyHasGeneratedAttribute_KeepsOwnDescriptorWithoutConflicts(
+		CancellationToken cancellationToken
+	)
+	{
+		// Arrange
+		using var result = await GenerateAsync(Source, cancellationToken: cancellationToken);
+		var compilation = result.CompilationResult.Compilation.WithAssemblyName("Persistence.IntegrationTests");
+		var reference = CreateFriendAssemblyReference(compilation, cancellationToken);
+		compilation = compilation
+			.AddReferences(reference)
+			.WithOptions(
+				compilation.Options.WithSpecificDiagnosticOptions(
+					compilation.Options.SpecificDiagnosticOptions.SetItem("CS0436", ReportDiagnostic.Error)
+				)
+			);
+
+		// Act
+		var conflicts = compilation.GetDiagnostics(cancellationToken).Where(d => d.Id == "CS0436").ToArray();
+
+		// Assert
+		await Assert.That(conflicts).IsEmpty();
+		var attribute = compilation
+			.Assembly.GetAttributes()
+			.Single(a => a.AttributeClass?.Name == EfModelReader.AttributeName);
+		await Assert
+			.That(attribute.AttributeClass!.ContainingAssembly.Identity.Name)
+			.IsEqualTo(compilation.AssemblyName);
+
+		var path = EmitAssembly(compilation, cancellationToken);
+
+		try
+		{
+			await Assert.That(EfModelReader.TryRead(path, out var descriptor)).IsTrue();
+			await Assert.That(descriptor!).Contains("AppDbContext");
+		}
+		finally
+		{
+			File.Delete(path);
+		}
+	}
 
 	[Test]
 	public async Task RoundTrip_EntityHoldingFrameworkTypes_GainsNoTableForThem(CancellationToken cancellationToken)

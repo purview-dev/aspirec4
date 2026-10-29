@@ -17,6 +17,13 @@ You install it in the **AppHost** and call one method. Your service projects nee
 - Docker (or Podman) for the default viewer sidecar. See [Without a container runtime](#without-a-container-runtime)
   if you have neither.
 
+Container image exports verify bind sharing through `Purview.Containers.Environment`; preload
+`alpine:3.19` offline or set `CONTAINER_ENVIRONMENT_PROBE_IMAGE`. For WSL or shared remote
+daemons, install `Purview.Containers.Aspire` and call `builder.AddContainerEnvironment()`
+to adapt the viewer sidecar's mounts as well. See the
+[container environment guide](https://github.com/purview-dev/containers/blob/main/src/src/Environment/Sdk/README.md)
+for mapping configuration, marker write permissions and remote-host limitations.
+
 ## Enabling DbContext modelling
 
 ### 1. Add the package to the AppHost

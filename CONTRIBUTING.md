@@ -85,6 +85,22 @@ Two distinct brands exist in this repository. Use them consistently:
 
 ### Container runtime tests (local only)
 
+The sample AppHost uses `Purview.Containers.Aspire` to verify bind mounts before containers
+start. Direct exporters and Mermaid tests use the same standalone resolver. Native Docker/Desktop
+paths are tried first; on Windows, running WSL distributions provide verified `wslpath` candidates.
+Docker connection/context/TLS settings are inherited unchanged. No WSL distribution is started.
+
+For custom sharing layouts, set `CONTAINER_ENVIRONMENT_PATH_MAPPINGS` to a JSON object mapping client
+roots to daemon roots. `CONTAINER_ENVIRONMENT_WSL_DISTRIBUTION` restricts WSL discovery to a running
+distribution; `CONTAINER_ENVIRONMENT_PROBE_IMAGE` selects a preloaded/internal probe image.
+These packages are owned by [Purview.Containers](https://github.com/purview-dev/containers), not AspireC4.
+For local development before publication, pack that repository with `just pack`, then restore
+AspireC4 using its `artifacts` directory as an additional NuGet source alongside nuget.org.
+No sibling checkout or machine-specific feed is required after the pinned packages are published.
+The [environment package README](https://github.com/purview-dev/containers/blob/main/src/src/Environment/Sdk/README.md) documents the reusable API, permissions
+and limits. Remote hosts need real shared files; no stale snapshot fallback is applied. Docker credential
+helpers configured on your machine must be installed and on `PATH`, including when the daemon is in WSL.
+
 | Recipe | Description |
 |---|---|
 | `just test-e2e-docker` | Integration tests against the host Docker daemon |

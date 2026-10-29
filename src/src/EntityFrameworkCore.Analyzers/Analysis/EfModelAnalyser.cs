@@ -20,17 +20,23 @@ static class EfModelAnalyser
 	);
 
 	/// <summary>Analyses a single <c>DbContext</c> type.</summary>
-	public static Result Analyse(INamedTypeSymbol context, SemanticModel semanticModel)
+	public static Result Analyse(
+		INamedTypeSymbol context,
+		SemanticModel semanticModel,
+		CancellationToken cancellationToken
+	)
 	{
+		cancellationToken.ThrowIfCancellationRequested();
 		List<(DiagnosticDescriptor, string)> diagnostics = [];
 
-		var fluent = ReadFluentConfiguration(context, semanticModel, diagnostics);
+		var fluent = ReadFluentConfiguration(context, semanticModel, diagnostics, cancellationToken);
 
 		// Entity -> the name the table takes before attributes and fluent config are applied.
 		Dictionary<INamedTypeSymbol, string> entities = [with(SymbolEqualityComparer.Default)];
 
 		foreach (var property in Properties(context))
 		{
+			cancellationToken.ThrowIfCancellationRequested();
 			if (
 				property.Type is INamedTypeSymbol { IsGenericType: true } set
 				&& IsDbSet(set)
@@ -41,12 +47,13 @@ static class EfModelAnalyser
 			}
 		}
 
-		AddReachableEntities(entities);
+		AddReachableEntities(entities, cancellationToken);
 
 		List<TableShape> tables = [];
 
 		foreach (var pair in entities)
 		{
+			cancellationToken.ThrowIfCancellationRequested();
 			tables.Add(BuildTable(pair.Key, pair.Value, fluent, entities, diagnostics));
 		}
 
@@ -91,12 +98,13 @@ static class EfModelAnalyser
 	static FluentConfiguration ReadFluentConfiguration(
 		INamedTypeSymbol context,
 		SemanticModel semanticModel,
-		List<(DiagnosticDescriptor, string)> diagnostics
+		List<(DiagnosticDescriptor, string)> diagnostics,
+		CancellationToken cancellationToken
 	)
 	{
 		foreach (var reference in context.DeclaringSyntaxReferences)
 		{
-			if (reference.GetSyntax() is not ClassDeclarationSyntax declaration)
+			if (reference.GetSyntax(cancellationToken) is not ClassDeclarationSyntax declaration)
 			{
 				continue;
 			}
@@ -110,15 +118,11 @@ static class EfModelAnalyser
 				continue;
 			}
 
-			// The semantic model must belong to the same tree as the syntax being asked about.
-			var model = semanticModel.SyntaxTree == method.SyntaxTree ? semanticModel : null;
-
-			if (model is null)
-			{
-				continue;
-			}
-
-			var fluent = FluentConfiguration.Read(method, model);
+			var model =
+				semanticModel.SyntaxTree == method.SyntaxTree
+					? semanticModel
+					: semanticModel.Compilation.GetSemanticModel(method.SyntaxTree);
+			var fluent = FluentConfiguration.Read(method, model, cancellationToken);
 
 			foreach (var (description, _) in fluent.Uninterpretable)
 			{
@@ -135,12 +139,13 @@ static class EfModelAnalyser
 	/// Adds entity types reachable only through navigation properties, so a related entity that has no
 	/// <c>DbSet</c> still appears on the diagram.
 	/// </summary>
-	static void AddReachableEntities(Dictionary<INamedTypeSymbol, string> entities)
+	static void AddReachableEntities(Dictionary<INamedTypeSymbol, string> entities, CancellationToken cancellationToken)
 	{
 		Queue<INamedTypeSymbol> queue = new(entities.Keys);
 
 		while (queue.Count > 0)
 		{
+			cancellationToken.ThrowIfCancellationRequested();
 			foreach (var property in Properties(queue.Dequeue()))
 			{
 				var target = GetNavigationTarget(property.Type);

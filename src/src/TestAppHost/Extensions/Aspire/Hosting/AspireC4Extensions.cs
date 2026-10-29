@@ -12,6 +12,8 @@ static class AspireC4Extensions
 		this IResourceBuilder<AspireC4Resource> builder
 	)
 	{
+		builder.ApplicationBuilder.AddContainerEnvironment();
+
 		var likeC4ResourcePath = Path.Combine(
 			Path.GetDirectoryName(typeof(TestAppHostProgram).Assembly.Location)!,
 			"likec4"

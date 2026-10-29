@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Aspire.Hosting.AspireC4.ApplicationModel;
 using Aspire.Hosting.AspireC4.Lifecycle;
+using Purview.Containers.Environment;
 
 namespace Aspire.Hosting.AspireC4.LikeC4.Runtime;
 
@@ -118,9 +119,9 @@ static class LikeC4ImageExporter
 				// "C:\…\likec4:/data:ro" leaves the runtime guessing where the drive letter ends and the
 				// mode begins, and it guesses wrong. --mount parses key=value and cannot be ambiguous.
 				"--mount",
-				$"type=bind,source={workspaceRoot},target={LikeC4ServerResource.WorkspacePath},readonly",
+				new ContainerBindMount(workspaceRoot, LikeC4ServerResource.WorkspacePath, IsReadOnly: true).ToString(),
 				"--mount",
-				$"type=bind,source={imageDirectory},target={ContainerOutputPath}",
+				new ContainerBindMount(imageDirectory, ContainerOutputPath).ToString(),
 				"--workdir",
 				ToContainerPath(workspaceRoot, outputDirectory),
 				LikeC4ServerResource.GetImageReference(tag),
@@ -368,6 +369,14 @@ static class LikeC4ImageExporter
 			foreach (var argument in arguments)
 			{
 				startInfo.ArgumentList.Add(argument);
+			}
+
+			if (command == options.ContainerRuntimeCommand)
+			{
+				await ContainerEnvironmentResolver
+					.ForRuntime(command)
+					.ResolveBindMountsAsync(startInfo, cancellationToken)
+					.ConfigureAwait(false);
 			}
 
 			using var process = Process.Start(startInfo);

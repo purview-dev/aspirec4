@@ -5,6 +5,7 @@ using Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Generators;
 using Aspire.Hosting.AspireC4.EntityFrameworkCore.Lifecycle;
 using Aspire.Hosting.AspireC4.EntityFrameworkCore.Models;
 using Microsoft.Extensions.Logging;
+using Purview.Containers.Environment;
 
 namespace Aspire.Hosting.AspireC4.EntityFrameworkCore;
 
@@ -111,9 +112,9 @@ static class ErdImageExporter
 				// "C:\…\erd:/data:ro" leaves the runtime guessing where the drive letter ends and the
 				// mode begins, and it guesses wrong. --mount parses key=value and cannot be ambiguous.
 				"--mount",
-				$"type=bind,source={outputDirectory},target={D2ServerResource.WorkspacePath},readonly",
+				new ContainerBindMount(outputDirectory, D2ServerResource.WorkspacePath, IsReadOnly: true).ToString(),
 				"--mount",
-				$"type=bind,source={imageDirectory},target={ContainerOutputPath}",
+				new ContainerBindMount(imageDirectory, ContainerOutputPath).ToString(),
 				$"{D2ServerResource.DefaultRegistry}/{D2ServerResource.DefaultImage}:{tag}",
 				"--layout",
 				engine,
@@ -278,6 +279,14 @@ static class ErdImageExporter
 			foreach (var argument in arguments)
 			{
 				startInfo.ArgumentList.Add(argument);
+			}
+
+			if (string.IsNullOrWhiteSpace(options.D2Command))
+			{
+				await ContainerEnvironmentResolver
+					.ForRuntime(command)
+					.ResolveBindMountsAsync(startInfo, cancellationToken)
+					.ConfigureAwait(false);
 			}
 
 			using var process = Process.Start(startInfo);

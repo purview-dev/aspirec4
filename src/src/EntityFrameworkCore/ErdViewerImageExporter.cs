@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Aspire.Hosting.AspireC4.EntityFrameworkCore.Lifecycle;
 using Microsoft.Extensions.Logging;
+using Purview.Containers.Environment;
 
 namespace Aspire.Hosting.AspireC4.EntityFrameworkCore;
 
@@ -81,11 +82,11 @@ static class ErdViewerImageExporter
 				// --mount rather than -v for the same reason as the d2 export: a Windows host path
 				// already contains a colon, which leaves -v guessing where the drive letter ends.
 				"--mount",
-				$"type=bind,source={viewerDirectory},target={ContainerViewerPath},readonly",
+				new ContainerBindMount(viewerDirectory, ContainerViewerPath, IsReadOnly: true).ToString(),
 				"--mount",
-				$"type=bind,source={imageDirectory},target={ContainerOutputPath}",
+				new ContainerBindMount(imageDirectory, ContainerOutputPath).ToString(),
 				"--mount",
-				$"type=bind,source={scriptPath},target={ContainerScriptPath},readonly",
+				new ContainerBindMount(scriptPath, ContainerScriptPath, IsReadOnly: true).ToString(),
 				// Chromium's sandbox needs privileges the container does not have, and the page being
 				// rendered is one this package generated from the consumer's own model.
 				"--ipc=host",
@@ -198,6 +199,11 @@ static class ErdViewerImageExporter
 			{
 				startInfo.ArgumentList.Add(argument);
 			}
+
+			await ContainerEnvironmentResolver
+				.ForRuntime(command)
+				.ResolveBindMountsAsync(startInfo, cancellationToken)
+				.ConfigureAwait(false);
 
 			using var process = Process.Start(startInfo);
 

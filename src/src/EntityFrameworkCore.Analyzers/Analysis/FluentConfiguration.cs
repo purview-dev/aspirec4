@@ -23,12 +23,17 @@ sealed class FluentConfiguration
 	public List<(string Description, Location? Location)> Uninterpretable { get; } = [];
 
 	/// <summary>Reads the supported fluent configuration out of an <c>OnModelCreating</c> body.</summary>
-	public static FluentConfiguration Read(MethodDeclarationSyntax method, SemanticModel semanticModel)
+	public static FluentConfiguration Read(
+		MethodDeclarationSyntax method,
+		SemanticModel semanticModel,
+		CancellationToken cancellationToken
+	)
 	{
 		FluentConfiguration config = new();
 
 		foreach (var invocation in method.DescendantNodes().OfType<InvocationExpressionSyntax>())
 		{
+			cancellationToken.ThrowIfCancellationRequested();
 			var name = GetInvokedName(invocation);
 
 			if (name is null)
@@ -51,7 +56,7 @@ sealed class FluentConfiguration
 					break;
 			}
 
-			var entityType = ResolveConfiguredEntity(invocation, semanticModel);
+			var entityType = ResolveConfiguredEntity(invocation, semanticModel, cancellationToken);
 
 			if (entityType is null)
 			{
@@ -182,7 +187,11 @@ sealed class FluentConfiguration
 	}
 
 	/// <summary>Walks an invocation chain back to the owning <c>Entity&lt;T&gt;()</c> call.</summary>
-	static INamedTypeSymbol? ResolveConfiguredEntity(InvocationExpressionSyntax invocation, SemanticModel semanticModel)
+	static INamedTypeSymbol? ResolveConfiguredEntity(
+		InvocationExpressionSyntax invocation,
+		SemanticModel semanticModel,
+		CancellationToken cancellationToken
+	)
 	{
 		foreach (var ancestor in WalkReceivers(invocation))
 		{
@@ -196,7 +205,8 @@ sealed class FluentConfiguration
 				&& generic.TypeArgumentList.Arguments.Count == 1
 			)
 			{
-				return semanticModel.GetSymbolInfo(generic.TypeArgumentList.Arguments[0]).Symbol as INamedTypeSymbol;
+				return semanticModel.GetSymbolInfo(generic.TypeArgumentList.Arguments[0], cancellationToken).Symbol
+					as INamedTypeSymbol;
 			}
 		}
 
