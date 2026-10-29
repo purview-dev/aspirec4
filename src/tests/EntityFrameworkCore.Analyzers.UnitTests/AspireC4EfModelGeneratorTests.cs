@@ -58,6 +58,26 @@ public sealed class AspireC4EfModelGeneratorTests
 	}
 
 	[Test]
+	public async Task RunGenerator_ModelAttribute_IsEmbedded(CancellationToken cancellationToken)
+	{
+		// Arrange
+		const string source = "namespace Sample;";
+
+		// Act
+		using var result = await GenerateAsync(source, cancellationToken: cancellationToken);
+		var type = result.CompilationResult.Compilation.Assembly.GetTypeByMetadataName(
+			"Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfModelAttribute"
+		);
+
+		// Assert
+		await Assert.That(result.Generated()).HasGeneratedSyntaxTree("EmbeddedAttribute.g.cs");
+		await Assert.That(type).IsNotNull();
+		await Assert
+			.That(type!.GetAttributes().Select(attribute => attribute.AttributeClass?.ToDisplayString()))
+			.Contains("Microsoft.CodeAnalysis.EmbeddedAttribute");
+	}
+
+	[Test]
 	public async Task RunGenerator_WithNoDbContext_EmitsNoDescriptor(CancellationToken cancellationToken)
 	{
 		// Arrange
@@ -82,6 +102,56 @@ public sealed class AspireC4EfModelGeneratorTests
 		// Assert
 		await Assert.That(descriptor).Contains("AspireC4EfModelAttribute");
 		await Assert.That(descriptor).Contains("\\\"name\\\":\\\"AppDbContext\\\"");
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task RunGenerator_PartialContextAcrossFiles_EmitsOneContextWithFluentConfiguration(
+		bool repeatsBaseList,
+		CancellationToken cancellationToken
+	)
+	{
+		// Arrange
+		const string context = """
+			using Microsoft.EntityFrameworkCore;
+			namespace Sample;
+			public class User { public int Id { get; set; } }
+			public partial class AppDbContext : DbContext
+			{
+				public DbSet<User> Users { get; set; }
+			}
+			""";
+		const string configuration = """
+			using Microsoft.EntityFrameworkCore;
+			namespace Sample;
+			public partial class AppDbContext : DbContext
+			{
+				protected override void OnModelCreating(ModelBuilder modelBuilder)
+				{
+					modelBuilder.Entity<User>().ToTable("people", "hr");
+				}
+			}
+			""";
+		AspireC4EfModelGeneratorTestOptions options = new();
+		options = options with
+		{
+			AdditionalSources = options.AdditionalSources.Add(
+				repeatsBaseList ? configuration : configuration.Replace(" : DbContext", "", StringComparison.Ordinal)
+			),
+		};
+
+		// Act
+		using var result = await GenerateAsync(context, options, cancellationToken);
+		var attribute = result
+			.CompilationResult.Compilation.Assembly.GetAttributes()
+			.Single(a => a.AttributeClass?.Name == "AspireC4EfModelAttribute");
+		var model = EfModelLoader.Parse((string)attribute.ConstructorArguments[0].Value!);
+
+		// Assert
+		await Assert.That(model.Contexts.Count).IsEqualTo(1);
+		await Assert.That(model.Contexts[0].Tables[0].Name).IsEqualTo("people");
+		await Assert.That(model.Contexts[0].Tables[0].Schema).IsEqualTo("hr");
 	}
 
 	[Test]

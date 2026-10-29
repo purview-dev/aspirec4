@@ -25,6 +25,30 @@ public sealed class LikeC4StrictValidatorGeneratorTests : TUnitSourceGeneratorTe
 		await Assert.That(result.Generated()).HasGeneratedSyntaxTree("LikeC4Severity.g.cs");
 	}
 
+	[Test]
+	[Arguments("LikeC4RegistryAttribute")]
+	[Arguments("KnownTypeAttribute")]
+	[Arguments("SeverityAttribute")]
+	[Arguments("LikeC4RegistryType")]
+	[Arguments("LikeC4Severity")]
+	public async Task RunGenerator_MarkerType_IsEmbedded(string typeName, CancellationToken cancellationToken)
+	{
+		// Arrange
+		const string source = "namespace TestApp;";
+
+		// Act
+		using var result = await RunGeneratorAsync(source, cancellationToken: cancellationToken);
+		var type = result.CompilationResult.Compilation.Assembly.GetTypeByMetadataName(
+			$"Aspire.Hosting.AspireC4.{typeName}"
+		);
+
+		// Assert
+		await Assert.That(type).IsNotNull();
+		await Assert
+			.That(type!.GetAttributes().Select(attribute => attribute.AttributeClass?.ToDisplayString()))
+			.Contains("Microsoft.CodeAnalysis.EmbeddedAttribute");
+	}
+
 	// -----------------------------------------------------------------------
 	// Full generator pipeline — DSL strict mode (ASPIREC4001 / ASPIREC4002)
 	// -----------------------------------------------------------------------

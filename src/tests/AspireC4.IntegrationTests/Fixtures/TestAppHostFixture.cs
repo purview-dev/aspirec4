@@ -1,10 +1,10 @@
 using System.Diagnostics;
 using System.Text.Json;
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Publishing;
 using Aspire.Hosting.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 
 namespace Aspire.Hosting.AspireC4.Fixtures;
 
@@ -504,19 +504,16 @@ public sealed class TestAppHostFixture : TUnit.Aspire.AspireFixture<Projects.Tes
 			opts.ImageExportDirectory = Path.Combine(outputDir, "images");
 		});
 
+		var publishCompletion = ObservePublishAsync(builder);
+
 		var app = await builder.BuildAsync(cancellationToken);
 		_publishApps.Add(app);
 
 		var isPublishMode = app.Services.GetRequiredService<DistributedApplicationExecutionContext>().IsPublishMode;
 
-		// BuildAsync returns as soon as the application is built; the publish pipeline
-		// (BeforeStartEvent → .c4 generation, then the manifest publisher) runs asynchronously
-		// on the AppHost thread. ApplicationStopped fires once the publish has fully completed
-		// and every output file has been flushed — only then are the files safe to read.
-		TaskCompletionSource stopped = new(TaskCreationOptions.RunContinuationsAsynchronously);
-		var lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
-		using var registration = lifetime.ApplicationStopped.Register(() => stopped.TrySetResult());
-		await stopped.Task.WaitAsync(cancellationToken);
+		// Publish completion is not host shutdown: a CLI/backchannel can keep the AppHost alive
+		// afterwards. Subscribe before BuildAsync so a fast publish cannot race the registration.
+		await publishCompletion.WaitAsync(ResourceTimeout, cancellationToken);
 
 		_publishOutputDirs.Add(outputDir);
 
@@ -527,6 +524,19 @@ public sealed class TestAppHostFixture : TUnit.Aspire.AspireFixture<Projects.Tes
 		{
 			ImageDirectory = Path.Combine(outputDir, "images"),
 		};
+	}
+
+	static Task ObservePublishAsync(IDistributedApplicationTestingBuilder builder)
+	{
+		TaskCompletionSource published = new(TaskCreationOptions.RunContinuationsAsynchronously);
+		builder.Eventing.Subscribe<AfterPublishEvent>(
+			(_, _) =>
+			{
+				published.TrySetResult();
+				return Task.CompletedTask;
+			}
+		);
+		return published.Task;
 	}
 
 	public override async ValueTask DisposeAsync()

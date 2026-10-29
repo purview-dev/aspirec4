@@ -7,6 +7,10 @@ public sealed partial class AspireC4LifecycleHookTests
 	static readonly string Root = Path.GetPathRoot(Path.GetFullPath("."))!
 		.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
+	[System.Diagnostics.CodeAnalysis.SuppressMessage(
+		"Performance",
+		"CA1877:Collapse consecutive Path.Combine or Path.Join operations"
+	)]
 	static string P(params string[] segments) =>
 		Path.Combine(Root + Path.DirectorySeparatorChar, Path.Combine(segments));
 

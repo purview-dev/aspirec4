@@ -23,7 +23,7 @@ public sealed class EntityFrameworkDiagramTests(Fixtures.TestAppHostFixture fixt
 			Skip.Test(fixture.SkipReason);
 	}
 
-	static JsonElement Root(string json) => JsonDocument.Parse(json).RootElement;
+	static JsonElement Root(string json) => JsonElement.Parse(json);
 
 	[Test]
 	public async Task StartAsync_WhenAppStarts_GeneratesTheModelAndViewer()

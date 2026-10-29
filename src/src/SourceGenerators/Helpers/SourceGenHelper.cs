@@ -68,7 +68,7 @@ static partial class SourceGenHelper
 			)
 			.CombineWith(strictMode, static (modelContext, value, _) => modelContext with { StrictMode = value });
 
-		return model;
+		return model.WithTrackingName("ValidateLikeC4");
 	}
 
 	static GeneratorResult<LikeC4RegistryTarget> BuildRegistryTarget(

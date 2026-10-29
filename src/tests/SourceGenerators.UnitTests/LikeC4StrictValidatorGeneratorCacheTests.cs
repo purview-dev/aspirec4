@@ -133,4 +133,27 @@ public sealed class LikeC4StrictValidatorGeneratorCacheTests
 		await Assert.That(second["GetMSBuildPropertyValue_AspireC4Strict"]).Contains(StepReason.Modified);
 		await Assert.That(IsCachedOrUnchanged(second["GetLikeC4RegistryTarget"])).IsTrue();
 	}
+
+	[Test]
+	public async Task UnrelatedSourceChange_ValidationModelRemainsCached(CancellationToken cancellationToken)
+	{
+		// Arrange
+		const string unrelatedSource = "namespace Other; public class Unrelated { }";
+
+		// Act
+		var result = await GenerateIncrementalAsync(
+			[
+				new IncrementalRunInput([Source, unrelatedSource]),
+				new IncrementalRunInput([
+					Source,
+					unrelatedSource.Replace("Unrelated", "Renamed", StringComparison.Ordinal),
+				]),
+			],
+			cancellationToken: cancellationToken
+		);
+
+		// Assert
+		var second = StepReasons(result.Runs[1]);
+		await Assert.That(IsCachedOrUnchanged(second["ValidateLikeC4"])).IsTrue();
+	}
 }

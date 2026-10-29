@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Aspire.Hosting.AspireC4.EntityFrameworkCore;
 using Aspire.Hosting.AspireC4.EntityFrameworkCore.Mermaid;
 using Aspire.Hosting.AspireC4.EntityFrameworkCore.Models;
+using Purview.Containers.Environment;
 
 namespace Aspire.Hosting.AspireC4.Mermaid;
 
@@ -136,7 +137,7 @@ public sealed class MermaidValidationTests
 
 		ProcessStartInfo startInfo = new()
 		{
-			FileName = "docker",
+			FileName = Environment.GetEnvironmentVariable("ASPIRE_CONTAINER_RUNTIME") ?? "docker",
 			RedirectStandardOutput = true,
 			RedirectStandardError = true,
 			UseShellExecute = false,
@@ -147,8 +148,8 @@ public sealed class MermaidValidationTests
 			{
 				"run",
 				"--rm",
-				"-v",
-				$"{_tempDir}:/data",
+				"--mount",
+				new ContainerBindMount(_tempDir, "/data").ToString(),
 				Image,
 				"-i",
 				"/data/diagram.mmd",
@@ -160,14 +161,19 @@ public sealed class MermaidValidationTests
 			startInfo.ArgumentList.Add(arg);
 		}
 
-		using var process = Process.Start(startInfo) ?? throw new InvalidOperationException("Could not start docker.");
+		await ContainerEnvironmentResolver
+			.ForRuntime(startInfo.FileName)
+			.ResolveBindMountsAsync(startInfo, cancellationToken);
 
-		var stdout = await process.StandardOutput.ReadToEndAsync(cancellationToken);
-		var stderr = await process.StandardError.ReadToEndAsync(cancellationToken);
+		using var process =
+			Process.Start(startInfo) ?? throw new InvalidOperationException("Could not start the container runtime.");
+
+		var stdout = process.StandardOutput.ReadToEndAsync(cancellationToken);
+		var stderr = process.StandardError.ReadToEndAsync(cancellationToken);
 
 		await process.WaitForExitAsync(cancellationToken);
 
-		return (process.ExitCode, stdout + stderr);
+		return (process.ExitCode, await stdout + await stderr);
 	}
 
 	// Tests

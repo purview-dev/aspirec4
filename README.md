@@ -5,6 +5,17 @@
 
 **AspireC4.Hosting** is an [Aspire](https://learn.microsoft.com/en-us/dotnet/aspire/) extension library that generates live [LikeC4](https://likec4.dev) diagrams from the Aspire resource graph.
 
+## Packages
+
+| Package | Install into | Purpose |
+| --- | --- | --- |
+| [`AspireC4.Hosting`](src/src/AspireC4/README.md) | AppHost | The LikeC4 architecture diagram |
+| [`AspireC4.Hosting.EntityFrameworkCore`](src/src/EntityFrameworkCore/README.md) | AppHost | An ER diagram of your EF Core `DbContext` types |
+| [`AspireC4.EntityFrameworkCore`](src/src/EntityFrameworkCore.Analyzers/README.md) | The project declaring a `DbContext` (optional) | Captures fluent configuration for the ER diagram |
+| [`AspireC4.EntityFrameworkCore.ModelDump`](src/src/EntityFrameworkCore.ModelDump/README.md) | The project owning the EF Core provider (optional) | Dumps the real EF model at build time |
+
+Each package ships its own README on NuGet; this document is the complete reference.
+
 ## Prerequisites
 
 - **.NET 8 or later**.

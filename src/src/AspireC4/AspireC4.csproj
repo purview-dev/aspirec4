@@ -33,11 +33,11 @@
 			Include="$(MSBuildThisFileDirectory)..\..\..\assets\images\likec4\likec4-logo.png"
 			Link="Sdk/likec4-logo.png"
 		/>
-		<None Include="$(MSBuildThisFileDirectory)..\..\..\README.md" Link="Sdk/README.md" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Aspire.Hosting" />
+		<PackageReference Include="Purview.Containers.Environment" />
 	</ItemGroup>
 
 	<ItemGroup>

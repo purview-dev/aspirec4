@@ -36,6 +36,14 @@ generates live [LikeC4](https://likec4.dev) architecture diagrams from the Aspir
 | `assets/images/` | LikeC4 logos/icons used by the samples |
 | `.agents/` | Bundled agent skills/agents/prompts (see [Skills](#skills)) |
 
+### Package READMEs
+
+Every packable project has its own `README.md` beside its `.csproj`, and that is what ships on NuGet:
+`Purview.BuildSdk` packs a project's own README in preference to the repository root one. Keep each
+one about its own package, and update it when that package's public API or setup changes. Do not
+link the root `README.md` into a project with `Link="Sdk/README.md"`, which would override it. Use
+absolute URLs in package READMEs, because relative links do not resolve on nuget.org.
+
 ## Toolchain
 
 | Tool | Purpose | Version source |

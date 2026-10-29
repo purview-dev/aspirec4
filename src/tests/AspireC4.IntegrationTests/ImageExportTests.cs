@@ -28,7 +28,7 @@ public sealed class ImageExportTests
 {
 	string _tempDir = string.Empty;
 
-	readonly CapturingLogger logger = new();
+	readonly CapturingLogger _logger = new();
 
 	[Before(Test)]
 	public void SetUp()
@@ -108,6 +108,7 @@ public sealed class ImageExportTests
 	{
 		await File.WriteAllTextAsync(
 			Path.Combine(_tempDir, "likec4.config.json"),
+			/*lang=json,strict*/
 			"""{ "name": "aspirec4", "title": "Export Test" }""",
 			cancellationToken
 		);
@@ -158,12 +159,12 @@ public sealed class ImageExportTests
 			options,
 			_tempDir,
 			_tempDir,
-			logger,
+			_logger,
 			cancellationToken
 		);
 
 		// Assert
-		await Assert.That(written.Count).IsEqualTo(2).Because(logger.Messages);
+		await Assert.That(written.Count).IsEqualTo(2).Because(_logger.Messages);
 
 		// The d2 source stays with the generated diagram; only the images move to the shared folder.
 		await Assert.That(File.Exists(Path.Combine(_tempDir, "schema.gen.d2"))).IsTrue();
@@ -195,12 +196,12 @@ public sealed class ImageExportTests
 			options,
 			_tempDir,
 			_tempDir,
-			logger,
+			_logger,
 			cancellationToken
 		);
 
 		// Assert
-		await Assert.That(written.Count).IsEqualTo(1).Because(logger.Messages);
+		await Assert.That(written.Count).IsEqualTo(1).Because(_logger.Messages);
 		await Assert.That(File.Exists(Path.Combine(ImagesDirectory, "schema.svg"))).IsTrue();
 		await Assert.That(File.Exists(Path.Combine(ImagesDirectory, "schema.png"))).IsFalse();
 	}
@@ -215,7 +216,7 @@ public sealed class ImageExportTests
 		var options = new AspireC4EfDiagramOptions().WithImageExport(ErdImageFormat.Svg);
 		var svg = Path.Combine(ImagesDirectory, "schema.svg");
 
-		await ErdImageExporter.ExportAsync(CreateModel(), options, _tempDir, _tempDir, logger, cancellationToken);
+		await ErdImageExporter.ExportAsync(CreateModel(), options, _tempDir, _tempDir, _logger, cancellationToken);
 
 		var first = File.GetLastWriteTimeUtc(svg);
 
@@ -225,7 +226,7 @@ public sealed class ImageExportTests
 			options,
 			_tempDir,
 			_tempDir,
-			logger,
+			_logger,
 			cancellationToken
 		);
 
@@ -242,7 +243,7 @@ public sealed class ImageExportTests
 		var options = new AspireC4EfDiagramOptions().WithImageExport(ErdImageFormat.Svg);
 		var svg = Path.Combine(ImagesDirectory, "schema.svg");
 
-		await ErdImageExporter.ExportAsync(CreateModel(), options, _tempDir, _tempDir, logger, cancellationToken);
+		await ErdImageExporter.ExportAsync(CreateModel(), options, _tempDir, _tempDir, _logger, cancellationToken);
 
 		File.Delete(svg);
 
@@ -252,12 +253,12 @@ public sealed class ImageExportTests
 			options,
 			_tempDir,
 			_tempDir,
-			logger,
+			_logger,
 			cancellationToken
 		);
 
 		// Assert
-		await Assert.That(written.Count).IsEqualTo(1).Because(logger.Messages);
+		await Assert.That(written.Count).IsEqualTo(1).Because(_logger.Messages);
 		await Assert.That(File.Exists(svg)).IsTrue();
 	}
 
@@ -272,7 +273,7 @@ public sealed class ImageExportTests
 			new AspireC4EfDiagramOptions().WithImageExport(ErdImageFormat.Svg),
 			_tempDir,
 			_tempDir,
-			logger,
+			_logger,
 			cancellationToken
 		);
 
@@ -282,12 +283,12 @@ public sealed class ImageExportTests
 			new AspireC4EfDiagramOptions().WithImageExport(ErdImageFormat.Svg, ErdImageFormat.Png),
 			_tempDir,
 			_tempDir,
-			logger,
+			_logger,
 			cancellationToken
 		);
 
 		// Assert
-		await Assert.That(written.Count).IsEqualTo(2).Because(logger.Messages);
+		await Assert.That(written.Count).IsEqualTo(2).Because(_logger.Messages);
 	}
 
 	[Test]
@@ -298,13 +299,13 @@ public sealed class ImageExportTests
 		options.ImageExportDirectory = "docs/diagrams";
 
 		// Act
-		await ErdImageExporter.ExportAsync(CreateModel(), options, _tempDir, _tempDir, logger, cancellationToken);
+		await ErdImageExporter.ExportAsync(CreateModel(), options, _tempDir, _tempDir, _logger, cancellationToken);
 
 		// Assert
 		await Assert
 			.That(File.Exists(Path.Combine(_tempDir, "docs", "diagrams", "schema.svg")))
 			.IsTrue()
-			.Because(logger.Messages);
+			.Because(_logger.Messages);
 	}
 
 	[Test]
@@ -313,8 +314,7 @@ public sealed class ImageExportTests
 		// Not merely "no images": the d2 source is written for export's benefit alone, and the images
 		// folder is created by the export, so neither should be left behind when export is off.
 		// Arrange
-		AspireC4EfDiagramOptions options = new();
-		options.ImageFormats = [];
+		AspireC4EfDiagramOptions options = new() { ImageFormats = [] };
 
 		// Act
 		var written = await ErdImageExporter.ExportAsync(
@@ -322,7 +322,7 @@ public sealed class ImageExportTests
 			options,
 			_tempDir,
 			_tempDir,
-			logger,
+			_logger,
 			cancellationToken
 		);
 
@@ -338,9 +338,12 @@ public sealed class ImageExportTests
 		// produces, not a d2 render of the same model. Asserted on the markup rather than on the file
 		// merely existing, because a d2 render would also produce a plausible .svg.
 		// Arrange
-		AspireC4EfDiagramOptions options = new() { Renderer = ErdRenderer.Interactive, UseViewerFidelityExport = true };
-
-		options.ImageFormats = [ErdImageFormat.Svg];
+		AspireC4EfDiagramOptions options = new()
+		{
+			Renderer = ErdRenderer.Interactive,
+			UseViewerFidelityExport = true,
+			ImageFormats = [ErdImageFormat.Svg],
+		};
 
 		// The viewer and its dependencies have to be on disk for a browser to load them.
 		foreach (var file in ErdOutput.Create(CreateModel(), options))
@@ -356,12 +359,12 @@ public sealed class ImageExportTests
 			options,
 			_tempDir,
 			_tempDir,
-			logger,
+			_logger,
 			cancellationToken
 		);
 
 		// Assert
-		await Assert.That(written.Count).IsEqualTo(1).Because(logger.Messages);
+		await Assert.That(written.Count).IsEqualTo(1).Because(_logger.Messages);
 
 		var svg = await File.ReadAllTextAsync(Path.Combine(ImagesDirectory, "schema.svg"), cancellationToken);
 
@@ -379,9 +382,12 @@ public sealed class ImageExportTests
 		// Only the interactive renderer writes a viewer, so there is nothing to drive otherwise. The
 		// export still happens rather than being abandoned, and says why in the log.
 		// Arrange
-		AspireC4EfDiagramOptions options = new() { Renderer = ErdRenderer.Dbml, UseViewerFidelityExport = true };
-
-		options.ImageFormats = [ErdImageFormat.Svg];
+		AspireC4EfDiagramOptions options = new()
+		{
+			Renderer = ErdRenderer.Dbml,
+			UseViewerFidelityExport = true,
+			ImageFormats = [ErdImageFormat.Svg],
+		};
 
 		// Act
 		var written = await ErdImageExporter.ExportAsync(
@@ -389,13 +395,13 @@ public sealed class ImageExportTests
 			options,
 			_tempDir,
 			_tempDir,
-			logger,
+			_logger,
 			cancellationToken
 		);
 
 		// Assert
-		await Assert.That(written.Count).IsEqualTo(1).Because(logger.Messages);
-		await Assert.That(logger.Messages).Contains("Dbml");
+		await Assert.That(written.Count).IsEqualTo(1).Because(_logger.Messages);
+		await Assert.That(_logger.Messages).Contains("Dbml");
 	}
 
 	[Test]
@@ -447,7 +453,7 @@ public sealed class ImageExportTests
 			new AspireC4EfDiagramOptions().WithImageExport(ErdImageFormat.Png),
 			_tempDir,
 			_tempDir,
-			logger,
+			_logger,
 			cancellationToken
 		);
 
@@ -465,7 +471,7 @@ public sealed class ImageExportTests
 		// Assert
 		var images = Directory.GetFiles(ImagesDirectory, "*.png").Select(Path.GetFileName).ToArray();
 
-		await Assert.That(images).Contains("schema.png").Because(logger.Messages);
+		await Assert.That(images).Contains("schema.png").Because(_logger.Messages);
 		await Assert.That(images).Contains("architecture-index.png");
 	}
 
