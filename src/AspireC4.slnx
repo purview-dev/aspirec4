@@ -10,6 +10,7 @@
 	</Folder>
 	<Folder Name="/src/">
 		<Project Path="src/TestAppHost/TestAppHost.csproj" />
+		<Project Path="src/TestAppHost.DataService/TestAppHost.DataService.csproj" />
 		<Project Path="src/SourceGenerators/SourceGenerators.csproj" />
 		<Project Path="src/AspireC4/AspireC4.csproj" />
 		<Project Path="src/EntityFrameworkCore/EntityFrameworkCore.csproj" />
