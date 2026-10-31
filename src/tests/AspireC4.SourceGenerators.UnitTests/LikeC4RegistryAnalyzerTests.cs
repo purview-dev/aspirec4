@@ -179,7 +179,9 @@ public sealed class LikeC4RegistryAnalyzerTests
 	}
 
 	[Test]
-	public async Task Analyze_WithNoDefinitionsClassAndGroupCallSite_EmitsNoDiagnostic(CancellationToken cancellationToken)
+	public async Task Analyze_WithNoDefinitionsClassAndGroupCallSite_EmitsNoDiagnostic(
+		CancellationToken cancellationToken
+	)
 	{
 		// Arrange
 		const string source = """
@@ -271,17 +273,17 @@ public sealed class LikeC4RegistryAnalyzerTests
 
 	static string MetadataSource(string keyValue, string callSite) =>
 		$$"""
-		using Aspire.Hosting.AspireC4;
-		namespace TestApp;
+			using Aspire.Hosting.AspireC4;
+			namespace TestApp;
 
-		[LikeC4Registry]
-		class MyRegistry
-		{
-		    public static class MetadataKeys { public const string AzureSku = "{{keyValue}}"; }
-		}
+			[LikeC4Registry]
+			class MyRegistry
+			{
+			    public static class MetadataKeys { public const string AzureSku = "{{keyValue}}"; }
+			}
 
-		class Setup { static void Configure() { var a = new object(); a{{callSite}}; } }
-		""";
+			class Setup { static void Configure() { var a = new object(); a{{callSite}}; } }
+			""";
 
 	[Test]
 	public async Task Analyze_WithMetadataKeysNestedClass_ExtractsWithoutError(CancellationToken cancellationToken)
@@ -378,7 +380,9 @@ public sealed class LikeC4RegistryAnalyzerTests
 	// -----------------------------------------------------------------------
 
 	[Test]
-	public async Task Analyze_WithRegistryStrictEnableAndUndeclaredGroup_EmitsErrorSeverity(CancellationToken cancellationToken)
+	public async Task Analyze_WithRegistryStrictEnableAndUndeclaredGroup_EmitsErrorSeverity(
+		CancellationToken cancellationToken
+	)
 	{
 		// Arrange
 		const string source = """
@@ -482,7 +486,10 @@ public sealed class LikeC4RegistryAnalyzerTests
 
 		AnalyzerOptions? options =
 			buildProperties.Count > 0
-				? new AnalyzerOptions(ImmutableArray<AdditionalText>.Empty, new TestAnalyzerConfigOptionsProvider(buildProperties))
+				? new AnalyzerOptions(
+					ImmutableArray<AdditionalText>.Empty,
+					new TestAnalyzerConfigOptionsProvider(buildProperties)
+				)
 				: null;
 
 		var withAnalyzers = compilation.WithAnalyzers(
@@ -494,11 +501,11 @@ public sealed class LikeC4RegistryAnalyzerTests
 	}
 
 	static IEnumerable<MetadataReference> GetMetadataReferences() =>
-	[
-		MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
-		MetadataReference.CreateFromFile(typeof(Compilation).Assembly.Location),
-		MetadataReference.CreateFromFile(typeof(CSharpCompilation).Assembly.Location),
-	];
+		[
+			MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+			MetadataReference.CreateFromFile(typeof(Compilation).Assembly.Location),
+			MetadataReference.CreateFromFile(typeof(CSharpCompilation).Assembly.Location),
+		];
 
 	static IReadOnlyList<Diagnostic> GetDiagnostics(ImmutableArray<Diagnostic> diagnostics, string diagnosticId) =>
 		[.. diagnostics.Where(d => d.Id == diagnosticId)];

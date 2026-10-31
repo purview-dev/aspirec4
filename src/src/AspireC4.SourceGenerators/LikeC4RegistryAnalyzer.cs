@@ -41,8 +41,10 @@ public sealed class LikeC4RegistryAnalyzer : DiagnosticAnalyzer
 		{
 			// Honour the same opt-out as the generator.
 			var options = startContext.Options.AnalyzerConfigOptionsProvider.GlobalOptions;
-			if (TryGetOption(options, "build_property.DisableAspireC4SourceGenerator") is { } disabledVal
-				&& string.Equals(disabledVal, "true", StringComparison.OrdinalIgnoreCase))
+			if (
+				TryGetOption(options, "build_property.DisableAspireC4SourceGenerator") is { } disabledVal
+				&& string.Equals(disabledVal, "true", StringComparison.OrdinalIgnoreCase)
+			)
 				return;
 
 			var globalStrict = LikeC4DiagnosticRules.ParseGlobalStrict(
@@ -102,17 +104,29 @@ public sealed class LikeC4RegistryAnalyzer : DiagnosticAnalyzer
 		var groupsSeverity = LikeC4DiagnosticRules.ResolveTypeSeverity(groupsTypeRaw, registrySeverity);
 
 		int metadataTypeRaw = primaryDef?.MetadataKeysTypeStrictMode ?? LikeC4DiagnosticRules.SeverityInherit;
-		var metadataSeverity = metadataTypeRaw != LikeC4DiagnosticRules.SeverityInherit
-			? LikeC4DiagnosticRules.ResolveTypeSeverity(metadataTypeRaw, registrySeverity)
-			: (globalStrict.IncludesMetadata ? registrySeverity : null);
+		var metadataSeverity =
+			metadataTypeRaw != LikeC4DiagnosticRules.SeverityInherit
+				? LikeC4DiagnosticRules.ResolveTypeSeverity(metadataTypeRaw, registrySeverity)
+				: (globalStrict.IncludesMetadata ? registrySeverity : null);
 
-		var allowedGroups = LikeC4StrictValidatorGenerator.BuildAllowedSet([], registries.SelectMany(static d => d.Groups));
+		var allowedGroups = LikeC4StrictValidatorGenerator.BuildAllowedSet(
+			[],
+			registries.SelectMany(static d => d.Groups)
+		);
 		var allowedMetadata = LikeC4StrictValidatorGenerator.BuildAllowedSet(
 			[],
-			registries.SelectMany(static d => d.MetadataKeys).Select(LikeC4StrictValidatorGenerator.NormaliseMetadataKeyForComparison)
+			registries
+				.SelectMany(static d => d.MetadataKeys)
+				.Select(LikeC4StrictValidatorGenerator.NormaliseMetadataKeyForComparison)
 		);
 
-		return new ValidationConfig(allowedGroups, allowedMetadata, groupsSeverity, metadataSeverity, isExplicitlyEnabled);
+		return new ValidationConfig(
+			allowedGroups,
+			allowedMetadata,
+			groupsSeverity,
+			metadataSeverity,
+			isExplicitlyEnabled
+		);
 	}
 
 	// --- Call-site validation (ASPIREC4004 / ASPIREC4006) ---
@@ -159,8 +173,10 @@ public sealed class LikeC4RegistryAnalyzer : DiagnosticAnalyzer
 
 		if (methodName == WithMetadataMethodName && config.MetadataSeverity is { } metadataSeverity)
 		{
-			if ((config.Metadata.Count > 0 || config.IsExplicitlyEnabled)
-				&& !config.Metadata.Contains(LikeC4StrictValidatorGenerator.NormaliseMetadataKeyForComparison(value)))
+			if (
+				(config.Metadata.Count > 0 || config.IsExplicitlyEnabled)
+				&& !config.Metadata.Contains(LikeC4StrictValidatorGenerator.NormaliseMetadataKeyForComparison(value))
+			)
 			{
 				var descriptor = LikeC4DiagnosticRules.WithSeverity(
 					LikeC4DiagnosticRules.UndeclaredMetadataKey,
@@ -211,9 +227,7 @@ public sealed class LikeC4RegistryAnalyzer : DiagnosticAnalyzer
 	/// </summary>
 	sealed class RegistryState(Compilation compilation)
 	{
-		readonly Lazy<ImmutableArray<ClassDefinitions>> _registries = new(
-			() => FindRegistryDefinitions(compilation)
-		);
+		readonly Lazy<ImmutableArray<ClassDefinitions>> _registries = new(() => FindRegistryDefinitions(compilation));
 		public ImmutableArray<ClassDefinitions> Registries => _registries.Value;
 
 		static ImmutableArray<ClassDefinitions> FindRegistryDefinitions(Compilation compilation)
@@ -229,14 +243,16 @@ public sealed class LikeC4RegistryAnalyzer : DiagnosticAnalyzer
 			foreach (var type in GetAllNamedTypes(compilation.Assembly.GlobalNamespace))
 			{
 				var attributes = type.GetAttributes();
-				bool isRegistry = attributes.Any(
-					a => registryAttribute is not null
-						&& SymbolEqualityComparer.Default.Equals(a.AttributeClass, registryAttribute)
+				bool isRegistry = attributes.Any(a =>
+					registryAttribute is not null
+					&& SymbolEqualityComparer.Default.Equals(a.AttributeClass, registryAttribute)
 				);
 				if (!isRegistry)
 					continue;
 
-				builder.Add(LikeC4StrictValidatorGenerator.ExtractClassDefinitions(type, attributes, CancellationToken.None));
+				builder.Add(
+					LikeC4StrictValidatorGenerator.ExtractClassDefinitions(type, attributes, CancellationToken.None)
+				);
 			}
 
 			return builder.ToImmutable();

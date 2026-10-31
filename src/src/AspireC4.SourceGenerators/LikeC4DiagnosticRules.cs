@@ -32,6 +32,7 @@ static class LikeC4DiagnosticRules
 	{
 		/// <summary>The rule needs both DSL-file and class definitions; emitted by the generator.</summary>
 		RequiresBothSources,
+
 		/// <summary>The rule needs only class definitions; emitted by the analyzer.</summary>
 		ClassOnly,
 	}
