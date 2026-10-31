@@ -13,10 +13,21 @@ metadata:
 
 # Entity Framework Core ER diagrams
 
-`AspireC4.Hosting.EntityFrameworkCore` adds a second diagram beside the architecture one: a live
-[d2](https://d2lang.com) `sql_table` ER diagram built from your Entity Framework Core `DbContext`
-types, linked from each contributing project in the dashboard and on its element in the architecture
-diagram.
+`AspireC4.Hosting.EntityFrameworkCore` adds a second diagram beside the architecture one: a live ER
+diagram built from your Entity Framework Core `DbContext` types, linked from each contributing project in
+the dashboard and on its element in the architecture diagram.
+
+It is **additive and optional**. `AddAspireC4()` is always the base, and `WithEntityFrameworkDiagram()` is
+an extension on the `IResourceBuilder<AspireC4Resource>` it returns, so the architecture diagram is always
+present — run one diagram or both, but never the ER diagram alone.
+
+## Target frameworks
+
+| Package | Target framework | Shipped as |
+| --- | --- | --- |
+| `AspireC4.Hosting.EntityFrameworkCore` | `net10.0` | `lib/net10.0/` library; the AppHost must target `net10.0` |
+| `AspireC4.EntityFrameworkCore` | `netstandard2.0` | analyzer-only under `analyzers/dotnet/cs/`, so it loads into any project's compiler and adds no runtime assembly |
+| `AspireC4.EntityFrameworkCore.ModelDump` | `net10.0` | build-time tool under `tools/`, invoked by MSBuild, so the building machine needs a .NET 10 runtime |
 
 ## Packages
 
@@ -188,6 +199,9 @@ apphost/.aspirec4/images/
   schema.png
   architecture-index.png        <- architecture diagram
 ```
+
+That folder is also the place to take a screenshot from: it is written by the AppHost itself, so nothing
+has to be captured by hand.
 
 The name drops the `.gen` marker: `schema.gen` produces `schema.svg`, not `schema.gen.svg`. The marker
 earns its place on a generated source file sitting in a directory you also hand-edit, which an image in

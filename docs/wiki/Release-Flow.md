@@ -76,7 +76,7 @@ The build must produce no `RS2000`–`RS2008` diagnostics.
 
 `purview-build.json` declares the package content that must be present in the packed `.nupkg`
 (`PackValidation:RequiredContent`). Keep the `lib/...` entries pinned to the concrete target framework
-(`lib/net8.0/...`) rather than the `$(TFM)` token.
+(`lib/net10.0/...`) rather than the `$(TFM)` token.
 
 The validator expands `$(TFM)` into one entry per framework group it discovers in the package — including the
 framework-agnostic `any` group contributed by the root-level `build/<package-id>.props`. That makes

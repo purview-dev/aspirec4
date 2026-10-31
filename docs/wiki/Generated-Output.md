@@ -25,6 +25,23 @@ Every AspireC4 diagram writes beneath the same `./.aspirec4/` root in the AppHos
 | `likec4.config.json` | LikeC4 project configuration (`name`, `title`, `include.paths`, `imageAliases`, `metadata`). Generated when `GenerateConfigFile` is `true`. |
 | Additional `.c4` files | Any files registered through `WithAdditionalDSLFile` are copied here; LikeC4 discovers all `.c4` files in the project directory automatically. |
 
+The ER diagram writes its own files beneath `./.aspirec4/erd/` — `schema.gen.json` (or `.mmd`, `.dbml`,
+`.d2`, depending on the renderer) plus the viewer assets. It is a separate diagram with its own options;
+see [Entity Framework Core ER Diagrams](Entity-Framework-Diagrams.md).
+
+## Exporting images
+
+Both diagrams export to the same `./.aspirec4/images/` folder: the architecture diagram writes one PNG
+per view with an `architecture-` prefix, the ER diagram writes `schema.svg` and `schema.png`. Export runs
+in the background and only when the output would differ, so startup is never delayed and an unchanged
+diagram renders nothing.
+
+The images are the one piece of generated output worth committing — a diagram in a pull request is
+documentation. The screenshots embedded in this repository's READMEs and wiki pages are kept in
+`docs/images/screenshots/`, captured from the sample AppHost; see its `README.md` for the file list and how
+to refresh them. See [Configuration](Configuration.md) for `ImageExportDirectory`, `ImageFormats` and
+`WithoutImageExport()`.
+
 ## Generating into your own LikeC4 project
 
 `WithLikeC4ProjectFolder(path)` points AspireC4 at a LikeC4 project you already maintain. That directory is what the LikeC4 server serves, so the project's own `likec4.config.json`, `.c4` sources and views are all in play, and the generated model joins them as one more file:

@@ -8,6 +8,7 @@ the Aspire dashboard.
 
 ## Prerequisites
 
+- **.NET 10 or later.** This package targets `net10.0`, so the AppHost that references it must too.
 - **Aspire 13.5.3 or later.** The AppHost must reference both the AppHost SDK and
   `Aspire.Hosting.AppHost`.
 - **Docker** (or Podman) for the default LikeC4 sidecar container.
@@ -53,6 +54,15 @@ builder.Build().Run();
 
 When the AppHost starts, this writes `./.aspirec4/likec4/model.gen.c4` and starts the LikeC4 server.
 The diagram refreshes as the Aspire app changes. Open it from the `aspirec4` resource in the dashboard.
+
+## Screenshots
+
+![AspireC4 architecture diagram of the sample AppHost: a Node app referencing Redis Commander, local Redis and Postgres in a local dev group, PgWeb, Azure Redis and Azure Postgres, with labelled relationships](https://raw.githubusercontent.com/purview-dev/aspirec4/main/docs/images/screenshots/architecture-diagram.png)
+
+The image above is captured from the sample AppHost in the
+[repository](https://github.com/purview-dev/aspirec4) and stored in `docs/images/screenshots/`. Your own
+diagram exports a PNG for every view to `./.aspirec4/images/` on startup (`ExportImages`), which is the
+easiest way to capture one.
 
 ## Configuration
 
@@ -159,6 +169,12 @@ Add `"AspireC4.Hosting"` to the `packages` in `aspire.config.json` and run `aspi
 Add [`AspireC4.Hosting.EntityFrameworkCore`](https://www.nuget.org/packages/AspireC4.Hosting.EntityFrameworkCore)
 to the AppHost and call `.WithEntityFrameworkDiagram()` to add a live ER diagram of your `DbContext`
 types, linked from the architecture diagram.
+
+It is **additive, and optional**: `AddAspireC4()` stays exactly as it is, and
+`WithEntityFrameworkDiagram()` is an extension on the builder it returns, so the two diagrams run side by
+side — or you keep the architecture diagram on its own and never install the package. The ER diagram has
+its own renderers (`Interactive` by default, plus `Mermaid`, `Dbml` and `D2`) and options; see that
+package's README.
 
 ## More information
 

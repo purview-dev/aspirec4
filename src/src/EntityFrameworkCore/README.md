@@ -6,10 +6,20 @@ Adds a live **ER diagram of your Entity Framework Core `DbContext` types** to an
 [Aspire](https://learn.microsoft.com/en-us/dotnet/aspire/) AppHost, alongside the
 [AspireC4](https://www.nuget.org/packages/AspireC4.Hosting) architecture diagram and linked from it.
 
+It is **optional and additive**: the architecture diagram from `AddAspireC4()` is always the base, and
+`WithEntityFrameworkDiagram()` adds the ER diagram beside it. You can run the architecture diagram on its
+own without this package; there is no way to have the ER diagram without it, because the extension hangs
+off the builder `AddAspireC4()` returns.
+
 You install it in the **AppHost** and call one method. Your service projects need no changes.
 
 ## Prerequisites
 
+- **.NET 10 or later.** This package targets `net10.0`; the optional
+  [`AspireC4.EntityFrameworkCore`](https://www.nuget.org/packages/AspireC4.EntityFrameworkCore) analyzer is
+  `netstandard2.0` and the
+  [`AspireC4.EntityFrameworkCore.ModelDump`](https://www.nuget.org/packages/AspireC4.EntityFrameworkCore.ModelDump)
+  tool is `net10.0`.
 - An Aspire 13.5+ AppHost already using [`AspireC4.Hosting`](https://www.nuget.org/packages/AspireC4.Hosting)
   (this package depends on it, so installing this one brings it in).
 - The projects that own your `DbContext` types are registered in the AppHost with
@@ -90,6 +100,15 @@ dotnet add package AspireC4.EntityFrameworkCore.ModelDump
 When a context is available from more than one source, the best one is used: **dump**, then
 **descriptor**, then **metadata**. Each context in the diagram records its fidelity, so an approximate
 model is never mistaken for a complete one.
+
+## Screenshots
+
+![AspireC4 interactive ER diagram of the sample AppHost: five DbContext groups of tables with primary and foreign key badges and crow's-foot relationship edges](https://raw.githubusercontent.com/purview-dev/aspirec4/main/docs/images/screenshots/entity-framework-er-diagram.png)
+
+The image above is captured from the sample AppHost in the
+[repository](https://github.com/purview-dev/aspirec4) and stored in `docs/images/screenshots/`. Your own
+diagram exports to `./.aspirec4/images/` on startup (`ExportImages`, SVG and PNG by default), and the
+viewer has its own **Save as SVG / PNG** buttons.
 
 ## Choosing which contexts appear
 

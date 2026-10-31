@@ -261,6 +261,14 @@ config.Item("AppHost:BrowserToken").Returns("value");
 |---|---|
 | `AspireC4.UnitTests` | `LikeC4ModelBuilder`, `LikeC4DslGenerator`, annotations, options — no Docker required |
 | `AspireC4.IntegrationTests` | Full Aspire lifecycle: container startup, file generation, endpoint availability |
+| `EntityFrameworkCore.UnitTests` | d2 model builder, d2 DSL generator and descriptor loader — no Docker required |
+| `EntityFrameworkCore.Analyzers.UnitTests` | EF model generator, plus the generator→assembly→AppHost round-trip |
+| `SourceGenerators.UnitTests` | The registry/DSL strict-validation generator |
+| `Repository.UnitTests` | Repository-level rules, including the authored skills in `skills/` |
+
+Every project targets `net10.0` except the two Roslyn components (`SourceGenerators` and
+`EntityFrameworkCore.Analyzers`), which target `netstandard2.0`. The framework is set once in
+`src/Directory.Build.props`, which is also where the `Aspire.Hosting.AspireC4` namespace prefix lives.
 
 Integration tests require Docker to be running. They pull `ghcr.io/likec4/likec4` on first run.
 
