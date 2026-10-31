@@ -57,4 +57,5 @@ HMR keeps the diagram up to date in the browser as the file regenerates. The HMR
 ## Next pages
 
 - [Generated Output](Generated-Output.md)
+- [Entity Framework Core ER Diagrams](Entity-Framework-Diagrams.md)
 - [Configuration](Configuration.md)

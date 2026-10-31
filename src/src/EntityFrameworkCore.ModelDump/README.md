@@ -34,6 +34,11 @@ dotnet add package AspireC4.EntityFrameworkCore.ModelDump
 The reference is the opt-in. The package is a development dependency, so it adds nothing to your
 build output or to the projects that reference yours.
 
+The dump tool itself targets **`net10.0`** and is invoked as `dotnet <tool>.dll` in an MSBuild `Exec`
+after `Build`, so the machine doing the build needs a .NET 10 runtime. A build that cannot run the tool
+simply produces no dump (the target is `ContinueOnError`); the AppHost then falls back to the other
+sources.
+
 ### 2. Make sure the project has a design-time factory
 
 The dump creates each context through `IDesignTimeDbContextFactory<T>`, which is the same entry point

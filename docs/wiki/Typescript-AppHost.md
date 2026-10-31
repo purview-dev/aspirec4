@@ -109,6 +109,28 @@ aspire restore
 
 When adding another Aspire integration, use `aspire add <package>` so Aspire updates `aspire.config.json` and regenerates the TypeScript API. Inspect `.aspire/modules/aspire.mts` to see the APIs currently available to `apphost.mts`.
 
+## Entity Framework Core diagrams
+
+The ER diagram is an optional second diagram and is additive, exactly as in a C# AppHost: `addAspireC4()`
+is the base, and the ER diagram is added on top of it. It is only compiled into the TypeScript API when
+the package is declared, so add it to `packages` in `aspire.config.json` and run `aspire restore`:
+
+```json
+{
+  "packages": {
+    "Aspire.Hosting.JavaScript": "13.5.3",
+    "AspireC4.Hosting": "13.5.3",
+    "AspireC4.Hosting.EntityFrameworkCore": "13.5.3"
+  }
+}
+```
+
+The fluent methods are exported in camel case (`addAspireC4`, `withLikeC4Details`, `withEntityFrameworkDiagram`,
+…). The ER output still lands in `./.aspirec4/erd/`, and the per-service fidelity packages
+(`AspireC4.EntityFrameworkCore` and `AspireC4.EntityFrameworkCore.ModelDump`) are C# project references, so
+they apply to whatever service project declares the `DbContext`. See
+[Entity Framework Core ER Diagrams](Entity-Framework-Diagrams.md).
+
 ## Output paths and legacy mode
 
 The TypeScript AppHost writes to the same paths as the C# AppHost: `./.aspirec4/likec4/` for the architecture diagram and `./.aspirec4/erd/` for the ER diagram, both relative to the AppHost working directory. If you are upgrading from 13.5 and need the pre-13.6 layout unchanged, call `withLegacyLayout()` inside the `configure` callback:

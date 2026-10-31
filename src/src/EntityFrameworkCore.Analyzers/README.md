@@ -21,6 +21,15 @@ configuration.
 | `DbSet<T>`, navigations, `[Key]`, `[Table]`, `[Column]`, `[Required]`, `[MaxLength]`, `[Index]`, … | All of that, **plus** `HasDefaultSchema`, `ToTable`, `HasKey`, `Ignore`, `HasIndex(...).IsUnique()`, `HasColumnName`, `HasColumnType`, `HasMaxLength`, `IsRequired`, `HasComment` |
 | Fidelity: `Approximate` | Fidelity: `Full` |
 
+## Requirements
+
+- **`netstandard2.0` analyzer, no runtime surface.** The package ships under `analyzers/dotnet/cs/`, so it
+  loads into the compiler for whatever framework your project targets and adds nothing to your build
+  output. The generated `[assembly: AspireC4EfModel]` attribute is compiled into your own assembly, which
+  the `net10.0` AppHost then reads.
+- The project still has to be registered in the AppHost with `AddProject<Projects.X>(...)`, and the AppHost
+  still has to call `WithEntityFrameworkDiagram()`.
+
 ## Installation
 
 Add it to the project that **declares** your `DbContext`. That can be the service project or a class
@@ -37,9 +46,6 @@ yours:
 ```xml
 <PackageReference Include="AspireC4.EntityFrameworkCore" PrivateAssets="all" />
 ```
-
-The service project still has to be registered in the AppHost with `AddProject<Projects.X>(...)`, and the
-AppHost has to call `WithEntityFrameworkDiagram()`.
 
 ## How it works
 

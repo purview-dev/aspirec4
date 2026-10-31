@@ -12,7 +12,24 @@ generates live [LikeC4](https://likec4.dev) architecture diagrams from the Aspir
 - The `AspireC4.Hosting` library (the Aspire integration).
 - An incremental Roslyn source generator (`AspireC4.SourceGenerators`) that validates registry constants and
   `.c4` DSL files against `.WithTag()`, `.WithKind()`, `.WithLikeC4Group()`, and `.WithMetadata()` call sites.
+- An optional Entity Framework Core ER diagram: the `AspireC4.Hosting.EntityFrameworkCore` AppHost library,
+  the analyzer-only `AspireC4.EntityFrameworkCore` package and the `AspireC4.EntityFrameworkCore.ModelDump`
+  build-time tool. It is **additive** — `WithEntityFrameworkDiagram()` extends the builder `AddAspireC4()`
+  returns, so consumers run the architecture diagram alone or both diagrams, never the ER diagram alone.
 - A `TestAppHost` sample AppHost and a TypeScript AppHost sample.
+
+### Packages and target frameworks
+
+| Package | Project | Target framework | Shipped as |
+|---|---|---|---|
+| `AspireC4.Hosting` | `src/src/AspireC4/` | `net10.0` | `lib/net10.0/` + `analyzers/dotnet/cs/` + `build/` |
+| `AspireC4.Hosting.EntityFrameworkCore` | `src/src/EntityFrameworkCore/` | `net10.0` | `lib/net10.0/` |
+| `AspireC4.EntityFrameworkCore` | `src/src/EntityFrameworkCore.Analyzers/` | `netstandard2.0` | `analyzers/dotnet/cs/` only (no runtime assembly) |
+| `AspireC4.EntityFrameworkCore.ModelDump` | `src/src/EntityFrameworkCore.ModelDump/` | `net10.0` | `tools/` + `build/` |
+
+AppHosts therefore target `net10.0`. `src/Directory.Build.props` owns the framework; the two Roslyn
+projects override it to `netstandard2.0`. The packed content is pinned to `lib/net10.0/...` in
+`.config/purview-build.json`, so a framework change has to update that manifest too.
 
 ### Layout
 
@@ -43,6 +60,15 @@ Every packable project has its own `README.md` beside its `.csproj`, and that is
 one about its own package, and update it when that package's public API or setup changes. Do not
 link the root `README.md` into a project with `Link="Sdk/README.md"`, which would override it. Use
 absolute URLs in package READMEs, because relative links do not resolve on nuget.org.
+
+### Documentation screenshots
+
+Screenshots embedded in the root `README.md`, the wiki pages under `docs/wiki/` and the package READMEs
+live in `docs/images/screenshots/`; its own `README.md` records provenance, consumers and how to refresh
+them. Use a relative path from the root README, and absolute `raw.githubusercontent.com` URLs from
+`docs/wiki/` (published from a separate repository) and from package READMEs (nuget.org). Skills under
+`skills/` install on their own, so they never embed these files — name the diagram's export folder
+(`./.aspirec4/images/`) in prose instead.
 
 ## Toolchain
 
@@ -122,8 +148,9 @@ just erd-svg <input>       # Render an emitted Mermaid .mmd to SVG in a one-shot
 ```
 
 `erd-check` defaults to the model at `src/src/TestAppHost/.aspirec4/erd/schema.gen.json`, written by
-`dotnet run --project src/src/TestAppHost`. Requires `bunx playwright install chromium` once. See the
-`erd-viewer` skill in `.github/skills/` before changing the viewer or its checks.
+`dotnet run --project src/src/TestAppHost`. Requires `bunx playwright install chromium` once. The checks
+live in `scripts/erd-viewer-check.mts` and `scripts/erd-vendor.mts`; read them, and the viewer under
+`src/src/EntityFrameworkCore/Assets/viewer/`, before changing either.
 
 ### Other
 
@@ -290,8 +317,9 @@ headline.
 
 ## LikeC4 DSL work
 
-When writing or validating `.c4`/`.likec4` files, load `.agents/skills/likec4-dsl/SKILL.md` and its
-`references/*.md`. Key contracts:
+When writing or validating `.c4`/`.likec4` files, load the `likec4-dsl` skill
+(`.agents/skills/likec4-dsl/SKILL.md` plus its `references/*.md`) — install it first if it is missing, since
+`.agents/skills/` is gitignored. Key contracts:
 
 - Validate with `likec4 validate` (never `check`/`lint`/`build`), prefer
   `likec4 validate --json --no-layout --file <edited-file> <project-dir>`.
@@ -305,8 +333,8 @@ When writing or validating `.c4`/`.likec4` files, load `.agents/skills/likec4-ds
   (`.github/workflows/release.yml`, delegating to the `purview-dev/build` reusable `purview-release.yml` with
   `release-mode: NuGet`) reads and validates it, builds, tests, packs, builds release notes from conventional
   commits, and creates a GitHub Release with the `.nupkg`/`.snupkg`. It does **not** push to nuget.org.
-- `.github/skills/release/SKILL.md` reflects the current pipeline correctly — keep it in sync when the release
-  process changes. Prefer `just pipeline-release` / `pipeline-local-release`.
+- [Release Flow](docs/wiki/Release-Flow.md) and `.config/purview-build.json` describe the current pipeline —
+  keep both in sync when the release process changes. Prefer `just pipeline-release` / `pipeline-local-release`.
 - Roslyn diagnostics (`ASPIREC4001`–`ASPIREC4007`) are tracked in
   `src/src/SourceGenerators/AnalyzerReleases.Shipped.md` / `AnalyzerReleases.Unshipped.md`. Move unshipped rows into
   a new `## Release <version>` shipped section when cutting a release that adds, removes, or changes a rule. See
@@ -314,14 +342,16 @@ When writing or validating `.c4`/`.likec4` files, load `.agents/skills/likec4-ds
 
 ## Skills
 
-Relevant bundled skills in `.agents/skills/`:
+Skills installed from other repositories live in `.agents/skills/` (gitignored); `skills-lock.json`
+records what is installed. The families:
 
-- `likec4-dsl` — LikeC4 DSL/CLI work.
-- `project-placement-defaults`, `sdk-configuration-reference`, `sdk-project-behavior-and-detection` —
-  Purview.BuildSdk behaviour and configuration.
-- `source-generator-codewriter-modernization`, `source-generator-testing`, `tunit-test-authoring` —
-  Roslyn generator work and tests.
-- `telemetry-sourcegenerator-*` — Purview.Telemetry.SourceGenerator usage (library telemetry).
+- `purview-architecture*`, `purview-engineering-principles`, `purview-testing-conventions` — architecture
+  and test conventions.
+- `purview-buildsdk-*` — Purview.BuildSdk behaviour and configuration.
+- `purview-containers-*` — the Purview.Containers packages this library consumes.
+- `purview-sourcegenerator-*` — Roslyn generator authoring, packaging and tests.
+- `purview-telemetry*` — Purview.Telemetry.SourceGenerator usage (library telemetry).
+- `purview-persistence` — the EF Core conventions the ER diagram is drawn from.
 - Agents and prompts live in `.agents/agents/` and `.agents/prompts/`.
 
 ## Agent skills
@@ -337,8 +367,8 @@ own skills are never installed into it - that would leave two copies to drift ap
 their authored path, `skills/<name>/SKILL.md`.
 
 `.github/skills/` is a third, separate place: skills about working *in* this repository, which would
-be meaningless to a consumer who installed the published set. `release` and `erd-viewer` live there.
-A skill that tells you how to run this repo's own tooling belongs in `.github/skills/`, never in
+be meaningless to a consumer who installed the published set. A skill that tells you how to run this
+repo's own tooling belongs in `.github/skills/`, never in
 `skills/` - `SkillTests` requires everything under `skills/` to carry the `purview-aspirec4` prefix
 because those names land in a directory shared with every skill a developer has installed.
 
@@ -348,9 +378,10 @@ npx skills add purview-dev/aspirec4
 
 | Skill | Answers |
 | -- | -- |
-| `skills/purview-aspirec4-quickstart/` | installing, `AddAspireC4`, what happens on startup, Docker sidecar versus local CLI |
+| `skills/purview-aspirec4-quickstart/` | installing, `AddAspireC4`, what happens on startup, Docker sidecar versus local CLI, and when to add the ER diagram as well |
 | `skills/purview-aspirec4-configuration/` | every `AspireC4DiagramOptions` property and its fluent method |
 | `skills/purview-aspirec4-resources/` | `WithLikeC4Details`, `WithLikeC4Reference`, `WithLikeC4Group`, and exclusion |
+| `skills/purview-aspirec4-entityframework/` | `WithEntityFrameworkDiagram`, the three model-discovery sources, renderers, domain types, and ER image export |
 | `skills/purview-aspirec4-validation/` | the `[LikeC4Registry]` class, severity levels, and the `ASPIREC4xxx` diagnostics |
 
 Every skill carries the `purview-aspirec4` prefix. Skills install into one flat directory per agent,

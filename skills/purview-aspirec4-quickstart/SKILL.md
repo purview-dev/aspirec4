@@ -3,8 +3,8 @@ name: purview-aspirec4-quickstart
 description: >-
   Use when adding AspireC4 to an Aspire AppHost to generate a live LikeC4 architecture diagram -
   installing AspireC4.Hosting, calling AddAspireC4, what happens on startup, running the LikeC4
-  server as a Docker sidecar or through a local Node CLI, and finding the diagram in the Aspire
-  dashboard.
+  server as a Docker sidecar or through a local Node CLI, finding the diagram in the Aspire
+  dashboard, and deciding whether to add the optional Entity Framework Core ER diagram as well.
 metadata:
   product: AspireC4
   repository: purview-dev/aspirec4
@@ -17,7 +17,7 @@ it beside your application.
 
 ## Prerequisites
 
-- .NET 8 or later.
+- .NET 10 or later. `AspireC4.Hosting` targets `net10.0`, so the AppHost must too.
 - **Aspire 13.5.3 or later.** An AppHost project must reference both the AppHost SDK and
   `Aspire.Hosting.AppHost`.
 - **Docker**, to run the LikeC4 sidecar container — or a local Node CLI runtime if you use
@@ -59,6 +59,31 @@ On startup AspireC4:
    `Exited`, for instance.
 
 Open the Aspire dashboard and select the `aspirec4` resource, or its **View LikeC4 Diagram** link.
+
+## Architecture only, or both diagrams
+
+`AddAspireC4()` on its own is the whole integration: the LikeC4 architecture diagram is the base, and it
+is the only diagram many applications need. Nothing else has to be installed.
+
+A second, optional ER diagram of your Entity Framework Core `DbContext` types is added by a separate
+AppHost package, on the builder `AddAspireC4()` returns:
+
+```csharp
+builder.AddAspireC4()
+       .WithEntityFrameworkDiagram();
+```
+
+`WithEntityFrameworkDiagram()` is an extension on `IResourceBuilder<AspireC4Resource>`, so the architecture
+diagram is always present — the ER diagram can never be used on its own. With both registered, the
+dashboard nests them under one `aspirec4` parent row and each contributing project links to its schema.
+See `purview-aspirec4-entityframework` for the packages, the fidelity sources and the renderers.
+
+## Looking at the output
+
+Every view is exported as an image on startup — the architecture diagram as PNG, the ER diagram as SVG
+and PNG — into `./.aspirec4/images/` beside the AppHost. That folder is the fastest way to see (or
+share) the diagram without opening the dashboard, and it is where to look when asked for a screenshot.
+`WithoutImageExport()` turns it off.
 
 ## Upgrading from 13.5
 

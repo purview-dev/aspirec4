@@ -4,7 +4,7 @@ This guide walks through installing AspireC4 and generating your first live arch
 
 ## Prerequisites
 
-- **.NET 8 or later**.
+- **.NET 10 or later.** The AppHost targets `net10.0`, and so do the `AspireC4.Hosting` and `AspireC4.Hosting.EntityFrameworkCore` libraries.
 - **Aspire 13.5.3 or later**. Aspire AppHost projects must reference both the AppHost SDK and `Aspire.Hosting.AppHost`.
 - **Docker** is used by default to run the LikeC4 sidecar container.
 - Optional: a local Node.js CLI runtime (`npx`, `pnpm`, `yarn`, `bun`, or `deno`) if you call `.WithLocalCLI()`.
@@ -73,6 +73,36 @@ builder.AddAspireC4(options =>
 
 See [Configuration](Configuration.md) for the full options reference and [Customizing Resources](Customizing-Resources.md) for per-resource details.
 
+## Add an ER diagram too (optional)
+
+The architecture diagram is the base: `AddAspireC4()` is all you need, and you can stop there. To add a
+linked ER diagram of your Entity Framework Core `DbContext` types as well, install the second AppHost
+package and call one more method on the builder `AddAspireC4()` returns:
+
+```bash
+dotnet add package AspireC4.Hosting.EntityFrameworkCore
+```
+
+```csharp
+var builder = DistributedApplication.CreateBuilder(args);
+
+builder.AddAspireC4()
+       .WithEntityFrameworkDiagram();
+
+builder.AddProject<Projects.Api>("api");
+
+builder.Build().Run();
+```
+
+The dashboard then shows both diagrams under one `aspirec4` parent row, and each contributing project is
+linked to the ER diagram. Output moves to `./.aspirec4/erd/`, beside the architecture diagram's
+`./.aspirec4/likec4/`.
+
+Two more optional packages raise the fidelity of the ER model — `AspireC4.EntityFrameworkCore` in the
+project declaring the `DbContext`, and `AspireC4.EntityFrameworkCore.ModelDump` in the project owning the
+EF Core provider. Both are opt-in by reference alone. See
+[Entity Framework Core ER Diagrams](Entity-Framework-Diagrams.md).
+
 ## Use a local CLI instead of Docker
 
 When Docker is not available, or you prefer a local Node.js-based workflow:
@@ -91,6 +121,7 @@ AspireC4 supports both C# and TypeScript AppHosts. See [TypeScript AppHosts](Typ
 
 - [Configuration](Configuration.md)
 - [Customizing Resources](Customizing-Resources.md)
+- [Entity Framework Core ER Diagrams](Entity-Framework-Diagrams.md)
 - [Generated Output](Generated-Output.md)
 - [Dashboard Integration](Dashboard-Integration.md)
 - [Source Generator Validation](Source-Generator.md)

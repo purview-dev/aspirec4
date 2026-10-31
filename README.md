@@ -16,9 +16,40 @@
 
 Each package ships its own README on NuGet; this document is the complete reference.
 
+### Use one diagram or both
+
+`AspireC4.Hosting` is the **base** package: it is what registers AspireC4, generates the LikeC4
+architecture diagram and owns the dashboard integration. Everything else hangs off it.
+
+- **Architecture only** (the common case): install `AspireC4.Hosting` and call `AddAspireC4()`.
+- **Architecture and ER diagram**: additionally install `AspireC4.Hosting.EntityFrameworkCore` and call
+  `.WithEntityFrameworkDiagram()` on the builder `AddAspireC4()` returns. `WithEntityFrameworkDiagram()`
+  is an extension on `IResourceBuilder<AspireC4Resource>`, so the architecture diagram is always present
+  — the ER diagram is additive, never a replacement.
+- **ER diagram at full fidelity**: optionally add `AspireC4.EntityFrameworkCore` (to the project that
+  declares the `DbContext`) and/or `AspireC4.EntityFrameworkCore.ModelDump` (to the project that owns
+  the EF Core provider). Both are opt-in by package reference alone.
+
+The same split applies to dependencies: the ER diagram needs the projects that own your `DbContext`
+types to be registered with `AddProject<Projects.X>(...)`.
+
+### Target frameworks
+
+| Package | Target framework | Shipped as |
+| --- | --- | --- |
+| `AspireC4.Hosting` | `net10.0` | `lib/net10.0/` library |
+| `AspireC4.Hosting.EntityFrameworkCore` | `net10.0` | `lib/net10.0/` library |
+| `AspireC4.EntityFrameworkCore` | `netstandard2.0` | `analyzers/dotnet/cs/` — analyzer-only, no runtime assembly |
+| `AspireC4.EntityFrameworkCore.ModelDump` | `net10.0` | `tools/` — a build-time tool invoked by MSBuild |
+
+The AppHost consumes the two libraries, so an AppHost must target **`net10.0`**. The analyzer package is
+`netstandard2.0` so it loads into any compiler, and it adds no assembly to your output; the model dump is
+a `net10.0` tool run by the build, so the build machine needs a .NET 10 runtime.
+
 ## Prerequisites
 
-- **.NET 8 or later**.
+- **.NET 10 SDK or later.** Every shipping package targets `net10.0`, and an Aspire 13.5 AppHost
+  targets `net10.0` too.
 - **Aspire 13.5.3 or later**. Aspire AppHost projects must reference both the AppHost SDK and
   `Aspire.Hosting.AppHost`.
 - **Docker** is used by default to run the LikeC4 sidecar container.
@@ -62,6 +93,20 @@ This writes `./.aspirec4/likec4/model.gen.c4`, starts the LikeC4 server, and ref
 > changes nothing else, call `options.WithLegacyLayout()` — it restores both the old paths
 > (`./likec4/gen/`, `./erd/gen/`) and the flat `aspirec4` / `aspirec4-er` names. See
 > [Upgrading from before 13.6](#upgrading-from-before-136).
+
+## Screenshots
+
+Both are captured from the sample AppHost in this repository (`src/src/TestAppHost`) and stored in
+[`docs/images/screenshots/`](docs/images/screenshots/), so the links below stay valid however often the
+diagrams are regenerated. Run `dotnet run --project src/src/TestAppHost` to refresh them.
+
+| Architecture diagram (`AddAspireC4()`) | ER diagram (`WithEntityFrameworkDiagram()`) |
+| --- | --- |
+| ![AspireC4 architecture diagram of the sample AppHost: a Node app referencing Redis Commander, local Redis and Postgres in a local dev group, PgWeb, Azure Redis and Azure Postgres, with labelled relationships](docs/images/screenshots/architecture-diagram.png) | ![AspireC4 interactive ER diagram of the sample AppHost: five DbContext groups of tables with primary and foreign key badges and crow's-foot relationship edges](docs/images/screenshots/entity-framework-er-diagram.png) |
+
+Every diagram also exports its views on startup, to `./.aspirec4/images/` beside the AppHost — see
+[Export the views as images](#export-the-views-as-images). Those exported files are the simplest way to
+add your own screenshots to a pull request, a wiki or a design document.
 
 ## Configuration
 
@@ -268,11 +313,16 @@ Only tags, links, metadata, relationships and nested elements are applied — Li
 nothing else, so your project stays the single source of each element's title, technology, description and
 icon. See [Generated Output](docs/wiki/Generated-Output.md) for the details.
 
-## Entity Framework Core ER diagrams (d2)
+## Entity Framework Core ER diagrams
 
-`AspireC4.Hosting.EntityFrameworkCore` adds a second, complementary diagram: a live
-[d2](https://d2lang.com) `sql_table` ER diagram generated from your Entity Framework Core `DbContext`
-types, hosted alongside the architecture diagram and linked from it.
+This is an **optional second diagram** on top of the architecture one: `AddAspireC4()` is always required,
+and `.WithEntityFrameworkDiagram()` adds the ER diagram to it. Install nothing else and you still get the
+architecture diagram; install this only where you want the schema view too.
+
+`AspireC4.Hosting.EntityFrameworkCore` adds a live ER diagram generated from your Entity Framework Core
+`DbContext` types, hosted alongside the architecture diagram and linked from it. The default `Interactive`
+renderer draws a browser viewer; `Mermaid`, `Dbml` and `D2` emit text formats instead (see
+[Renderers](#renderers)).
 
 The AppHost package is all that is required. `WithEntityFrameworkDiagram()` finds every associated
 `DbContext` automatically — reading a build-time dump or a source-generated descriptor where a project

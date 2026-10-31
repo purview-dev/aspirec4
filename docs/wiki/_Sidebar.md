@@ -2,6 +2,7 @@
 - [Getting Started](Getting-Started.md)
 - [Configuration](Configuration.md)
 - [Customizing Resources](Customizing-Resources.md)
+- [Entity Framework Core ER Diagrams](Entity-Framework-Diagrams.md)
 - [TypeScript AppHosts](Typescript-AppHost.md)
 - [Generated Output](Generated-Output.md)
 - [Dashboard Integration](Dashboard-Integration.md)
