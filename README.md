@@ -35,21 +35,28 @@ types to be registered with `AddProject<Projects.X>(...)`.
 
 ### Target frameworks
 
-| Package | Target framework | Shipped as |
+| Package | Target frameworks | Shipped as |
 | --- | --- | --- |
-| `AspireC4.Hosting` | `net10.0` | `lib/net10.0/` library |
-| `AspireC4.Hosting.EntityFrameworkCore` | `net10.0` | `lib/net10.0/` library |
+| `AspireC4.Hosting` | `net10.0`, `net11.0` | `lib/net10.0/` and `lib/net11.0/` libraries |
+| `AspireC4.Hosting.EntityFrameworkCore` | `net10.0`, `net11.0` | `lib/net10.0/` and `lib/net11.0/` libraries |
 | `AspireC4.EntityFrameworkCore` | `netstandard2.0` | `analyzers/dotnet/cs/` — analyzer-only, no runtime assembly |
 | `AspireC4.EntityFrameworkCore.ModelDump` | `net10.0` | `tools/` — a build-time tool invoked by MSBuild |
 
-The AppHost consumes the two libraries, so an AppHost must target **`net10.0`**. The analyzer package is
-`netstandard2.0` so it loads into any compiler, and it adds no assembly to your output; the model dump is
-a `net10.0` tool run by the build, so the build machine needs a .NET 10 runtime.
+The libraries multi-target the lowest common supported pair. `net10.0` is the LTS, the framework an
+Aspire AppHost targets, and therefore the asset a .NET 10 host resolves; `net11.0` is the current
+release, and a consumer on .NET 11 gets that asset without a package change. `.NET 8` and `.NET 9` are
+not supported.
+
+The analyzer package is `netstandard2.0` so it loads into any compiler, and it adds no assembly to
+your output; the model dump is a `net10.0` tool run by the build, so the build machine needs a .NET 10
+runtime or later. The repository itself builds with the .NET 11 SDK and C# 15. See
+[Toolchain and support matrix](docs/wiki/Toolchain.md) for the SDK pin, the target-framework policy and
+what was deliberately not adopted.
 
 ## Prerequisites
 
-- **.NET 10 SDK or later.** Every shipping package targets `net10.0`, and an Aspire 13.5 AppHost
-  targets `net10.0` too.
+- **.NET 10 or .NET 11.** An Aspire 13.5 AppHost targets `net10.0`, and that is the lowest asset the
+  packages ship; a .NET 11 host resolves the `net11.0` asset. **.NET 8 and .NET 9 are not supported.**
 - **Aspire 13.5.3 or later**. Aspire AppHost projects must reference both the AppHost SDK and
   `Aspire.Hosting.AppHost`.
 - **Docker** is used by default to run the LikeC4 sidecar container.

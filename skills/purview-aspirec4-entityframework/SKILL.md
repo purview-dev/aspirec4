@@ -23,11 +23,14 @@ present — run one diagram or both, but never the ER diagram alone.
 
 ## Target frameworks
 
-| Package | Target framework | Shipped as |
+| Package | Target frameworks | Shipped as |
 | --- | --- | --- |
-| `AspireC4.Hosting.EntityFrameworkCore` | `net10.0` | `lib/net10.0/` library; the AppHost must target `net10.0` |
+| `AspireC4.Hosting.EntityFrameworkCore` | `net10.0`, `net11.0` | `lib/net10.0/` and `lib/net11.0/` libraries |
 | `AspireC4.EntityFrameworkCore` | `netstandard2.0` | analyzer-only under `analyzers/dotnet/cs/`, so it loads into any project's compiler and adds no runtime assembly |
-| `AspireC4.EntityFrameworkCore.ModelDump` | `net10.0` | build-time tool under `tools/`, invoked by MSBuild, so the building machine needs a .NET 10 runtime |
+| `AspireC4.EntityFrameworkCore.ModelDump` | `net10.0` | build-time tool under `tools/`, invoked by MSBuild, so the building machine needs a .NET 10 runtime or later |
+
+The libraries ship the lowest common supported pair: `net10.0` is the LTS and the Aspire AppHost
+framework, and `net11.0` serves a host on the current release. .NET 8 and .NET 9 are not supported.
 
 ## Packages
 

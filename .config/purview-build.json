@@ -30,9 +30,9 @@
 		],
 		// RequireExplicitContent defaults to true, so this is the exhaustive declaration of what each
 		// package ships: a package with no rule here, or an entry matching none of its globs, fails
-		// validation. The lib/ paths are literal net10.0 and must be updated alongside the target
-		// framework in src/Directory.Build.props - the stale net8.0 entries they replace are what
-		// broke this manifest. $(TFM) is deliberately not used: AspireC4.Hosting ships a TFM-less
+		// validation. The lib/ paths are literal because the two libraries multi-target net10.0 and
+		// net11.0 (Purview.BuildSdk's default set); update them alongside the sets in that SDK, not
+		// from a per-project TFM. $(TFM) is deliberately not used: AspireC4.Hosting ships a TFM-less
 		// build/ folder, so the token expands to include "any" and the rule could never be met.
 		"RequiredContent": {
 			// The Aspire integration: the library, the registry/DSL source generator that ships beside
@@ -42,6 +42,8 @@
 				"build/AspireC4.Hosting.props",
 				"lib/net10.0/Aspire.Hosting.AspireC4.dll",
 				"lib/net10.0/Aspire.Hosting.AspireC4.xml",
+				"lib/net11.0/Aspire.Hosting.AspireC4.dll",
+				"lib/net11.0/Aspire.Hosting.AspireC4.xml",
 				"likec4-logo.png",
 				"README.md"
 			],
@@ -51,6 +53,8 @@
 			"aspirec4.hosting.entityframeworkcore": [
 				"lib/net10.0/Aspire.Hosting.AspireC4.EntityFrameworkCore.dll",
 				"lib/net10.0/Aspire.Hosting.AspireC4.EntityFrameworkCore.xml",
+				"lib/net11.0/Aspire.Hosting.AspireC4.EntityFrameworkCore.dll",
+				"lib/net11.0/Aspire.Hosting.AspireC4.EntityFrameworkCore.xml",
 				"likec4-logo.png",
 				"README.md"
 			],

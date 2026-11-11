@@ -1,5 +1,6 @@
 - [Home](Home.md)
 - [Getting Started](Getting-Started.md)
+- [Toolchain and support matrix](Toolchain.md)
 - [Configuration](Configuration.md)
 - [Customizing Resources](Customizing-Resources.md)
 - [Entity Framework Core ER Diagrams](Entity-Framework-Diagrams.md)

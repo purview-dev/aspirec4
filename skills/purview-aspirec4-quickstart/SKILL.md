@@ -17,7 +17,9 @@ it beside your application.
 
 ## Prerequisites
 
-- .NET 10 or later. `AspireC4.Hosting` targets `net10.0`, so the AppHost must too.
+- .NET 10 or .NET 11. `AspireC4.Hosting` ships `net10.0` and `net11.0` assets; an AppHost targeting
+  `net10.0` (the Aspire AppHost framework) resolves the `net10.0` one. .NET 8 and .NET 9 are not
+  supported.
 - **Aspire 13.5.3 or later.** An AppHost project must reference both the AppHost SDK and
   `Aspire.Hosting.AppHost`.
 - **Docker**, to run the LikeC4 sidecar container — or a local Node CLI runtime if you use

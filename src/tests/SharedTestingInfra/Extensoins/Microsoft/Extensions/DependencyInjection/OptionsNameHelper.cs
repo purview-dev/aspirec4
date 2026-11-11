@@ -40,8 +40,8 @@ public static class OptionsNameHelper
 
 		foreach (var memberName in DefaultMemberNames)
 		{
-			var value =
-				TryGetStaticStringProperty(optionsType, memberName) ?? TryGetStaticStringField(optionsType, memberName);
+			var value = TryGetStaticStringProperty(optionsType, memberName)
+				?? TryGetStaticStringField(optionsType, memberName);
 
 			if (!string.IsNullOrWhiteSpace(value))
 			{

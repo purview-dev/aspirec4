@@ -4,7 +4,7 @@ This guide walks through installing AspireC4 and generating your first live arch
 
 ## Prerequisites
 
-- **.NET 10 or later.** The AppHost targets `net10.0`, and so do the `AspireC4.Hosting` and `AspireC4.Hosting.EntityFrameworkCore` libraries.
+- **.NET 10 or .NET 11.** The AppHost targets `net10.0`, and the `AspireC4.Hosting` and `AspireC4.Hosting.EntityFrameworkCore` libraries ship both a `net10.0` asset for it and a `net11.0` asset for a host that has moved to the current release. **.NET 8 and .NET 9 are not supported**; see [Toolchain and support matrix](Toolchain.md).
 - **Aspire 13.5.3 or later**. Aspire AppHost projects must reference both the AppHost SDK and `Aspire.Hosting.AppHost`.
 - **Docker** is used by default to run the LikeC4 sidecar container.
 - Optional: a local Node.js CLI runtime (`npx`, `pnpm`, `yarn`, `bun`, or `deno`) if you call `.WithLocalCLI()`.

@@ -13,6 +13,7 @@ AspireC4 turns your distributed application into a living architecture diagram. 
 ## Start here
 
 - [Getting Started](Getting-Started.md)
+- [Toolchain and support matrix](Toolchain.md)
 - [Configuration](Configuration.md)
 - [Customizing Resources](Customizing-Resources.md)
 - [Entity Framework Core ER Diagrams](Entity-Framework-Diagrams.md)
@@ -53,17 +54,22 @@ startup, which is the easiest way to capture a screenshot of your own applicatio
 
 ## Prerequisites
 
-- **.NET 10 or later.** The AppHost targets `net10.0`, which is the target framework of both libraries.
+- **.NET 10 or .NET 11.** The AppHost targets `net10.0`, and both libraries ship a `net10.0` asset for it; a .NET 11 host resolves the `net11.0` asset. **.NET 8 and .NET 9 are not supported.**
 - **Aspire 13.5.3 or later**, with `Aspire.Hosting.AppHost` referenced by the AppHost project.
 - **Docker** (default LikeC4 server), or a local Node.js CLI runtime if you use `.WithLocalCLI()`.
 
 ### Target frameworks
 
-| Package | Target framework | Shipped as |
+| Package | Target frameworks | Shipped as |
 | --- | --- | --- |
-| `AspireC4.Hosting` | `net10.0` | library |
-| `AspireC4.Hosting.EntityFrameworkCore` | `net10.0` | library |
+| `AspireC4.Hosting` | `net10.0`, `net11.0` | library |
+| `AspireC4.Hosting.EntityFrameworkCore` | `net10.0`, `net11.0` | library |
 | `AspireC4.EntityFrameworkCore` | `netstandard2.0` | analyzer-only, no runtime assembly |
 | `AspireC4.EntityFrameworkCore.ModelDump` | `net10.0` | build-time tool under `tools/` |
+
+The libraries multi-target the lowest common supported pair: `net10.0` is the LTS and the framework an
+Aspire AppHost targets, and `net11.0` serves a host that has moved to the current release. The
+repository itself builds with the .NET 11 SDK; see [Toolchain and support matrix](Toolchain.md) for the
+SDK pin, the C# 15 settings and what was deliberately not adopted.
 
 See [Getting Started](Getting-Started.md) for installation and the first run.

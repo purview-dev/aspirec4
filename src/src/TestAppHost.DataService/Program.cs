@@ -9,23 +9,17 @@ using System.Runtime.InteropServices;
 // because the integration tests start it on every run.
 using CancellationTokenSource cts = new();
 
-using var sigTerm = PosixSignalRegistration.Create(
-	PosixSignal.SIGTERM,
-	context =>
-	{
-		context.Cancel = true;
-		cts.Cancel();
-	}
-);
+using var sigTerm = PosixSignalRegistration.Create(PosixSignal.SIGTERM, context =>
+{
+	context.Cancel = true;
+	cts.Cancel();
+});
 
-using var sigInt = PosixSignalRegistration.Create(
-	PosixSignal.SIGINT,
-	context =>
-	{
-		context.Cancel = true;
-		cts.Cancel();
-	}
-);
+using var sigInt = PosixSignalRegistration.Create(PosixSignal.SIGINT, context =>
+{
+	context.Cancel = true;
+	cts.Cancel();
+});
 
 Console.WriteLine("Sample data service started. Owns the AspireC4 sample EF Core models.");
 

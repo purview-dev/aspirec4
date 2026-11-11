@@ -1,3 +1,4 @@
+using Aspire.Hosting.AspireC4.EntityFrameworkCore.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Aspire.Hosting.AspireC4.EntityFrameworkCore.Lifecycle;
@@ -48,15 +49,18 @@ static partial class ErdLog
 		Level = LogLevel.Warning,
 		Message = "No Entity Framework Core models were found for project {ProjectPath} "
 			+ "(output directory: {OutputDirectory}, {AssembliesScanned} assembly(ies) read, "
-			+ "{DescriptorsFound} descriptor(s) found). Ensure the project has been built at least once; "
-			+ "add the AspireC4.EntityFrameworkCore package to a project you own for full fidelity."
+			+ "{DescriptorsFound} descriptor(s) found, model dump: {DumpStatus}). Ensure the project has "
+			+ "been built at least once; add the AspireC4.EntityFrameworkCore package to a project you own "
+			+ "for full fidelity, and AspireC4.EntityFrameworkCore.ModelDump to the project that owns the "
+			+ "provider for the authoritative model."
 	)]
 	public static partial void ProjectProducedNoModel(
 		ILogger logger,
 		string projectPath,
 		string outputDirectory,
 		int assembliesScanned,
-		int descriptorsFound
+		int descriptorsFound,
+		EfModelDumpStatus dumpStatus
 	);
 
 	[LoggerMessage(

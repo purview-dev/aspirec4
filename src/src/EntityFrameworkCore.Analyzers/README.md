@@ -26,7 +26,7 @@ configuration.
 - **`netstandard2.0` analyzer, no runtime surface.** The package ships under `analyzers/dotnet/cs/`, so it
   loads into the compiler for whatever framework your project targets and adds nothing to your build
   output. The generated `[assembly: AspireC4EfModel]` attribute is compiled into your own assembly, which
-  the `net10.0` AppHost then reads.
+  the AppHost then reads.
 - The project still has to be registered in the AppHost with `AddProject<Projects.X>(...)`, and the AppHost
   still has to call `WithEntityFrameworkDiagram()`.
 

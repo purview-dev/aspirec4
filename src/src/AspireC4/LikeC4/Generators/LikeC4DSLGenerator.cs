@@ -542,18 +542,13 @@ public static class LikeC4DSLGenerator
 	static string SanitizeReference(string name, bool isFullyQualified) =>
 		isFullyQualified ? string.Join('.', name.Split('.').Select(Sanitize)) : Sanitize(name);
 
-	static string Sanitize(string name) =>
-		string.Create(
-			name.Length,
-			name,
-			static (span, src) =>
+	static string Sanitize(string name) => string.Create(name.Length, name, static (span, src) =>
+		{
+			for (var i = 0; i < src.Length; i++)
 			{
-				for (var i = 0; i < src.Length; i++)
-				{
-					span[i] = char.IsLetterOrDigit(src[i]) || src[i] == '_' ? src[i] : '_';
-				}
+				span[i] = char.IsLetterOrDigit(src[i]) || src[i] == '_' ? src[i] : '_';
 			}
-		);
+		});
 
 	/// <summary>Escapes single quotes in string values used inside LikeC4 quoted strings.</summary>
 	static string EscapeQuote(string value) => value.Replace("'", "\\'", StringComparison.Ordinal);

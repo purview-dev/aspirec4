@@ -165,8 +165,8 @@ public sealed class MermaidValidationTests
 			.ForRuntime(startInfo.FileName)
 			.ResolveBindMountsAsync(startInfo, cancellationToken);
 
-		using var process =
-			Process.Start(startInfo) ?? throw new InvalidOperationException("Could not start the container runtime.");
+		using var process = Process.Start(startInfo)
+			?? throw new InvalidOperationException("Could not start the container runtime.");
 
 		var stdout = process.StandardOutput.ReadToEndAsync(cancellationToken);
 		var stderr = process.StandardError.ReadToEndAsync(cancellationToken);

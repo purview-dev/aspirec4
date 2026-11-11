@@ -226,19 +226,12 @@ sealed partial class AspireC4EfLifecycleHook(
 		// This resource runs no process of its own, so it has to publish its own state or the
 		// dashboard leaves it Unknown with no logs.
 		await resourceNotificationService
-			.PublishUpdateAsync(
-				resource,
-				snapshot =>
-					snapshot with
-					{
-						State = KnownResourceStates.Running,
-						Properties = WithDiagramProperties(
-							snapshot.Properties,
-							directory,
-							efModel.Contexts.Count,
-							tables
-						),
-					}
+			.PublishUpdateAsync(resource, snapshot =>
+				snapshot with
+				{
+					State = KnownResourceStates.Running,
+					Properties = WithDiagramProperties(snapshot.Properties, directory, efModel.Contexts.Count, tables),
+				}
 			)
 			.ConfigureAwait(false);
 
@@ -363,7 +356,8 @@ sealed partial class AspireC4EfLifecycleHook(
 					diagnostics.ProjectPath,
 					diagnostics.OutputDirectory ?? "(none)",
 					diagnostics.AssembliesScanned,
-					diagnostics.DescriptorsFound
+					diagnostics.DescriptorsFound,
+					diagnostics.DumpStatus
 				);
 			}
 		}

@@ -1,6 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
+		<!--
+			Single-target: the tool ships once under tools/ and runs as `dotnet <tool>.dll`, so it needs
+			one runtime. net10.0 also keeps the build machine requirement at .NET 10 or later.
+		-->
+		<TargetFramework>net10.0</TargetFramework>
 		<IsPackable>true</IsPackable>
 		<PackageId>AspireC4.EntityFrameworkCore.ModelDump</PackageId>
 		<AssemblyTitle>AspireC4 Entity Framework Core Model Dump</AssemblyTitle>

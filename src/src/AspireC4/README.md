@@ -8,7 +8,9 @@ the Aspire dashboard.
 
 ## Prerequisites
 
-- **.NET 10 or later.** This package targets `net10.0`, so the AppHost that references it must too.
+- **.NET 10 or .NET 11.** This package ships `net10.0` and `net11.0` assets; an AppHost targeting
+  `net10.0` (the Aspire AppHost framework) resolves the `net10.0` one, and a host on .NET 11 resolves
+  the `net11.0` one. .NET 8 and .NET 9 are not supported.
 - **Aspire 13.5.3 or later.** The AppHost must reference both the AppHost SDK and
   `Aspire.Hosting.AppHost`.
 - **Docker** (or Podman) for the default LikeC4 sidecar container.

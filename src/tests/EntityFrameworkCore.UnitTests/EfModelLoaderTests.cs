@@ -300,6 +300,7 @@ public sealed class EfModelLoaderTests
 		await Assert.That(diagnostics.OutputDirectory).IsNull();
 		await Assert.That(diagnostics.AssembliesScanned).IsEqualTo(0);
 		await Assert.That(diagnostics.DescriptorsFound).IsEqualTo(0);
+		await Assert.That(diagnostics.DumpStatus).IsEqualTo(EfModelDumpStatus.Missing);
 	}
 
 	[Test]
@@ -463,6 +464,7 @@ public sealed class EfModelLoaderTests
 			// Assert
 			await Assert.That(model.Contexts.Select(c => c.Name)).Contains("DumpDbContext");
 			await Assert.That(diagnostics.DumpContextsFound).IsEqualTo(1);
+			await Assert.That(diagnostics.DumpStatus).IsEqualTo(EfModelDumpStatus.Loaded);
 		}
 		finally
 		{
@@ -486,8 +488,9 @@ public sealed class EfModelLoaderTests
 			// Act
 			var model = EfModelLoader.LoadFromProject(projectPath, out var diagnostics);
 
-			// Assert — the descriptor in the assembly is used instead.
+			// Assert — the descriptor in the assembly is used instead, and the reason is reported.
 			await Assert.That(diagnostics.DumpContextsFound).IsEqualTo(0);
+			await Assert.That(diagnostics.DumpStatus).IsEqualTo(EfModelDumpStatus.Stale);
 			await Assert.That(model.Contexts.Select(c => c.Name)).DoesNotContain("DumpDbContext");
 			await Assert.That(model.Contexts.Select(c => c.Name)).Contains("BlogDbContext");
 		}
@@ -526,10 +529,67 @@ public sealed class EfModelLoaderTests
 			// Assert
 			await Assert.That(model.Contexts.Select(c => c.Name)).Contains("DumpDbContext");
 			await Assert.That(diagnostics.DumpContextsFound).IsEqualTo(1);
+			await Assert.That(diagnostics.DumpStatus).IsEqualTo(EfModelDumpStatus.Loaded);
 		}
 		finally
 		{
 			Directory.Delete(serviceRoot, recursive: true);
+		}
+	}
+
+	[Test]
+	public async Task LoadFromProject_WithoutDumpDirectory_ReportsTheDumpAsMissing(CancellationToken cancellationToken)
+	{
+		// Arrange — a build output with no obj/aspirec4/ef directory beside it.
+		var projectPath = await CreateProjectAsync(cancellationToken);
+		var root = Path.GetDirectoryName(projectPath)!;
+		var output = Path.Combine(root, "bin", "Debug", "net10.0");
+		WriteAssembly(output, typeof(EfModelLoaderTests).Assembly.Location, DateTime.UtcNow);
+
+		try
+		{
+			// Act
+			_ = EfModelLoader.LoadFromProject(projectPath, out var diagnostics);
+
+			// Assert
+			await Assert.That(diagnostics.DumpStatus).IsEqualTo(EfModelDumpStatus.Missing);
+		}
+		finally
+		{
+			Directory.Delete(root, recursive: true);
+		}
+	}
+
+	[Test]
+	public async Task LoadFromProject_WithDumpThatDescribesNoContexts_ReportsTheDumpAsEmpty(
+		CancellationToken cancellationToken
+	)
+	{
+		// A dump file that parses but holds nothing is a different problem from a missing dump: the
+		// ModelDump target ran, so the project needs looking at rather than rebuilding.
+		// Arrange
+		var projectPath = await CreateProjectAsync(cancellationToken);
+		var root = Path.GetDirectoryName(projectPath)!;
+		var output = Path.Combine(root, "bin", "Debug", "net10.0");
+		WriteAssembly(output, typeof(EfModelLoaderTests).Assembly.Location, DateTime.UtcNow.AddMinutes(-5));
+		WriteDump(
+			root,
+			"Empty", /*lang=json,strict*/
+			"""{"schemaVersion":1,"contexts":[]}""",
+			DateTime.UtcNow
+		);
+
+		try
+		{
+			// Act
+			_ = EfModelLoader.LoadFromProject(projectPath, out var diagnostics);
+
+			// Assert
+			await Assert.That(diagnostics.DumpStatus).IsEqualTo(EfModelDumpStatus.Empty);
+		}
+		finally
+		{
+			Directory.Delete(root, recursive: true);
 		}
 	}
 

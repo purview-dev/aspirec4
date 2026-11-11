@@ -135,34 +135,28 @@ var nodeApp = builder
 	// These references will be used to generate the connections in the C4 model,
 	// _and_ ensure that the application has the connection strings for these dependencies by internally
 	// calling `.WithReference(...)`.
-	.WithLikeC4Reference(
-		azureManagerRedis,
-		opts => opts.WithLabel("Caches sessions").WithTechnology("Redis Protocol").WithKind("RESP")
+	.WithLikeC4Reference(azureManagerRedis, opts =>
+		opts.WithLabel("Caches sessions").WithTechnology("Redis Protocol").WithKind("RESP")
 	)
-	.WithLikeC4Reference(
-		localRedis,
-		opts => opts.WithLabel("Caches  sessions (local)").WithTechnology("Redis Protocol").WithKind("RESP")
+	.WithLikeC4Reference(localRedis, opts =>
+		opts.WithLabel("Caches  sessions (local)").WithTechnology("Redis Protocol").WithKind("RESP")
 	)
-	.WithLikeC4Reference(
-		azurePostgres,
-		opts => opts.WithLabel("Persists data").WithTechnology("PostgreSQL / JDBC").WithKind("tcp-ip")
+	.WithLikeC4Reference(azurePostgres, opts =>
+		opts.WithLabel("Persists data").WithTechnology("PostgreSQL / JDBC").WithKind("tcp-ip")
 	)
-	.WithLikeC4Reference(
-		localPostgres,
-		opts => opts.WithLabel("Persists data (local)").WithTechnology("PostgreSQL / JDBC").WithKind("tcp-ip")
+	.WithLikeC4Reference(localPostgres, opts =>
+		opts.WithLabel("Persists data (local)").WithTechnology("PostgreSQL / JDBC").WithKind("tcp-ip")
 	)
 	.WaitFor(azureManagerRedis)
 	.WaitFor(localRedis)
 	.WaitFor(azurePostgres)
 	.WaitFor(localPostgres);
 
-localPostgres.WithLikeC4Reference(
-	azurePostgres,
-	opts => opts.WithLabel("syncs with").WithTechnology("PostgreSQL / JDBC").WithKind("tcp-ip")
+localPostgres.WithLikeC4Reference(azurePostgres, opts =>
+	opts.WithLabel("syncs with").WithTechnology("PostgreSQL / JDBC").WithKind("tcp-ip")
 );
-localRedis.WithLikeC4Reference(
-	azureManagerRedis,
-	opts => opts.WithLabel("syncs with").WithTechnology("Redis Protocol").WithKind("RESP")
+localRedis.WithLikeC4Reference(azureManagerRedis, opts =>
+	opts.WithLabel("syncs with").WithTechnology("Redis Protocol").WithKind("RESP")
 );
 
 // Test adding some parameters , including one from configuration.

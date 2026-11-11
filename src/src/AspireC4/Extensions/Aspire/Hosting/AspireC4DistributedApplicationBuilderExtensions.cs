@@ -200,16 +200,13 @@ public static class AspireC4DistributedApplicationBuilderExtensions
 				targetPort: AspireC4Resource.DefaultPort,
 				name: AspireC4Resource.HttpEndpointName
 			)
-			.WithUrlForEndpoint(
-				AspireC4Resource.HttpEndpointName,
-				opts =>
-				{
-					opts.DisplayText = "View LikeC4 Diagram";
-					//opts.DisplayOrder = 0;
-					opts.DisplayLocation = UrlDisplayLocation.SummaryAndDetails;
-					opts.Url = string.IsNullOrWhiteSpace(defaultViewId) ? "/" : $"/view/{defaultViewId}";
-				}
-			)
+			.WithUrlForEndpoint(AspireC4Resource.HttpEndpointName, opts =>
+			{
+				opts.DisplayText = "View LikeC4 Diagram";
+				//opts.DisplayOrder = 0;
+				opts.DisplayLocation = UrlDisplayLocation.SummaryAndDetails;
+				opts.Url = string.IsNullOrWhiteSpace(defaultViewId) ? "/" : $"/view/{defaultViewId}";
+			})
 			.WithHttpHealthCheck("/", statusCode: 200, endpointName: AspireC4Resource.HttpEndpointName)
 			// Register container args as a callback so they are evaluated at container-start
 			// time (after BeforeStartEvent has set ContainerServePath). DisableHMR is read
@@ -273,15 +270,12 @@ public static class AspireC4DistributedApplicationBuilderExtensions
 	{
 		serverBuilder
 			.WithHttpEndpoint(port: hmrHostPort, targetPort: resolvedHmrPort, name: AspireC4Resource.HMREndpointName)
-			.WithUrlForEndpoint(
-				AspireC4Resource.HMREndpointName,
-				opts =>
-				{
-					opts.DisplayText = "LikeC4 HMR Endpoint";
-					//opts.DisplayOrder = 1;
-					opts.DisplayLocation = UrlDisplayLocation.DetailsOnly;
-				}
-			);
+			.WithUrlForEndpoint(AspireC4Resource.HMREndpointName, opts =>
+			{
+				opts.DisplayText = "LikeC4 HMR Endpoint";
+				//opts.DisplayOrder = 1;
+				opts.DisplayLocation = UrlDisplayLocation.DetailsOnly;
+			});
 
 		if (OperatingSystem.IsWindows())
 		{

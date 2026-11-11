@@ -15,7 +15,7 @@ You install it in the **AppHost** and call one method. Your service projects nee
 
 ## Prerequisites
 
-- **.NET 10 or later.** This package targets `net10.0`; the optional
+- **.NET 10 or .NET 11.** This package ships `net10.0` and `net11.0` assets; the optional
   [`AspireC4.EntityFrameworkCore`](https://www.nuget.org/packages/AspireC4.EntityFrameworkCore) analyzer is
   `netstandard2.0` and the
   [`AspireC4.EntityFrameworkCore.ModelDump`](https://www.nuget.org/packages/AspireC4.EntityFrameworkCore.ModelDump)

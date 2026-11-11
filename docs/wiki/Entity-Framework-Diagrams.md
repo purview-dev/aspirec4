@@ -14,15 +14,16 @@ package; there is no way to run the ER diagram without the architecture diagram.
 
 | Package | Target framework | Add to | Why |
 | --- | --- | --- | --- |
-| `AspireC4.Hosting` | `net10.0` | the AppHost | the architecture diagram this one hangs off. Required first |
-| `AspireC4.Hosting.EntityFrameworkCore` | `net10.0` | the AppHost | the ER diagram itself |
+| `AspireC4.Hosting` | `net10.0`, `net11.0` | the AppHost | the architecture diagram this one hangs off. Required first |
+| `AspireC4.Hosting.EntityFrameworkCore` | `net10.0`, `net11.0` | the AppHost | the ER diagram itself |
 | `AspireC4.EntityFrameworkCore` | `netstandard2.0` (analyzer-only) | a project **you own** that declares a `DbContext` | captures fluent `OnModelCreating` configuration |
 | `AspireC4.EntityFrameworkCore.ModelDump` | `net10.0` (build-time tool) | the project that owns the EF Core **provider** and a design-time factory | the authoritative model, composite foreign keys included |
 
-Both libraries target `net10.0`, so the AppHost must too. The analyzer package is `netstandard2.0` and
-ships only under `analyzers/dotnet/cs/`: it adds no runtime assembly, so it works whatever framework the
-owning project targets. The dump tool runs as `dotnet <tool>.dll` from an MSBuild `Exec`, so the build
-machine needs a .NET 10 runtime.
+Both libraries ship `net10.0` and `net11.0` assets, so an AppHost on either runtime resolves one. The
+analyzer package is `netstandard2.0` and ships only under `analyzers/dotnet/cs/`: it adds no runtime
+assembly, so it works whatever framework the owning project targets. The dump tool is `net10.0` and
+runs as `dotnet <tool>.dll` from an MSBuild `Exec`, so the build machine needs a .NET 10 runtime (or
+later). See [Toolchain and support matrix](Toolchain.md) for the full matrix.
 
 ## Enabling it
 

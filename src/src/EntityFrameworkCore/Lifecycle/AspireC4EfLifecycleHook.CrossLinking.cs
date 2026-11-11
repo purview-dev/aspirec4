@@ -247,24 +247,22 @@ sealed partial class AspireC4EfLifecycleHook
 			ApplyArchitectureDiagramLink(contributor, url);
 
 			await resourceNotificationService
-				.PublishUpdateAsync(
-					contributor,
-					snapshot =>
-						snapshot.Urls.Any(u => u.Name == ErDiagramUrlName)
-							? snapshot
-							: snapshot with
-							{
-								Urls =
-								[
-									.. snapshot.Urls,
-									new UrlSnapshot(ErDiagramUrlName, url, IsInternal: false)
-									{
-										DisplayProperties = new UrlDisplayPropertiesSnapshot(
-											_options.DashboardLinkDisplayName
-										),
-									},
-								],
-							}
+				.PublishUpdateAsync(contributor, snapshot =>
+					snapshot.Urls.Any(u => u.Name == ErDiagramUrlName)
+						? snapshot
+						: snapshot with
+						{
+							Urls =
+							[
+								.. snapshot.Urls,
+								new UrlSnapshot(ErDiagramUrlName, url, IsInternal: false)
+								{
+									DisplayProperties = new UrlDisplayPropertiesSnapshot(
+										_options.DashboardLinkDisplayName
+									),
+								},
+							],
+						}
 				)
 				.ConfigureAwait(false);
 		}

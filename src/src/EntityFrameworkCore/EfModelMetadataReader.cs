@@ -397,8 +397,8 @@ static class EfModelMetadataReader
 		{
 			PropertyName = property.Name,
 			Name = GetAttributeString(property, "Column", 0) ?? property.Name,
-			StoreType =
-				GetAttributeNamedString(property, "Column", "TypeName") ?? ColumnStoreType(property.PropertyType),
+			StoreType = GetAttributeNamedString(property, "Column", "TypeName")
+				?? ColumnStoreType(property.PropertyType),
 			ClrTypeName = property.PropertyType.FullName,
 			DomainTypeName = name,
 			DomainTypeKind = kind,
@@ -524,8 +524,9 @@ static class EfModelMetadataReader
 
 			var explicitName = GetAttributeString(navigation, "ForeignKey", 0);
 
-			var column =
-				(explicitName is null ? null : table.Columns.FirstOrDefault(c => c.PropertyName == explicitName))
+			var column = (
+				explicitName is null ? null : table.Columns.FirstOrDefault(c => c.PropertyName == explicitName)
+			)
 				?? table.Columns.FirstOrDefault(c => c.PropertyName == navigation.Name + "Id")
 				?? table.Columns.FirstOrDefault(c => c.PropertyName == target.Name + "Id")
 				?? SharedPrimaryKeyColumn(table, target);

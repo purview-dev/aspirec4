@@ -20,15 +20,19 @@ generates live [LikeC4](https://likec4.dev) architecture diagrams from the Aspir
 
 ### Packages and target frameworks
 
-| Package | Project | Target framework | Shipped as |
+| Package | Project | Target frameworks | Shipped as |
 |---|---|---|---|
-| `AspireC4.Hosting` | `src/src/AspireC4/` | `net10.0` | `lib/net10.0/` + `analyzers/dotnet/cs/` + `build/` |
-| `AspireC4.Hosting.EntityFrameworkCore` | `src/src/EntityFrameworkCore/` | `net10.0` | `lib/net10.0/` |
+| `AspireC4.Hosting` | `src/src/AspireC4/` | `net10.0`, `net11.0` | `lib/net10.0/` + `lib/net11.0/` + `analyzers/dotnet/cs/` + `build/` |
+| `AspireC4.Hosting.EntityFrameworkCore` | `src/src/EntityFrameworkCore/` | `net10.0`, `net11.0` | `lib/net10.0/` + `lib/net11.0/` |
 | `AspireC4.EntityFrameworkCore` | `src/src/EntityFrameworkCore.Analyzers/` | `netstandard2.0` | `analyzers/dotnet/cs/` only (no runtime assembly) |
 | `AspireC4.EntityFrameworkCore.ModelDump` | `src/src/EntityFrameworkCore.ModelDump/` | `net10.0` | `tools/` + `build/` |
 
-AppHosts therefore target `net10.0`. `src/Directory.Build.props` owns the framework; the two Roslyn
-projects override it to `netstandard2.0`. The packed content is pinned to `lib/net10.0/...` in
+The target frameworks are **owned by Purview.BuildSdk** (its `Current` set, `net10.0;net11.0`); the two
+Roslyn projects get `netstandard2.0` from the SDK. Never set `TargetFramework`/`TargetFrameworks` in
+`src/Directory.Build.props`: the SDK reads a project's TFM from the project file text, so a directory-level
+value only shadows its list and breaks `pack` (`NU5026`). Projects that must stay single-target — the
+AppHost, the sample services and the ModelDump tool — declare `net10.0` in their own `.csproj`. The packed
+content is pinned to literal `lib/net10.0/...` and `lib/net11.0/...` paths in
 `.config/purview-build.json`, so a framework change has to update that manifest too.
 
 ### Layout
@@ -74,8 +78,10 @@ them. Use a relative path from the root README, and absolute `raw.githubusercont
 
 | Tool | Purpose | Version source |
 |---|---|---|
-| .NET SDK | Build/test | `global.json` |
-| Target framework | **net10.0** for all shipping and test projects (`src/Directory.Build.props`); Roslyn components override to `netstandard2.0` | `src/Directory.Build.props` |
+| .NET SDK | Build/test — **11.0.100 GA**, `rollForward: latestFeature`, `allowPrerelease: false` | `global.json` |
+| Target frameworks | **net10.0;net11.0** for the libraries and test projects (Purview.BuildSdk's `Current` set; Roslyn components get `netstandard2.0`); single-target `net10.0` declared per project for the AppHost, sample services and ModelDump tool. **.NET 8 and .NET 9 are unsupported.** | Purview.BuildSdk + project files |
+| Language version | **C# 15 (`15.0`, not `preview`)** | `src/Directory.Build.props` |
+| Container test SDK | `mcr.microsoft.com/dotnet/sdk:11.0`, matching `global.json` | `tests/Docker/` |
 | Bun | JS scripts, commit hooks, TS sample | `package.json` → `packageManager` |
 | just | Task runner (single entry point) | system install |
 | Docker | Integration tests, local diagram viewer | system install |
@@ -86,6 +92,12 @@ The repository uses `Purview.BuildSdk` (pinned in `global.json` under `msbuild-s
 `src/Directory.Build.props` / `src/Directory.Build.targets`. The SDK classifies projects, adds references,
 sets testing/telemetry defaults, and copies the bundled `.agents/**` skills into this repo. Use the
 `project-placement-defaults` and `sdk-project-behavior-and-detection` skills when reasoning about its behaviour.
+
+Package versions track the **lowest** target framework, not the SDK: runtime and Microsoft packages stay in
+the `10.0.x` band (`10.0.15` today) so a `net10.0` build never acquires a .NET 11-only binary. Build-only
+tooling (SourceLink, CSharpier, `dotnet-inspect`) may track the SDK. `docs/wiki/Toolchain.md` records the
+full matrix and which .NET 11 features are deliberately not used; update it with any TFM, SDK or package-band
+change.
 
 ## Commands
 
@@ -165,16 +177,21 @@ just scrub          # Remove bin/obj, clean, restore, shutdown build server
 
 ### Running a single test
 
+Tests run on Microsoft.Testing.Platform (selected in `global.json`), so filtering is a tree-node path:
+`/<assembly>/<namespace>/<class>/<test>`, with `*` as a wildcard.
+
 ```sh
 dotnet test src/tests/AspireC4.UnitTests/AspireC4.UnitTests.csproj \
-  -- --filter "FullyQualifiedName~MyTestMethod"
+  --treenode-filter "/*/*/ImageExportStampTests/*"
 ```
+
+`--filter` is the VSTest option; under MTP it matches nothing and the run reports "Zero tests ran".
 
 ## Non-negotiables
 
 - Always run `just test` (unit + integration) to verify changes. Unit tests alone are not sufficient.
 - Never claim a task complete unless all tests pass (`just test` exits green, zero failures).
-- Never skip tests (`--filter` overrides, `[Skip]`) without explicit user permission.
+- Never skip tests (`--treenode-filter` overrides, `[Skip]`) without explicit user permission.
 - Always run `just lint-check` (or `just lint-fix`) before committing — CSharpier is enforced in CI and by the
   `pre-commit` Lefthook hook.
 - Never add `Co-authored-by` trailers to commit messages.
@@ -193,6 +210,15 @@ dotnet test src/tests/AspireC4.UnitTests/AspireC4.UnitTests.csproj \
   own namespace) with `#pragma warning disable IDE0130` where required.
 - Central package management: all NuGet versions live in the **root** `Directory.Packages.props`. Never add a
   `Version` attribute directly in a `.csproj`; add a `PackageVersion` to `Directory.Packages.props` first.
+- C# 15 is available on both legs, but the `net10.0` leg cannot see types the .NET 11 runtime adds. Declare
+  an **internal** polyfill, guarded by `#if !NET11_0_OR_GREATER`, beside the project that needs one rather
+  than lowering the language version — `src/src/EntityFrameworkCore/Polyfills/CompilerServices.cs` is the
+  pattern. Roslyn resolves these by full name, so it works for consumers on .NET 10 and .NET 11 alike.
+- Use `closed` for an internal hierarchy whose descendants are complete and switched over, as
+  `EfModelDumpRead` does; it turns "a new case silently falls through" into a build failure.
+- Introduce a union only when a value genuinely is one of a fixed set of types. Follow the compiler's
+  **non-boxing access pattern** (`HasValue` + `TryGetValue`) so value-type cases are not boxed during pattern
+  matching — see `docs/wiki/Toolchain.md`.
 
 ## Git hooks and commits
 

@@ -246,8 +246,7 @@ static class EfModelAnalyser
 			fluentProperty = found;
 		}
 
-		var maxLength =
-			fluentProperty?.MaxLength
+		var maxLength = fluentProperty?.MaxLength
 			?? GetAttributeInt(property, EfTypes.Attributes.MaxLength, 0)
 			?? GetAttributeInt(property, EfTypes.Attributes.StringLength, 0);
 
@@ -261,12 +260,10 @@ static class EfModelAnalyser
 		return new ColumnShape
 		{
 			PropertyName = property.Name,
-			Name =
-				fluentProperty?.ColumnName
+			Name = fluentProperty?.ColumnName
 				?? GetAttributeString(property, EfTypes.Attributes.Column, 0)
 				?? property.Name,
-			StoreType =
-				fluentProperty?.ColumnType
+			StoreType = fluentProperty?.ColumnType
 				?? GetAttributeNamedString(property, EfTypes.Attributes.Column, "TypeName")
 				?? StoreTypeMap.ColumnStoreType(property.Type),
 			ClrTypeName = property.Type.ToDisplayString(),
@@ -339,8 +336,7 @@ static class EfModelAnalyser
 					DomainTypeName = name,
 					DomainTypeKind = kind,
 					IsNullable = nullable || StoreTypeMap.IsNullable(member.Type),
-					MaxLength =
-						GetAttributeInt(member, EfTypes.Attributes.MaxLength, 0)
+					MaxLength = GetAttributeInt(member, EfTypes.Attributes.MaxLength, 0)
 						?? GetAttributeInt(member, EfTypes.Attributes.StringLength, 0),
 					Comment = GetAttributeString(member, EfTypes.Attributes.Comment, 0),
 				}
@@ -440,8 +436,9 @@ static class EfModelAnalyser
 
 			var explicitName = GetAttributeString(navigation, EfTypes.Attributes.ForeignKey, 0);
 
-			var column =
-				(explicitName is null ? null : table.Columns.FirstOrDefault(c => c.PropertyName == explicitName))
+			var column = (
+				explicitName is null ? null : table.Columns.FirstOrDefault(c => c.PropertyName == explicitName)
+			)
 				?? table.Columns.FirstOrDefault(c => c.PropertyName == navigation.Name + "Id")
 				?? table.Columns.FirstOrDefault(c => c.PropertyName == target.Name + "Id")
 				?? SharedPrimaryKeyColumn(table, target);

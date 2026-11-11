@@ -198,56 +198,45 @@ public sealed class AspireC4EfModelGenerator : IIncrementalGenerator
 			.Text("typeName", result.TypeName)
 			.Text("defaultSchema", result.DefaultSchema);
 
-		json.Array(
-			"tables",
-			result.Tables,
-			static (writer, table) =>
+		json.Array("tables", result.Tables, static (writer, table) =>
+		{
+			writer
+				.StartObject()
+				.Text("name", table.Name)
+				.Text("clrTypeName", table.ClrTypeName)
+				.Text("schema", table.Schema)
+				.Bool("isJoinEntity", table.IsJoinEntity);
+
+			writer.Array("columns", table.Columns, static (w, column) =>
+				w.StartObject()
+					.Text("name", column.Name)
+					.Text("storeType", column.StoreType)
+					.Text("clrTypeName", column.ClrTypeName)
+					.Text("domainTypeName", column.DomainTypeName)
+					.Text("domainTypeKind", column.DomainTypeKind)
+					.Bool("isNullable", column.IsNullable)
+					.Bool("isPrimaryKey", column.IsPrimaryKey)
+					.Bool("isUnique", column.IsUnique)
+					.Bool("isForeignKey", column.IsForeignKey)
+					.Number("maxLength", column.MaxLength)
+					.Text("comment", column.Comment)
+					.EndObject()
+			);
+
+			writer.Array("foreignKeys", table.ForeignKeys, static (w, foreignKey) =>
 			{
-				writer
-					.StartObject()
-					.Text("name", table.Name)
-					.Text("clrTypeName", table.ClrTypeName)
-					.Text("schema", table.Schema)
-					.Bool("isJoinEntity", table.IsJoinEntity);
+				w.StartObject().Text("principalTable", foreignKey.PrincipalEntity);
+				w.Array("columns", foreignKey.Columns, static (a, c) => a.Value(c));
+				w.Array("principalColumns", foreignKey.PrincipalColumns, static (a, c) => a.Value(c));
+				w.Text("navigationName", foreignKey.NavigationName)
+					.Text("principalNavigationName", foreignKey.PrincipalNavigationName)
+					.Bool("isUnique", foreignKey.IsUnique)
+					.Bool("isRequired", foreignKey.IsRequired)
+					.EndObject();
+			});
 
-				writer.Array(
-					"columns",
-					table.Columns,
-					static (w, column) =>
-						w.StartObject()
-							.Text("name", column.Name)
-							.Text("storeType", column.StoreType)
-							.Text("clrTypeName", column.ClrTypeName)
-							.Text("domainTypeName", column.DomainTypeName)
-							.Text("domainTypeKind", column.DomainTypeKind)
-							.Bool("isNullable", column.IsNullable)
-							.Bool("isPrimaryKey", column.IsPrimaryKey)
-							.Bool("isUnique", column.IsUnique)
-							.Bool("isForeignKey", column.IsForeignKey)
-							.Number("maxLength", column.MaxLength)
-							.Text("comment", column.Comment)
-							.EndObject()
-				);
-
-				writer.Array(
-					"foreignKeys",
-					table.ForeignKeys,
-					static (w, foreignKey) =>
-					{
-						w.StartObject().Text("principalTable", foreignKey.PrincipalEntity);
-						w.Array("columns", foreignKey.Columns, static (a, c) => a.Value(c));
-						w.Array("principalColumns", foreignKey.PrincipalColumns, static (a, c) => a.Value(c));
-						w.Text("navigationName", foreignKey.NavigationName)
-							.Text("principalNavigationName", foreignKey.PrincipalNavigationName)
-							.Bool("isUnique", foreignKey.IsUnique)
-							.Bool("isRequired", foreignKey.IsRequired)
-							.EndObject();
-					}
-				);
-
-				writer.EndObject();
-			}
-		);
+			writer.EndObject();
+		});
 
 		return json.EndObject().ToString();
 	}

@@ -76,12 +76,16 @@ Two distinct brands exist in this repository. Use them consistently:
 
 ### Filtering a single test
 
+Tests run on Microsoft.Testing.Platform, so the filter is a tree-node path
+(`/<assembly>/<namespace>/<class>/<test>`, `*` is a wildcard). `--filter` is the VSTest option and
+matches nothing here.
+
 ```sh
 dotnet test src/tests/AspireC4.UnitTests/AspireC4.UnitTests.csproj \
-  -- --filter "FullyQualifiedName~MyTestMethod"
+  --treenode-filter "/*/*/MyClassTests/*"
 
 dotnet test src/tests/AspireC4.IntegrationTests/AspireC4.IntegrationTests.csproj \
-  -- --filter "FullyQualifiedName~MyTestMethod"
+  --treenode-filter "/*/*/MyClassTests/*"
 ```
 
 ## Code style — CSharpier
@@ -154,9 +158,15 @@ Fix: Correct HMR port fallback on Windows.
 
 All tests in this repository **must use [TUnit](https://github.com/thomhurst/TUnit)**. Do not use xUnit, NUnit, or MSTest. Test projects declare just `<Project Sdk="Microsoft.NET.Sdk" />`; the SDK (Purview.BuildSdk) wires TUnit, TUnit.Mocks, and Bogus into them automatically.
 
-Every project targets `net10.0` except the two Roslyn components (`SourceGenerators` and
-`EntityFrameworkCore.Analyzers`), which target `netstandard2.0`. The framework is set once in
-`src/Directory.Build.props`.
+The libraries and test projects multi-target `net10.0;net11.0` — Purview.BuildSdk's `Current` set of the
+releases still in support. The two Roslyn components (`SourceGenerators` and
+`EntityFrameworkCore.Analyzers`) get `netstandard2.0` from the SDK. The AppHost, the sample services and
+the ModelDump tool are single-target and declare `net10.0` in their own project file.
+
+The C# 15 language version lives in `src/Directory.Build.props`; the SDK is pinned in `global.json`.
+Never set `TargetFramework`/`TargetFrameworks` in the directory-level props file — the SDK reads a
+project's TFM from the project file text, and a directory-level value shadows its list, which breaks
+`pack`. See [Toolchain and support matrix](Toolchain.md) before changing any of it.
 
 ```csharp
 [Test]

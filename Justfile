@@ -3,7 +3,11 @@ set quiet
 export TESTINGPLATFORM_EXITCODE_IGNORE := "8"
 export DOTNET_CLI_TELEMETRY_OPTOUT := "1"
 export DOTNET_SKIP_FIRST_TIME_EXPERIENCE := "1"
+export DOTNET_NOLOGO := "1"
 export DO_NOT_TRACK := "1"
+# The .NET 11 CLI keeps the MSBuild server on by default; stating it keeps local and CI builds on
+# the same path rather than depending on a machine-wide setting.
+export DOTNET_CLI_USE_MSBUILD_SERVER := "1"
 
 _root := "./"
 _solution := "src/AspireC4.slnx"

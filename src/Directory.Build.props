@@ -1,24 +1,55 @@
 <Project>
 	<PropertyGroup>
 		<NamespacePrefix>Aspire.Hosting.AspireC4</NamespacePrefix>
+
+		<!--
+			Purview.BuildSdk 2.0.0 owns the target-framework decision: its default set is
+			net10.0;net11.0, the two releases still in support. Do not set TargetFramework or
+			TargetFrameworks here. The SDK reads a project's TFM from the project file text (an
+			evaluation-stable check), so a value set here after the import only shadows the SDK's
+			TargetFrameworks and leaves a mixed evaluation that breaks pack. Projects that must stay
+			single-target - the Aspire AppHost, the sample services and the build-time tool - declare
+			<TargetFramework>net10.0</TargetFramework> in their own project file instead.
+
+			Roslyn components (SourceGenerators, EntityFrameworkCore.Analyzers) are excluded from the
+			set and get netstandard2.0 from the SDK, which analyzers require.
+		-->
 	</PropertyGroup>
 
 	<Import Sdk="Purview.BuildSdk" Project="Sdk.props" />
 
 	<PropertyGroup>
 		<!--
-			Baselined on net10.0: net8.0 and net9.0 both fall out of support imminently.
-			Roslyn components (SourceGenerators, EntityFrameworkCore.Analyzers) override this with
-			netstandard2.0, which is required for analyzers and is unaffected by the support window.
+			C# 15 is GA in the .NET 11 SDK. Pinning 15.0 rather than letting the SDK's "latest" move
+			keeps the language deterministic across SDK servicing. A net10.0 leg cannot reference the
+			types the .NET 11 runtime adds for closed hierarchies and unions, so those are backed by
+			internal polyfills beside the project that uses one - see
+			src/src/EntityFrameworkCore/Polyfills/CompilerServices.cs.
 		-->
-		<TargetFramework>net10.0</TargetFramework>
-		<LangVersion>preview</LangVersion>
+		<LangVersion>15.0</LangVersion>
+		<!--
+			The SDK opts a net11.0 target into the C# 15 updated-memory-safety rules. That feature is
+			still preview-only, and compiling it forces LangVersion=preview, which would let preview
+			syntax into every project. There is no unsafe code in this repository, so the rules buy
+			nothing; take the GA language version and leave the tier off until it is GA too.
+		-->
+		<MemorySafetyRules>0</MemorySafetyRules>
 		<NoWarn>$(NoWarn);ASPIREATS001</NoWarn>
 		<ExcludeMSTelemetryExtension>true</ExcludeMSTelemetryExtension>
 		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(IsTestProject)' == 'true'">
 		<NoWarn>$(NoWarn);CA1034;CA2234;</NoWarn>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(TargetFramework)' == 'net11.0'">
+		<!--
+			CA1307 only suggests the (char, StringComparison) overloads from net11.0 onwards. The same
+			source has to compile for the net10.0 leg, which is the shipped floor, so the suggestion
+			cannot be applied without forking the source per target. Suppress it on the leg that raises
+			it rather than leaving every net11-only build red for a rule that cannot be actioned.
+		-->
+		<NoWarn>$(NoWarn);CA1307</NoWarn>
 	</PropertyGroup>
 
 	<PropertyGroup Label="Purview site URL metadata">
