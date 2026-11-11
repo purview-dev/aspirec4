@@ -172,6 +172,9 @@ just refresh-icons  # Regenerate the LikeC4 icon manifest (scripts/generate-icon
 just ts-restore     # aspire restore for the TypeScript sample
 just ts-run         # aspire run for the TypeScript sample
 just ts-lint        # oxfmt check on apphost.mts
+just ts-test        # TypeScript test suite (bun test)
+just ts-validate    # global.json Aspire SDK version vs the TypeScript sample
+just ts-validate-fix # Rewrite the TypeScript sample to match global.json
 just scrub          # Remove bin/obj, clean, restore, shutdown build server
 ```
 
@@ -224,7 +227,8 @@ dotnet test src/tests/AspireC4.UnitTests/AspireC4.UnitTests.csproj \
 
 Lefthook (`.config/lefthook.yml`) installs two hooks:
 
-- `pre-commit` — runs `just lint-check` (CSharpier over the repo root). Rejects mis-formatted commits.
+- `pre-commit` — runs `just ts-validate` (the Aspire version in `global.json` against the TypeScript
+  sample) and `just lint-check` (CSharpier over the repo root). Rejects the commit on either failure.
 - `commit-msg` — runs `bunx commitlint --edit` to enforce Conventional Commits.
 
 Commit rules (enforced by `commitlint.config.mts`):
@@ -270,6 +274,10 @@ Test authoring requirements (from the source-generator test authoring agent in `
 - One dedicated `{Class}Tests` class per class under test, in the same namespace.
 - Build dependencies/SUTs through `CreateXXX` helpers with optional parameters; never instantiate inside a test.
 - Pass a `CancellationToken` wherever a downstream method accepts one.
+
+The TypeScript suite (`bun test`, under `scripts/`) is run by
+`Repository.UnitTests/TypeScriptTests.cs`. Purview.Build has no JavaScript test module, so that bridge is
+what makes `just test` and the shared pipeline execute it; `just ts-test` runs the same suite directly.
 
 ### Integration tests and the project runner
 

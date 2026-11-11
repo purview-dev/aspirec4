@@ -83,6 +83,14 @@ Two distinct brands exist in this repository. Use them consistently:
 | `just lint-fix` | Auto-fix formatting with CSharpier |
 | `just pack` | Build and pack NuGet artifacts into `artifacts/nuget/` |
 
+### TypeScript
+
+| Recipe | Description |
+|---|---|
+| `just ts-test` | Run the TypeScript test suite with Bun |
+| `just ts-validate` | Check the TypeScript sample's Aspire version against `global.json` |
+| `just ts-validate-fix` | Rewrite the TypeScript sample to the Aspire version in `global.json` |
+
 ### Container runtime tests (local only)
 
 The sample AppHost uses `Purview.Containers.Aspire` to verify bind mounts before containers
@@ -151,7 +159,7 @@ CSharpier runs automatically on every `git commit` via Lefthook. Commits with fo
 
 | Hook | What it does |
 |---|---|
-| `pre-commit` | Runs `just lint-check` (CSharpier over the repo root). Rejects the commit if any file is mis-formatted. |
+| `pre-commit` | Runs `just ts-validate` (the Aspire version in `global.json` against the TypeScript sample) and `just lint-check` (CSharpier over the repo root). Rejects the commit on either failure. |
 | `commit-msg` | Runs `commitlint` to enforce [conventional commit](#commit-messages) format. |
 
 Lefthook installs when you run `just init`. To verify it is active:
@@ -268,7 +276,7 @@ config.Item("AppHost:BrowserToken").Returns("value");
 | `EntityFrameworkCore.UnitTests` | d2 model builder, d2 DSL generator and descriptor loader — no Docker required |
 | `EntityFrameworkCore.Analyzers.UnitTests` | EF model generator, plus the generator→assembly→AppHost round-trip |
 | `SourceGenerators.UnitTests` | The registry/DSL strict-validation generator |
-| `Repository.UnitTests` | Repository-level rules, including the authored skills in `skills/` |
+| `Repository.UnitTests` | Repository-level rules, including the authored skills in `skills/`. Also runs the TypeScript suite via `bun test`, because Purview.Build has no JavaScript test module. |
 
 The libraries and test projects multi-target `net10.0;net11.0` — Purview.BuildSdk's `Current` set of the
 releases still in support. The two Roslyn components (`SourceGenerators` and

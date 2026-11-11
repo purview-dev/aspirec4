@@ -109,7 +109,8 @@ build configuration=config_default *args:
 clean configuration=config_default *args:
     dotnet clean {{ _solution }} --configuration {{ configuration }} {{ args }}
 
-# Run all tests (unit + integration)
+# Run all tests (unit + integration). The TypeScript suite runs too, through
+# Repository.UnitTests/TypeScriptTests, so the shared pipeline executes it in the same pass.
 [group('.NET')]
 test filter=default_test_filter *args:
     dotnet test {{ _solution }} -c {{ config_default }} --treenode-filter "{{ filter }}" {{ args }}
@@ -159,6 +160,21 @@ ts-run:
 [group('Typescript')]
 ts-lint:
     cd {{ _typescriptAppHost }} && bun run lint
+
+# Verify the Aspire SDK version in global.json matches the TypeScript sample
+[group('Typescript')]
+ts-validate:
+    bun scripts/validate-aspire-version.mts
+
+# Rewrite the TypeScript sample's Aspire version to match global.json
+[group('Typescript')]
+ts-validate-fix:
+    bun scripts/validate-aspire-version.mts --fix
+
+# Run the TypeScript test suite directly
+[group('Typescript')]
+ts-test:
+    bun test
 
 # ── Icon manifest ─────────────────────────────────────────────────────────────
 

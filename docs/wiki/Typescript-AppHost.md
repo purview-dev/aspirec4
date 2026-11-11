@@ -65,6 +65,13 @@ Declare the integration and its Aspire dependencies in `aspire.config.json`:
 
 Use the AspireC4 package version appropriate for the application. The repository sample points `AspireC4.Hosting` at `../../src/src/AspireC4/AspireC4.csproj` so it exercises the local source instead of a published package.
 
+### Keeping the Aspire version in step
+
+`global.json` is the single source of truth for the Aspire AppHost SDK version. The sample repeats it in
+`aspire.config.json`, both as `sdk.version` and in the `Aspire.Hosting.*` package pins, because the Aspire
+CLI reads that file rather than `global.json`. `just ts-validate` compares the two and fails on drift;
+`just ts-validate-fix` rewrites the sample to match. The same check runs on every commit.
+
 ## Run the TypeScript sample
 
 The sample at `samples/typescript-app-host` demonstrates:
