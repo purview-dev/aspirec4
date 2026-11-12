@@ -9,6 +9,9 @@ AspireC4 includes an incremental Roslyn source generator (built on `Purview.Sour
 
 The generator injects the registry attributes and enums automatically — the `AspireC4.Hosting` package references it, so no separate generator package is needed. TypeScript AppHosts are not validated this way; they use the generated fluent API.
 
+> [!IMPORTANT]
+> The generator runs inside the compiler and is built against Roslyn 5.9, so the AppHost must be built with the **.NET 11 SDK**. An older compiler reports `CS9057` and skips it: no `ASPIREC4xxx` diagnostics, and no injected `[LikeC4Registry]` types. See [Requirements](Requirements.md#the-compiler-floor-net-11-sdk).
+
 ## Registry class
 
 Add one `[LikeC4Registry]` class to the AppHost assembly. Its accessibility and nesting do not matter. Values are declared as `const string` fields in conventionally named nested classes:

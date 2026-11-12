@@ -42,29 +42,35 @@ static partial class SourceGenHelper
 
 		var model = generationContext
 			.CollectWith(registryTargets, static (ctx, targets, _) => new StrictValidatorGenerationModel(ctx, targets))
-			.CollectWith(
-				tagCallSites,
-				static (modelContext, tagSites, _) => modelContext with { TagCallSites = tagSites }
+			.CollectWith(tagCallSites, static (modelContext, tagSites, _) =>
+				modelContext with
+				{
+					TagCallSites = tagSites,
+				}
 			)
-			.CollectWith(
-				kindCallSites,
-				static (modelContext, kindSites, _) => modelContext with { KindCallSites = kindSites }
+			.CollectWith(kindCallSites, static (modelContext, kindSites, _) =>
+				modelContext with
+				{
+					KindCallSites = kindSites,
+				}
 			)
-			.CollectWith(
-				groupCallSites,
-				static (modelContext, groupSites, _) => modelContext with { GroupCallSites = groupSites }
+			.CollectWith(groupCallSites, static (modelContext, groupSites, _) =>
+				modelContext with
+				{
+					GroupCallSites = groupSites,
+				}
 			)
-			.CollectWith(
-				metadataCallSites,
-				static (modelContext, metadataSites, _) => modelContext with { MetadataCallSites = metadataSites }
+			.CollectWith(metadataCallSites, static (modelContext, metadataSites, _) =>
+				modelContext with
+				{
+					MetadataCallSites = metadataSites,
+				}
 			)
-			.CollectWith(
-				dslDefinition,
-				static (modelContext, dslDefinitions, ct) =>
-					modelContext with
-					{
-						DSLDefinition = LikeC4DSLHelpers.MergeDSLDefinitions(dslDefinitions),
-					}
+			.CollectWith(dslDefinition, static (modelContext, dslDefinitions, ct) =>
+				modelContext with
+				{
+					DSLDefinition = LikeC4DSLHelpers.MergeDSLDefinitions(dslDefinitions),
+				}
 			)
 			.CombineWith(strictMode, static (modelContext, value, _) => modelContext with { StrictMode = value });
 

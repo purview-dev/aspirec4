@@ -64,16 +64,34 @@ public static class EfModelLoader
 		// The build-time dump is the real EF Core model — conventions, converters and composite foreign
 		// keys included — so it wins over the descriptor and the metadata reader. It is read from this
 		// project and every project it references, because it runs where the EF Core provider lives.
-		if (EfModelDumpReader.TryReadGraph(projectPath, outputDirectory, out var dumped))
-		{
-			diagnostics = new EfModelLoadDiagnostics(projectPath, outputDirectory, 0, 0, 0, dumped.Contexts.Count);
+		var dump = EfModelDumpReader.ReadGraph(projectPath, outputDirectory);
 
-			return dumped;
+		// Switching over the closed hierarchy makes a new dump outcome a build failure here rather
+		// than a diagnostic that silently stops being reported.
+		var dumpStatus = dump switch
+		{
+			EfModelDumpLoaded => EfModelDumpStatus.Loaded,
+			EfModelDumpUnavailable unavailable => unavailable.Status,
+		};
+
+		if (dump is EfModelDumpLoaded loaded)
+		{
+			diagnostics = new EfModelLoadDiagnostics(
+				projectPath,
+				outputDirectory,
+				0,
+				0,
+				0,
+				loaded.Model.Contexts.Count,
+				dumpStatus
+			);
+
+			return loaded.Model;
 		}
 
 		if (outputDirectory is null)
 		{
-			diagnostics = new EfModelLoadDiagnostics(projectPath, null, 0, 0);
+			diagnostics = new EfModelLoadDiagnostics(projectPath, null, 0, 0, DumpStatus: dumpStatus);
 
 			return EfModel.Empty;
 		}
@@ -100,13 +118,25 @@ public static class EfModelLoader
 		}
 		catch (IOException)
 		{
-			diagnostics = new EfModelLoadDiagnostics(projectPath, outputDirectory, scanned, models.Count);
+			diagnostics = new EfModelLoadDiagnostics(
+				projectPath,
+				outputDirectory,
+				scanned,
+				models.Count,
+				DumpStatus: dumpStatus
+			);
 
 			return EfModel.Empty;
 		}
 		catch (UnauthorizedAccessException)
 		{
-			diagnostics = new EfModelLoadDiagnostics(projectPath, outputDirectory, scanned, models.Count);
+			diagnostics = new EfModelLoadDiagnostics(
+				projectPath,
+				outputDirectory,
+				scanned,
+				models.Count,
+				DumpStatus: dumpStatus
+			);
 
 			return EfModel.Empty;
 		}
@@ -126,7 +156,8 @@ public static class EfModelLoader
 			outputDirectory,
 			scanned,
 			withDescriptors.Count,
-			approximate.Count
+			approximate.Count,
+			DumpStatus: dumpStatus
 		);
 
 		return Merge(models);
@@ -367,11 +398,16 @@ public static class EfModelLoader
 /// <param name="DumpContextsFound">
 /// How many contexts came from a build-time dump. Non-zero means the authoritative EF model was used.
 /// </param>
+/// <param name="DumpStatus">
+/// Why the build-time dump did or did not supply the model, so an approximate diagram can name the
+/// reason it is approximate.
+/// </param>
 public readonly record struct EfModelLoadDiagnostics(
 	string ProjectPath,
 	string? OutputDirectory,
 	int AssembliesScanned,
 	int DescriptorsFound,
 	int MetadataContextsFound = 0,
-	int DumpContextsFound = 0
+	int DumpContextsFound = 0,
+	EfModelDumpStatus DumpStatus = EfModelDumpStatus.NotChecked
 );

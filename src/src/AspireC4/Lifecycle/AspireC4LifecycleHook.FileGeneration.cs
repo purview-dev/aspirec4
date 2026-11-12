@@ -51,18 +51,22 @@ sealed partial class AspireC4LifecycleHook
 
 		var outputPath = Path.Combine(outputDir, filename);
 
-		// Skip writing (and formatting) when only the timestamp changed — i.e. the stable body
-		// is identical to what was last written.  This prevents needless git noise when state
-		// changes bounce resources through transitional states that end up back where they started.
+		// Two checks, for two different reasons. The in-memory one decides whether this is a new model at
+		// all — it gates formatting and image export, and absorbs state changes that bounce a resource
+		// through a transitional state and back. The on-disk one decides whether anything is written: the
+		// in-memory value starts empty on every run, so without it each restart of an unchanged
+		// application would rewrite the file and touch the working tree.
 		var newRawBody = StripHeader(dsl);
 		var changed = !string.Equals(_lastRawBody, newRawBody, StringComparison.Ordinal);
 		if (changed)
 		{
 			_lastRawBody = newRawBody;
-			await File.WriteAllTextAsync(outputPath, dsl, cancellationToken);
 
 			// Format the generated file in-place (best-effort) so the on-disk file is human-readable.
-			if (opts.FormatGeneratedFile)
+			if (
+				await GeneratedOutput.WriteIfChangedAsync(outputPath, dsl, cancellationToken)
+				&& opts.FormatGeneratedFile
+			)
 			{
 				await RunFormatAsync(outputPath, outputDir, cancellationToken);
 			}
@@ -70,7 +74,7 @@ sealed partial class AspireC4LifecycleHook
 
 		// Copy additional user-provided DSL files into the output directory so LikeC4
 		// picks them up as part of the workspace.
-		List<string> additionalDestPaths = [];
+		List<string> generatedFileNames = [filename];
 		foreach (var sourcePath in opts.AdditionalDSLFiles)
 		{
 			var absoluteSource = Path.GetFullPath(sourcePath);
@@ -80,17 +84,24 @@ sealed partial class AspireC4LifecycleHook
 			}
 
 			var destFileName = Path.GetFileName(absoluteSource);
-			var destPath = Path.Combine(outputDir, destFileName);
-			File.Copy(absoluteSource, destPath, overwrite: true);
-			additionalDestPaths.Add(destPath);
+			generatedFileNames.Add(destFileName);
 
-			telemetry.AdditionalDSLFileSynced(Path.GetFileNameWithoutExtension(absoluteSource));
+			if (GeneratedOutput.CopyIfChanged(absoluteSource, Path.Combine(outputDir, destFileName)))
+			{
+				telemetry.AdditionalDSLFileSynced(Path.GetFileNameWithoutExtension(absoluteSource));
+			}
 		}
 
 		// Generate likec4.config.json when opted in (default) and AspireC4 owns the served project.
 		if (opts.GenerateConfigFile && !LikeC4ProjectLayout.IsHandAuthoredProject(serveDir, outputDir))
 		{
 			await WriteConfigFileAsync(opts, outputDir, cancellationToken);
+			generatedFileNames.Add(LikeC4ProjectLayout.ConfigFileName);
+		}
+
+		if (opts.GenerateGitIgnoreFile)
+		{
+			await WriteGitIgnoreAsync(outputDir, generatedFileNames, cancellationToken);
 		}
 
 		telemetry.LikeC4ModelWritten(outputPath);
@@ -237,7 +248,26 @@ sealed partial class AspireC4LifecycleHook
 			aliases,
 			opts.ConfigFileMetadata
 		);
-		var configPath = Path.Combine(outputDir, "likec4.config.json");
-		await File.WriteAllTextAsync(configPath, config, cancellationToken);
+		var configPath = Path.Combine(outputDir, LikeC4ProjectLayout.ConfigFileName);
+		await GeneratedOutput.WriteIfChangedAsync(configPath, config, cancellationToken);
+	}
+
+	async Task WriteGitIgnoreAsync(
+		string outputDir,
+		IEnumerable<string> generatedFileNames,
+		CancellationToken cancellationToken
+	)
+	{
+		var result = await GeneratedOutput.WriteGitIgnoreAsync(
+			outputDir,
+			"The architecture diagram's generated LikeC4 model. Hand-written .c4 files are not listed.",
+			generatedFileNames,
+			cancellationToken
+		);
+
+		if (result == GitIgnoreWrite.KeptUserFile)
+		{
+			telemetry.GitIgnoreFileKept(Path.Combine(outputDir, GeneratedOutput.GitIgnoreFileName));
+		}
 	}
 }

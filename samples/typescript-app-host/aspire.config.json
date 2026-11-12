@@ -4,7 +4,7 @@
     "language": "typescript/nodejs"
   },
   "sdk": {
-    "version": "13.5.3"
+    "version": "13.6.5"
   },
   "profiles": {
     "https": {
@@ -16,9 +16,9 @@
     }
   },
   "packages": {
-    "Aspire.Hosting.Azure.PostgreSQL": "13.5.3",
-    "Aspire.Hosting.Azure.Redis": "13.5.3",
-    "Aspire.Hosting.JavaScript": "13.5.3",
+    "Aspire.Hosting.Azure.PostgreSQL": "13.6.5",
+    "Aspire.Hosting.Azure.Redis": "13.6.5",
+    "Aspire.Hosting.JavaScript": "13.6.5",
     "AspireC4.Hosting": "../../src/src/AspireC4/AspireC4.csproj"
   }
 }

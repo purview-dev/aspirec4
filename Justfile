@@ -1,9 +1,15 @@
 set quiet
 
+import "Justfile.skills.just"
+
 export TESTINGPLATFORM_EXITCODE_IGNORE := "8"
 export DOTNET_CLI_TELEMETRY_OPTOUT := "1"
 export DOTNET_SKIP_FIRST_TIME_EXPERIENCE := "1"
+export DOTNET_NOLOGO := "1"
 export DO_NOT_TRACK := "1"
+# The .NET 11 CLI keeps the MSBuild server on by default; stating it keeps local and CI builds on
+# the same path rather than depending on a machine-wide setting.
+export DOTNET_CLI_USE_MSBUILD_SERVER := "1"
 
 _root := "./"
 _solution := "src/AspireC4.slnx"
@@ -105,7 +111,8 @@ build configuration=config_default *args:
 clean configuration=config_default *args:
     dotnet clean {{ _solution }} --configuration {{ configuration }} {{ args }}
 
-# Run all tests (unit + integration)
+# Run all tests (unit + integration). The TypeScript suite runs too, through
+# Repository.UnitTests/TypeScriptTests, so the shared pipeline executes it in the same pass.
 [group('.NET')]
 test filter=default_test_filter *args:
     dotnet test {{ _solution }} -c {{ config_default }} --treenode-filter "{{ filter }}" {{ args }}
@@ -155,6 +162,21 @@ ts-run:
 [group('Typescript')]
 ts-lint:
     cd {{ _typescriptAppHost }} && bun run lint
+
+# Verify the Aspire SDK version in global.json matches the TypeScript sample
+[group('Typescript')]
+ts-validate:
+    bun scripts/validate-aspire-version.mts
+
+# Rewrite the TypeScript sample's Aspire version to match global.json
+[group('Typescript')]
+ts-validate-fix:
+    bun scripts/validate-aspire-version.mts --fix
+
+# Run the TypeScript test suite directly
+[group('Typescript')]
+ts-test:
+    bun test
 
 # ── Icon manifest ─────────────────────────────────────────────────────────────
 

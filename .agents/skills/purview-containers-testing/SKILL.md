@@ -3,7 +3,7 @@ name: purview-containers-testing
 description: >-
   Use when organising or running a test suite that uses Purview.Containers - the Unit and Integration
   tiers, why test modules must run serially under WSL Containers, pinning or skipping a backend,
-  running the Docker suites in CI and the WSL suites on a self-hosted runner, and verifying the
+  running Docker and WSLC contract suites in hosted CI and the full WSLC matrix, and verifying the
   consumer contract.
 metadata:
   product: Purview.Containers
@@ -21,7 +21,7 @@ tier is a property of the project rather than of a hand-written attribute:
 | --- | --- | --- |
 | `*.UnitTests` | `Unit` | none — logic, parsing, configuration, wait-strategy units, in-process fakes |
 | `Wsl.*` and module `*.IntegrationTests` | `Integration` | a **WSLC host** |
-| `Docker.IntegrationTests`, `Modules.DockerIntegrationTests` | `Integration` | any **Docker daemon**; these target `net10.0`, so they run on Linux too |
+| `Docker.IntegrationTests`, `Modules.DockerIntegrationTests` | `Integration` | any **Docker daemon**; these target `net10.0`, so they run on Linux too and keep the lowest supported framework under test |
 
 The shared pipeline filters to `/*/*/*/*[Category=Unit]`, so **the standard pipeline never starts a
 container**. The Docker suites are the exception: the PR workflow adds an `integration-docker` job on
@@ -32,7 +32,7 @@ Windows and WSL — the same modules a developer runs on WSLC locally.
 just test                                                       # every discovered project
 just test '/*/*/*/*[Category=Unit]'                             # unit only
 just test '/*/*/*/*[Category=Integration]' --max-parallel-test-modules 1
-just test src/tests/Docker.IntegrationTests/Docker.IntegrationTests.csproj
+dotnet test --project src/tests/Docker.IntegrationTests/Docker.IntegrationTests.csproj --treenode-filter '/*/*/*/*'
 ```
 
 Filtering uses TUnit's `--treenode-filter`, not `--filter`: this runs on Microsoft.Testing.Platform,
@@ -66,16 +66,16 @@ PURVIEW_CONTAINERS_BACKEND=wsl   # or docker
 ```
 
 Both halves skip themselves when their runtime is unreachable: the Docker suites when no daemon
-responds, the WSLC suites when the host lacks the WSL Containers components. That is what lets a
-machine without WSLC still run the unit tier — and it is also why a mis-provisioned CI runner reports
-*successes with skips* rather than real coverage. Print `wsl --version` and `wslc version` as the
-job's first step so that failure is visible immediately.
+responds, the WSLC suites when the host lacks the WSL Containers components. Set
+`PURVIEW_CONTAINERS_REQUIRE_BACKEND=wsl|docker` in CI to fail instead of silently skipping coverage.
+Print `wsl --version` and `wslc version` in WSLC jobs so provisioning failures are visible.
 
 ## CI shape
 
 - **Docker half** — runs on every pull request, on `ubuntu-latest`.
-- **WSL half** — cannot: it needs a Windows host with WSL Containers, which no GitHub-hosted runner
-  provides. It is a **manual** workflow on a self-hosted runner:
+- **WSLC contract** — runs on every pull request on `windows-2025`, with nested virtualisation and
+  WSL Containers installed by the workflow.
+- **Full WSLC matrix** — runs nightly on `windows-2025`, or on demand on a hosted or self-hosted runner:
 
   ```bash
   gh workflow run "Integration (WSL Containers)" --ref main
@@ -83,17 +83,22 @@ job's first step so that failure is visible immediately.
   ```
 
   It runs `Wsl.IntegrationTests` then each service-module suite **one project at a time**, so the
-  shared WSLC image store is never contended. Inputs: `ref` and `filter` (a treenode filter).
+  shared WSLC image store is never contended. Use `scope: contract` for the backend contract alone.
 
 Self-hosted runner prerequisites: a **Windows x64** runner labelled `self-hosted` and `wslc`, with
 WSL Containers installed (`wsl --install --no-distribution`) and the pinned .NET SDK. Tell
 `actionlint` about the custom label in `.github/actionlint.yaml`.
 
-> The shared pipeline runs on `ubuntu-latest`, so it builds the portable `net10.0` projects **and**
+> The shared pipeline runs on `ubuntu-latest`, so it builds the portable `net10.0`/`net11.0` projects **and**
 > the Windows-targeted test projects on Linux. That works only because `src/Directory.Build.props`
 > sets `EnableWindowsTargeting=true`; without it the SDK reports `NETSDK1100`.
 
 ## Expectations
+
+The repository's `src/tests/BackendContractTests.cs` is compiled into both backend integration
+suites. It exercises exec settings, binary pre-start/runtime copies, delayed and failed one-shot
+exits, network alias DNS, image builds, reuse, cancellation and bounded readiness cleanup. Run both
+complete suites when changing a shared contract; a unit-only run cannot prove backend behaviour.
 
 `Wsl.IntegrationTests` runs many real containers in one session and can take several minutes, because
 WSLC serialises container operations. Slow-test warnings while it runs are expected, not a signal.

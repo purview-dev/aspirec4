@@ -196,6 +196,11 @@ static class LikeC4ImageExporter
 
 		var imageDirectory = ResolveImageDirectory(options, appHostDirectory);
 
+		if (options.GenerateGitIgnoreFile)
+		{
+			await ImageExportStamp.WriteGitIgnoreAsync(imageDirectory, cancellationToken).ConfigureAwait(false);
+		}
+
 		// Checked before anything is run. The AppHost's own change detection resets every time it
 		// restarts, so without this a restart re-renders views that are already correct on disk — and
 		// an export starts a LikeC4 server and a headless browser to do it.
@@ -305,6 +310,12 @@ static class LikeC4ImageExporter
 	/// Overwrites, so a view that has been re-exported replaces its previous image rather than
 	/// accumulating. A view removed from the model leaves its last image behind, which is the lesser
 	/// evil: emptying the folder would also delete the ER diagram's images sitting beside them.
+	/// <para>
+	/// An image that came out byte-identical is left where it is. The run-state tags settle during
+	/// startup, so the stamp misses and the views are re-rendered on most runs — into the same pixels.
+	/// Replacing them anyway changed nothing git could see but still touched every file, which is the
+	/// churn a watcher, a sync client or an IDE reacts to.
+	/// </para>
 	/// </remarks>
 	static void MoveWithPrefix(string staging, string imageDirectory)
 	{
@@ -315,7 +326,7 @@ static class LikeC4ImageExporter
 				AspireC4ImageExport.ArchitecturePrefix + Path.GetFileName(file)
 			);
 
-			File.Move(file, destination, overwrite: true);
+			GeneratedOutput.CopyIfChanged(file, destination);
 		}
 	}
 

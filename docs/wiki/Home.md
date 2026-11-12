@@ -12,7 +12,16 @@ AspireC4 turns your distributed application into a living architecture diagram. 
 
 ## Start here
 
-- [Getting Started](Getting-Started.md)
+The pages are layered: each one owns its topic, and a page that only needs to mention a topic links to
+its owner instead of restating it.
+
+**Using AspireC4**
+
+- [Requirements](Requirements.md) — the SDK, runtime, Aspire and container requirements, and why
+- [Getting Started](Getting-Started.md) — install and first run
+
+**Reference**
+
 - [Configuration](Configuration.md)
 - [Customizing Resources](Customizing-Resources.md)
 - [Entity Framework Core ER Diagrams](Entity-Framework-Diagrams.md)
@@ -23,6 +32,10 @@ AspireC4 turns your distributed application into a living architecture diagram. 
 - [Source Generator Validation](Source-Generator.md)
 - [Advanced Configuration](Advanced-Configuration.md)
 - [Migration Guide](Migration.md)
+
+**Working on AspireC4**
+
+- [Toolchain and support matrix](Toolchain.md) — how this repository is built
 - [Contributing](Contributing.md)
 - [Release Flow](Release-Flow.md)
 
@@ -42,7 +55,7 @@ startup, which is the easiest way to capture a screenshot of your own applicatio
 
 - **Live diagram generation.** `AddAspireC4()` registers a lifecycle hook that generates the `.c4` file before startup and regenerates it (debounced) whenever a resource changes state — so the diagram always reflects the current application.
 - **Optional Entity Framework Core ER diagram.** `WithEntityFrameworkDiagram()` (package `AspireC4.Hosting.EntityFrameworkCore`) adds a second, linked diagram of your `DbContext` types. It is additive — the architecture diagram is the base and is always required, so you run one diagram or both. See [Entity Framework Core ER Diagrams](Entity-Framework-Diagrams.md).
-- **One generated-output root.** The architecture and ER diagrams default beneath `./.aspirec4/`, so source control needs a single `**/.aspirec4/` ignore entry.
+- **One generated-output root, no ignore entries.** The architecture and ER diagrams default beneath `./.aspirec4/`, AspireC4 writes the `.gitignore` files that keep the generated models out of git, and nothing is rewritten when nothing changed. Hand-written LikeC4 files in `likec4-extensions/` are included automatically.
 - **Docker or local CLI.** The LikeC4 server runs as the `ghcr.io/likec4/likec4` container by default, or through a local JavaScript package manager CLI (`npx`, `pnpm`, `yarn`, `bun`, or `deno`) with `.WithLocalCLI()`.
 - **Rich per-resource customization.** `WithLikeC4Details()` controls labels, technologies, descriptions, summaries, icons, kinds, tags, links, and metadata; `WithLikeC4Reference()` customizes relationships; `WithLikeC4Group()` groups resources in the generated view.
 - **Automatic icons.** Icons are inferred from resource type and name using a bundled manifest, with custom `IconResolvers` evaluated first, and optional GraphViz `dot` assistance.
@@ -51,19 +64,12 @@ startup, which is the easiest way to capture a screenshot of your own applicatio
 - **TypeScript AppHost support.** The same features are available to TypeScript AppHosts through the Aspire-generated fluent API.
 - **Dashboard integration.** The diagram URL is surfaced in the Aspire dashboard, with optional per-resource dashboard links, and support for hiding the sidecar in favour of links on project resources.
 
-## Prerequisites
+## Requirements
 
-- **.NET 10 or later.** The AppHost targets `net10.0`, which is the target framework of both libraries.
-- **Aspire 13.5.3 or later**, with `Aspire.Hosting.AppHost` referenced by the AppHost project.
+- **Build with the .NET 11 SDK.** The AppHost can still target `net10.0` or `net11.0`.
+- **Aspire 13.6.5 or later**, with `Aspire.Hosting.AppHost` referenced by the AppHost project.
 - **Docker** (default LikeC4 server), or a local Node.js CLI runtime if you use `.WithLocalCLI()`.
 
-### Target frameworks
-
-| Package | Target framework | Shipped as |
-| --- | --- | --- |
-| `AspireC4.Hosting` | `net10.0` | library |
-| `AspireC4.Hosting.EntityFrameworkCore` | `net10.0` | library |
-| `AspireC4.EntityFrameworkCore` | `netstandard2.0` | analyzer-only, no runtime assembly |
-| `AspireC4.EntityFrameworkCore.ModelDump` | `net10.0` | build-time tool under `tools/` |
-
-See [Getting Started](Getting-Started.md) for installation and the first run.
+[Requirements](Requirements.md) has the full list, the target frameworks each package ships, and why
+an older SDK silently drops the source generators. See [Getting Started](Getting-Started.md) for
+installation and the first run.

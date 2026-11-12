@@ -3,8 +3,10 @@
 [![NuGet version](https://img.shields.io/nuget/v/AspireC4.EntityFrameworkCore.ModelDump.svg)](https://www.nuget.org/packages/AspireC4.EntityFrameworkCore.ModelDump)
 
 Writes your **real** Entity Framework Core model to `obj/` on every build, so the AspireC4 ER diagram
-shows exactly what EF builds: conventions, value converters, `IEntityTypeConfiguration<T>` classes and
-composite foreign keys included.
+shows what EF builds: conventions, value converters, `IEntityTypeConfiguration<T>` classes, composite
+foreign keys, fluently configured complex and owned types (`ComplexProperty`, `OwnsOne`, `OwnsMany`,
+`ToJson`), explicit column types and string-converted enums included. Inheritance mapping, delete
+behaviour, sequences and check constraints are not shown.
 
 This package is **optional**. It is a companion to
 [`AspireC4.Hosting.EntityFrameworkCore`](https://www.nuget.org/packages/AspireC4.Hosting.EntityFrameworkCore),
@@ -35,9 +37,11 @@ The reference is the opt-in. The package is a development dependency, so it adds
 build output or to the projects that reference yours.
 
 The dump tool itself targets **`net10.0`** and is invoked as `dotnet <tool>.dll` in an MSBuild `Exec`
-after `Build`, so the machine doing the build needs a .NET 10 runtime. A build that cannot run the tool
+after `Build`. It rolls forward to the **latest installed major runtime**, so the .NET 11 SDK's runtime
+is enough, and a project that builds `net11.0` can be loaded. A build that cannot run the tool
 simply produces no dump (the target is `ContinueOnError`); the AppHost then falls back to the other
-sources.
+sources. See the
+[requirements page](https://github.com/purview-dev/aspirec4/blob/main/docs/wiki/Requirements.md#the-model-dump-tool).
 
 ### 2. Make sure the project has a design-time factory
 

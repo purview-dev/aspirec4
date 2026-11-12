@@ -61,8 +61,7 @@ sealed partial class AspireC4LifecycleHook
 
 		// Primary strategy: endpoint name "https"/"http" identifies the browser frontend.
 		// This matches how Aspire itself selects the public frontend URL in PopulateDashboardUrls.
-		var rawUrl =
-			list.FirstOrDefault(u => u.Name == "https")?.Url
+		var rawUrl = list.FirstOrDefault(u => u.Name == "https")?.Url
 			?? list.FirstOrDefault(u => u.Name == "http")?.Url
 			// Fallbacks for future-proofing in case endpoint names change.
 			?? list.FirstOrDefault(u => u.Url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))?.Url

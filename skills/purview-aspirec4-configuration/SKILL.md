@@ -4,7 +4,9 @@ description: >-
   Use when tuning AspireC4DiagramOptions - the view and title settings, output directory and
   generated file, the LikeC4 container tag and HMR, icon inference, Aspire metadata injection and
   dashboard links, run-state tags and styles, additional DSL files and image aliases, exporting the
-  views as images on startup, and the security note on embedding the Aspire token.
+  views as images on startup, and the security note on embedding the Aspire token. Also use when
+  deciding what to put in .gitignore for .aspirec4/ (nothing - AspireC4 writes its own), when generated
+  files change on every run, or when adding hand-written LikeC4 files in likec4-extensions/.
 metadata:
   product: AspireC4
   repository: purview-dev/aspirec4
@@ -64,8 +66,9 @@ when the runtime options are resolved. An explicit `OutputDirectory` still wins 
 default, and `WithLikeC4ProjectFolder` is unaffected: generated output always stays beneath the project
 being served.
 
-It is a compatibility shim and will be removed in a future major version. Prefer adopting
-`**/.aspirec4/` in `.gitignore` and updating anything that addresses the `aspirec4` resource by name.
+It is a compatibility shim and will be removed in a future major version. Prefer the new layout —
+remove the old `likec4/gen/` and `erd/gen/` ignore entries, since AspireC4 writes its own — and update
+anything that addresses the `aspirec4` resource by name.
 
 ## Server, container and hot reload
 
@@ -123,6 +126,19 @@ puts passwords and secrets.
 | `AdditionalDSLFolders` | `[]` | directories scanned recursively for `.c4` files, added to `include.paths` in the generated config |
 | `ImageAliases` | `{}` | alias definitions (keys begin with `@`) written to `imageAliases` in the generated config |
 | `ConfigFileMetadata` | `{}` | extra metadata for the generated `likec4.config.json` |
+| `ExtensionsDirectory` | `"./likec4-extensions"` | a folder of hand-written `.c4` files beside the AppHost, **included automatically when it exists**; `null`/empty turns it off |
+| `GenerateGitIgnoreFile` | `true` | write `.gitignore` files naming the generated files — see *Source control* below |
+
+### Hand-written LikeC4 files
+
+Put people, external systems, `extend` blocks and extra views in `likec4-extensions/` beside the
+AppHost — no call needed. It joins `include.paths` and the container mount exactly like
+`WithAdditionalDSLFolder`. Generated element ids are the Aspire resource names, with any character
+other than a letter, digit or `_` turned into `_`, so `extend data_service { ... }` and `customer -> data_service` work and stay stable while the resources keep their names. A kind the file uses must
+be declared in its own `specification` block. `WithExtensionsFolder(path)` uses another folder;
+`WithoutExtensionsFolder()` turns the convention off. It does not apply with `WithLikeC4ProjectFolder`,
+whose project already holds the hand-written files. This replaces a separate LikeC4 project that read a
+committed `model.gen.c4`.
 
 ## Image export
 
@@ -180,31 +196,35 @@ Publish is skipped outright: an export is fire-and-forget, so it would be killed
 publish exits, and publish is expected to be hermetic rather than reaching for a container runtime a
 build agent may not have.
 
-### Committing the images
+### Source control: nothing to add
 
-The images are the one piece of generated output worth tracking — a diagram that shows up in a pull
-request is documentation, and they do not churn because export only runs when the diagram changes.
-Ignore the generated directory but carve them out of it:
+**Do not add `.aspirec4/` entries to the repository's `.gitignore`.** AspireC4 writes its own, beside
+what it generates:
 
-```gitignore
-# /* rather than /: git will not descend into an excluded directory, so the children have to be
-# excluded individually for the re-include to be reachable.
-**/.aspirec4/*
-!**/.aspirec4/images/
-# The stamp recording what the images were rendered from is a local cache, not documentation.
-**/.aspirec4/images/.aspirec4-*
-```
+| Directory | `.gitignore` written there ignores | Left visible to git |
+| --- | --- | --- |
+| `likec4/` (architecture output) | `model.gen.c4`, the generated `likec4.config.json`, copies of `AdditionalDSLFiles` | anything else |
+| `erd/` (ER output) | the diagram, the viewer files, `vendor/` | anything else |
+| `images/` | the `.aspirec4-*` stamps only | **the exported images** — commit them |
 
-Both diagrams are stable in source control, but they cache differently:
+- Each file names exactly what AspireC4 writes, anchored to its directory, so a directory shared with
+  hand-written files does not hide them.
+- A `.gitignore` AspireC4 did not write is never overwritten; its own start with `# Written by AspireC4.`
+- Every generated file is written **only when its bytes change**, compared against the file on disk, and
+  the headers carry no timestamp, so a restart of an unchanged application touches nothing.
+- A hand-written `**/.aspirec4/` entry still works but also hides the images, which defeats committing them.
+
+`GenerateGitIgnoreFile` (default `true`) / `WithoutGitIgnoreFileGeneration()` turns it off, for a
+repository that commits the model on purpose. Expect diffs then: the architecture model carries this
+run's ports, dashboard links and run states.
+
+Image export caches differently per diagram:
 
 - **ER diagram** — fully cached. From the EF model alone, so a restart over an unchanged schema renders
   nothing.
-- **Architecture diagram** — re-rendered on each run, to identical bytes. Its model is a picture of a
-  *running* system: ports and run-state tags settle during startup, so the first export sees a slightly
-  different model from the last. The stamp ignores the ephemeral ports; the run states are left in
-  because they genuinely change the picture. Measured across restarts the PNGs are byte-for-byte the
-  same, so git sees nothing — the cost is a background render, not a dirty tree.
-
+- **Architecture diagram** — usually re-rendered on each run, because the run-state tags settle during
+  startup and the stamp rarely matches. A render that comes out identical leaves the existing image
+  untouched, so the cost is a background render, not a changed file.
 Failures are best-effort: they are reported and the generated `.c4` model is unaffected.
 
 ```csharp
@@ -238,6 +258,8 @@ WithDefaultStateStyles(bool = true)       WithStateTag(string state, string? tag
 WithElementKindSpec(LikeC4ElementKindSpec)
 WithRelationshipKindSpec(LikeC4RelationshipKindSpec)
 WithAdditionalDSLFile(string)             WithAdditionalDSLFolder(string)
+WithExtensionsFolder(string)              WithoutExtensionsFolder()
+WithoutGitIgnoreFileGeneration()
 WithImageAliasFolder(string, string)
 WithExcludedResourceType<T>()             WithoutExcludedResourceType<T>()
 WithIncludeAspireC4InternalResource(bool)

@@ -19,6 +19,13 @@ configuration.
 | Read from metadata only | With this package |
 | --- | --- |
 | `DbSet<T>`, navigations, `[Key]`, `[Table]`, `[Column]`, `[Required]`, `[MaxLength]`, `[Index]`, … | All of that, **plus** `HasDefaultSchema`, `ToTable`, `HasKey`, `Ignore`, `HasIndex(...).IsUnique()`, `HasColumnName`, `HasColumnType`, `HasMaxLength`, `IsRequired`, `HasComment` |
+
+Both read value objects the same way — Purview's `[Scalar<T>]`, `[Scalar(typeof(T))]` and `[Scalar("Name")]`,
+`IScalarValueObject<,>`, a bare `[ValueObject]`, `[ValueObject(EFMapping = Json)]`, EF's `[ComplexType]` and
+`[Owned]` — along with value-object collections and C# unions. The attributes matter here: a Purview
+generator writes the `Value` member into a generated file this analyzer cannot see, so a strongly-typed id
+is recognised by its `[Scalar]` attribute. See
+[Value objects, enums and unions](https://github.com/purview-dev/aspirec4/blob/main/docs/wiki/Entity-Framework-Diagrams.md#value-objects-enums-and-unions).
 | Fidelity: `Approximate` | Fidelity: `Full` |
 
 ## Requirements
@@ -26,7 +33,12 @@ configuration.
 - **`netstandard2.0` analyzer, no runtime surface.** The package ships under `analyzers/dotnet/cs/`, so it
   loads into the compiler for whatever framework your project targets and adds nothing to your build
   output. The generated `[assembly: AspireC4EfModel]` attribute is compiled into your own assembly, which
-  the `net10.0` AppHost then reads.
+  the AppHost then reads.
+- **The .NET 11 SDK** to build the project. A source generator runs inside the compiler, and this one
+  is built against Roslyn 5.9 — the project's target framework has no bearing on it. An older SDK
+  reports `CS9057` and skips the generator, so the ER diagram falls back to the approximate metadata
+  read. See the
+  [requirements page](https://github.com/purview-dev/aspirec4/blob/main/docs/wiki/Requirements.md#the-compiler-floor-net-11-sdk).
 - The project still has to be registered in the AppHost with `AddProject<Projects.X>(...)`, and the AppHost
   still has to call `WithEntityFrameworkDiagram()`.
 

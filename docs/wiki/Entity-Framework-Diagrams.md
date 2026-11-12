@@ -14,15 +14,18 @@ package; there is no way to run the ER diagram without the architecture diagram.
 
 | Package | Target framework | Add to | Why |
 | --- | --- | --- | --- |
-| `AspireC4.Hosting` | `net10.0` | the AppHost | the architecture diagram this one hangs off. Required first |
-| `AspireC4.Hosting.EntityFrameworkCore` | `net10.0` | the AppHost | the ER diagram itself |
+| `AspireC4.Hosting` | `net10.0`, `net11.0` | the AppHost | the architecture diagram this one hangs off. Required first |
+| `AspireC4.Hosting.EntityFrameworkCore` | `net10.0`, `net11.0` | the AppHost | the ER diagram itself |
 | `AspireC4.EntityFrameworkCore` | `netstandard2.0` (analyzer-only) | a project **you own** that declares a `DbContext` | captures fluent `OnModelCreating` configuration |
 | `AspireC4.EntityFrameworkCore.ModelDump` | `net10.0` (build-time tool) | the project that owns the EF Core **provider** and a design-time factory | the authoritative model, composite foreign keys included |
 
-Both libraries target `net10.0`, so the AppHost must too. The analyzer package is `netstandard2.0` and
-ships only under `analyzers/dotnet/cs/`: it adds no runtime assembly, so it works whatever framework the
-owning project targets. The dump tool runs as `dotnet <tool>.dll` from an MSBuild `Exec`, so the build
-machine needs a .NET 10 runtime.
+Both libraries ship `net10.0` and `net11.0` assets, so an AppHost on either runtime resolves one. The
+analyzer package is `netstandard2.0` and ships only under `analyzers/dotnet/cs/`: it adds no runtime
+assembly, so it works whatever framework the owning project targets — but it runs inside the compiler,
+so the owning project must be built with the .NET 11 SDK. The dump tool is `net10.0` and runs as
+`dotnet <tool>.dll` from an MSBuild `Exec`, rolling forward to the latest installed major runtime, so the
+.NET 11 SDK's runtime is enough and a project that builds `net11.0` can be loaded.
+[Requirements](Requirements.md) has the detail for both, including what happens when either cannot run.
 
 ## Enabling it
 
@@ -91,6 +94,51 @@ older than the built assembly.
 Set `<AspireC4EfModelDumpConnectionString>` when the design-time factory needs one to build its options —
 the model is never opened, so any syntactically valid value works. A dump failure never fails the build.
 
+## Value objects, enums and unions
+
+A column declared with a domain type shows it beside the real database type — `AssetId (guid)`,
+`ActorType (int, enum)` — as `DomainTypeDisplay` chooses. This page owns the rules for what is recognised.
+
+| Declared as | Shown as |
+| --- | --- |
+| Purview `[Scalar<T>]`, `[Scalar(typeof(T))]`, `[Scalar("Amount")]`, `IScalarValueObject<TSelf, TValue>`, or any non-generic struct with a public `Value` | a **scalar value object**: one column of the wrapped type. A struct or a class |
+| `Nullable<T>` of any of those | the same value object, nullable |
+| Purview `[ValueObject]` (its `EFMapping` defaults to `ComplexType`), EF's `[ComplexType]`, `ComplexProperty(...)`, `[Owned]` or `OwnsOne(...)` sharing the owner's table | a **complex value object**: `{Property}_{Member}` columns on the owner's table, folded under the property in the viewer |
+| `[ValueObject(EFMapping = Json)]`, `OwnsOne(...).ToJson()`, a complex collection | a complex value object in **one `json` column** |
+| `List<string>`, `Guid[]`, `List<AssetId>` | **one `json` column**; a collection of value objects or enums shows as `AssetId[]` |
+| an enum | its underlying integral type (`tinyint` for a `byte` enum) marked `enum`, or `varchar` when converted to a string |
+| a C# union — `union`, or a struct marked `[Union]` / implementing `IUnion` | marked **`union`**. EF needs a value converter to store one, so the database type is what the converter produces |
+| `OwnsMany(...)`, or an `[Owned]` type in a collection | a table of its own, with a foreign key to its owner |
+
+A member of a complex value object that is itself a scalar value object or an enum keeps its own type,
+and still records which property it belongs to, so the viewer groups it correctly. A union is never taken
+for a scalar value object, although its `Value` accessor has the same shape.
+
+### Relationships through value objects
+
+A foreign key typed with a value object resolves like any other, from **either end**:
+
+- a reference navigation on the dependent (`Order.Customer`), with the key found by `[ForeignKey]`,
+  `{Navigation}Id` or `{Principal}Id`;
+- or only a collection on the principal (`Customer.Orders`). EF then matches the key by name
+  (`{Principal}{Key}`, `{Principal}Id`); when the dependent declares none, EF adds a shadow foreign key,
+  and the diagram shows that column — nullable, typed like the key it references.
+
+A single-column foreign key into a composite key is paired with the key column of its own type. A
+collection answered by a collection on the other side is a many-to-many through a join table EF owns.
+
+### What each source can see
+
+The analyzer descriptor and the metadata reader apply the same rules to the declared types, so they
+agree; the build-time dump reads the real model and sees configuration neither can:
+
+| | Dump | Descriptor | Metadata |
+| --- | --- | --- | --- |
+| attribute- and shape-based value objects, unions, collections | yes | yes | yes |
+| `ComplexProperty`, `OwnsOne`, `OwnsMany`, `ToJson` configured fluently | yes | no | no |
+| an enum's `HasConversion<string>()` | `varchar` | its integral type | its integral type |
+| an explicit column type | `HasColumnType`, `[Column(TypeName)]` | both | `[Column(TypeName)]` |
+| relationships configured only with `HasOne`/`HasForeignKey` | yes | no | no |
 ## Choosing which contexts appear
 
 By default every project resource is scanned. To narrow that down:
@@ -141,7 +189,7 @@ Set options in the `configure` callback or in the `AspireC4:EntityFramework` con
 | `IncludedContexts` / `ExcludedContexts` | empty | `WithIncludedContexts(...)` / `WithExcludedContexts(...)` |
 | `OutputDirectory` | `"./.aspirec4/erd/"` | where generated files are written, relative to the AppHost |
 | `FileName` | `"schema.gen"` | generated file name without extension |
-| `DomainTypeDisplay` | `DomainTypeFirst` | how a value object or enum shows beside the store type: `AssetId (guid)`, `ActorType (int, enum)` |
+| `DomainTypeDisplay` | `DomainTypeFirst` | how a value object, enum or union shows beside the store type: `AssetId (guid)`, `ActorType (int, enum)`. d2 has no annotation slot, so with `DomainTypeOnly` its tables show the domain type alone; the other renderers keep the database type as a note or tooltip |
 | `ShowNullability` | `true` | mark nullable columns with `?` |
 | `GroupBySchema` / `GroupByContext` | `true` | group tables by database schema, and by `DbContext` when there are several |
 | `UseSubgraphs` | `true` | Mermaid only: one `subgraph` per `DbContext` (Mermaid 11.17+) |
@@ -153,6 +201,7 @@ Set options in the `configure` callback or in the `AspireC4:EntityFramework` con
 | `UseViewerFidelityExport` | `false` | render images through the interactive viewer in a headless browser. Pulls a ~3.7 GB Playwright image |
 | `D2Command` | `null` | a local `d2` binary for image export, instead of the container |
 | `ContainerRuntimeCommand` | `"docker"` | set to `podman` where Aspire uses Podman |
+| `GenerateGitIgnoreFile` | `true` | write a `.gitignore` naming the generated files; `WithoutGitIgnoreFileGeneration()` turns it off. See [Source control](Generated-Output.md#source-control) |
 
 > [!IMPORTANT]
 > Set `OutputDirectory` in the callback rather than in configuration. The sidecar's bind mount is fixed
@@ -219,8 +268,11 @@ Images** command that opens the folder. Grouping and the `-likec4` rename arrive
   (`Approximate`). Add `AspireC4.EntityFrameworkCore` to the project that declares it.
 - **A composite or fluent-only relationship is not drawn.** Only the model dump sees these. Add
   `AspireC4.EntityFrameworkCore.ModelDump` to the project with the provider and a design-time factory.
-- **Not captured from any static source:** owned types, inheritance mapping, delete behaviour, sequences,
-  check constraints. Relationships across `DbContext` boundaries are never drawn.
+- **Fluently configured complex and owned types are missing or show as tables.** `ComplexProperty`,
+  `OwnsOne` and `ToJson` are method calls, invisible to the static sources; mark the type `[ValueObject]`,
+  `[ComplexType]` or `[Owned]`, or add the model dump.
+- **Not captured from any source:** inheritance mapping, delete behaviour, sequences, check constraints.
+  Relationships across `DbContext` boundaries are never drawn.
 - **The runner, not the product.** Running `AspireC4.IntegrationTests` from an IDE test runner fails
   Aspire's project-resource start-up, which surfaces as an empty ER model. Use `just test-integration`.
 

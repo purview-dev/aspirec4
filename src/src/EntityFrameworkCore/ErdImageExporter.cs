@@ -171,6 +171,11 @@ static class ErdImageExporter
 			.Select(f => Path.Combine(imageDirectory, $"{ImageBaseName(options.FileName)}.{Extension(f)}"))
 			.ToArray();
 
+		if (options.GenerateGitIgnoreFile)
+		{
+			await ImageExportStamp.WriteGitIgnoreAsync(imageDirectory, cancellationToken).ConfigureAwait(false);
+		}
+
 		// Checked before anything is written or run. The AppHost's own change detection resets every
 		// time it restarts, so without this a restart re-renders images that are already correct — and
 		// on the viewer path that means pulling and starting a multi-gigabyte browser for nothing.
@@ -212,7 +217,8 @@ static class ErdImageExporter
 			// what the d2 renderer writes, so enabling export never changes what it already produced.
 			if (options.Renderer != ErdRenderer.D2)
 			{
-				await File.WriteAllTextAsync(
+				await GeneratedOutput
+					.WriteIfChangedAsync(
 						Path.Combine(outputDirectory, $"{options.FileName}.d2"),
 						D2DSLGenerator.Generate(D2ModelBuilder.Build(model, options), options),
 						cancellationToken

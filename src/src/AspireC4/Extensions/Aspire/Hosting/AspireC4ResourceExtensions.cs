@@ -169,8 +169,7 @@ public static class AspireC4ResourceExtensions
 	{
 		ArgumentNullException.ThrowIfNull(configure);
 
-		var innerResource =
-			builder.Resource.InnerResource
+		var innerResource = builder.Resource.InnerResource
 			?? throw new InvalidOperationException(
 				$"The inner server resource has not been initialised yet. Ensure {nameof(AspireC4DistributedApplicationBuilderExtensions.AddAspireC4)}() has completed before calling {nameof(ConfigureServer)}()."
 			);

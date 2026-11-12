@@ -50,11 +50,15 @@ static class EfModelAnalyser
 		AddReachableEntities(entities, cancellationToken);
 
 		List<TableShape> tables = [];
+		Dictionary<INamedTypeSymbol, TableShape> tableByEntity = [with(SymbolEqualityComparer.Default)];
 
 		foreach (var pair in entities)
 		{
 			cancellationToken.ThrowIfCancellationRequested();
-			tables.Add(BuildTable(pair.Key, pair.Value, fluent, entities, diagnostics));
+			var table = BuildTable(pair.Key, pair.Value, fluent, entities, diagnostics);
+
+			tables.Add(table);
+			tableByEntity[pair.Key] = table;
 		}
 
 		if (tables.Count == 0)
@@ -62,6 +66,7 @@ static class EfModelAnalyser
 			diagnostics.Add((DiagnosticLibrary.NoEntityTypesDiscovered, context.Name));
 		}
 
+		ApplyPrincipalSideRelationships(tableByEntity);
 		ResolveForeignKeyTargets(tables);
 
 		return new Result(context.Name, context.ToDisplayString(), fluent.DefaultSchema, tables, diagnostics);
@@ -194,9 +199,46 @@ static class EfModelAnalyser
 				continue;
 			}
 
-			if (StoreTypeMap.IsComplexValueObject(property.Type))
+			switch (StoreTypeMap.ComplexValueObjectMapping(property.Type))
 			{
-				AddComplexColumns(table, property.Name, property.Type, StoreTypeMap.IsNullable(property.Type), 0);
+				case ComplexMapping.Flattened:
+					AddComplexColumns(
+						table,
+						property.Name,
+						property.Type,
+						StoreTypeMap.IsNullable(property.Type),
+						0,
+						property.Name,
+						StoreTypeMap.Unwrap(property.Type).Name
+					);
+
+					continue;
+
+				case ComplexMapping.Json:
+					table.Columns.Add(
+						BuildColumn(
+							property,
+							config,
+							uniqueFromIndexes,
+							StoreTypeMap.Json,
+							(StoreTypeMap.Unwrap(property.Type).Name, EfTypes.DomainTypeKinds.ComplexValueObject)
+						)
+					);
+
+					continue;
+
+				case ComplexMapping.None:
+				default:
+					break;
+			}
+
+			// A collection of primitives or value objects is a column, not a navigation: EF Core stores a
+			// primitive collection as JSON, and a complex collection can only be JSON-mapped.
+			if (ScalarCollectionElement(property.Type) is { } element)
+			{
+				table.Columns.Add(
+					BuildColumn(property, config, uniqueFromIndexes, StoreTypeMap.Json, CollectionDomainType(element))
+				);
 
 				continue;
 			}
@@ -233,10 +275,20 @@ static class EfModelAnalyser
 		return table;
 	}
 
+	/// <param name="property">The mapped property.</param>
+	/// <param name="config">Its entity's fluent configuration, when there is any.</param>
+	/// <param name="uniqueFromIndexes">Properties a unique index covers.</param>
+	/// <param name="inferredStoreType">
+	/// The store type to show when nothing is configured, for a column whose CLR type does not say — a
+	/// JSON-mapped value object or a collection. Configuration still wins.
+	/// </param>
+	/// <param name="domain">The domain type to record, in place of the one the property type implies.</param>
 	static ColumnShape BuildColumn(
 		IPropertySymbol property,
 		EntityConfiguration? config,
-		HashSet<string> uniqueFromIndexes
+		HashSet<string> uniqueFromIndexes,
+		string? inferredStoreType = null,
+		(string? Name, string? Kind)? domain = null
 	)
 	{
 		PropertyConfiguration? fluentProperty = null;
@@ -246,8 +298,7 @@ static class EfModelAnalyser
 			fluentProperty = found;
 		}
 
-		var maxLength =
-			fluentProperty?.MaxLength
+		var maxLength = fluentProperty?.MaxLength
 			?? GetAttributeInt(property, EfTypes.Attributes.MaxLength, 0)
 			?? GetAttributeInt(property, EfTypes.Attributes.StringLength, 0);
 
@@ -256,18 +307,17 @@ static class EfModelAnalyser
 			|| HasAttribute(property, EfTypes.Attributes.Required)
 			|| !StoreTypeMap.IsNullable(property.Type);
 
-		var (name, kind) = DomainType(property.Type, complexType: null);
+		var (name, kind) = domain ?? DomainType(property.Type, complexType: null);
 
 		return new ColumnShape
 		{
 			PropertyName = property.Name,
-			Name =
-				fluentProperty?.ColumnName
+			Name = fluentProperty?.ColumnName
 				?? GetAttributeString(property, EfTypes.Attributes.Column, 0)
 				?? property.Name,
-			StoreType =
-				fluentProperty?.ColumnType
+			StoreType = fluentProperty?.ColumnType
 				?? GetAttributeNamedString(property, EfTypes.Attributes.Column, "TypeName")
+				?? inferredStoreType
 				?? StoreTypeMap.ColumnStoreType(property.Type),
 			ClrTypeName = property.Type.ToDisplayString(),
 			DomainTypeName = name,
@@ -289,10 +339,24 @@ static class EfModelAnalyser
 	/// <remarks>
 	/// Column names are approximated as <c>{Property}_{Member}</c>. EF's own flattening is only visible
 	/// with a built model, which the build-time dump has and this analyser does not.
+	/// <para>
+	/// Every member records the outermost property it came from in
+	/// <see cref="ColumnShape.ComplexPropertyName"/>, whatever its own type: a member that is itself a
+	/// scalar value object or an enum carries that type, so without the owner a renderer could not tell it
+	/// belongs to the group.
+	/// </para>
 	/// </remarks>
-	static void AddComplexColumns(TableShape table, string prefix, ITypeSymbol complexType, bool nullable, int depth)
+	static void AddComplexColumns(
+		TableShape table,
+		string prefix,
+		ITypeSymbol complexType,
+		bool nullable,
+		int depth,
+		string ownerProperty,
+		string ownerType
+	)
 	{
-		if (depth > MaxComplexDepth || complexType is not INamedTypeSymbol named)
+		if (depth > MaxComplexDepth || StoreTypeMap.Unwrap(complexType) is not INamedTypeSymbol named)
 		{
 			return;
 		}
@@ -309,43 +373,104 @@ static class EfModelAnalyser
 				continue;
 			}
 
-			if (StoreTypeMap.IsComplexValueObject(member.Type))
+			var path = $"{prefix}_{member.Name}";
+			var memberNullable = nullable || StoreTypeMap.IsNullable(member.Type);
+			var mapping = StoreTypeMap.ComplexValueObjectMapping(member.Type);
+
+			if (mapping == ComplexMapping.Flattened)
 			{
-				AddComplexColumns(
-					table,
-					$"{prefix}_{member.Name}",
-					member.Type,
-					nullable || StoreTypeMap.IsNullable(member.Type),
-					depth + 1
-				);
+				AddComplexColumns(table, path, member.Type, memberNullable, depth + 1, ownerProperty, ownerType);
 
 				continue;
 			}
 
-			if (!StoreTypeMap.IsScalar(member.Type))
+			string storeType;
+			(string? Name, string? Kind) domain;
+
+			if (mapping == ComplexMapping.Json)
+			{
+				storeType = StoreTypeMap.Json;
+				domain = (StoreTypeMap.Unwrap(member.Type).Name, EfTypes.DomainTypeKinds.ComplexValueObject);
+			}
+			else if (ScalarCollectionElement(member.Type) is { } element)
+			{
+				storeType = StoreTypeMap.Json;
+				domain = CollectionDomainType(element);
+			}
+			else if (StoreTypeMap.IsScalar(member.Type))
+			{
+				storeType = StoreTypeMap.ColumnStoreType(member.Type);
+				domain = DomainType(member.Type, named.Name);
+			}
+			else
 			{
 				continue;
 			}
-
-			var (name, kind) = DomainType(member.Type, named.Name);
 
 			table.Columns.Add(
 				new ColumnShape
 				{
-					PropertyName = $"{prefix}_{member.Name}",
-					Name = GetAttributeString(member, EfTypes.Attributes.Column, 0) ?? $"{prefix}_{member.Name}",
-					StoreType = StoreTypeMap.ColumnStoreType(member.Type),
+					PropertyName = path,
+					Name = GetAttributeString(member, EfTypes.Attributes.Column, 0) ?? path,
+					StoreType = GetAttributeNamedString(member, EfTypes.Attributes.Column, "TypeName") ?? storeType,
 					ClrTypeName = member.Type.ToDisplayString(),
-					DomainTypeName = name,
-					DomainTypeKind = kind,
-					IsNullable = nullable || StoreTypeMap.IsNullable(member.Type),
-					MaxLength =
-						GetAttributeInt(member, EfTypes.Attributes.MaxLength, 0)
+					DomainTypeName = domain.Name,
+					DomainTypeKind = domain.Kind,
+					ComplexPropertyName = ownerProperty,
+					ComplexTypeName = ownerType,
+					IsNullable = memberNullable,
+					MaxLength = GetAttributeInt(member, EfTypes.Attributes.MaxLength, 0)
 						?? GetAttributeInt(member, EfTypes.Attributes.StringLength, 0),
 					Comment = GetAttributeString(member, EfTypes.Attributes.Comment, 0),
 				}
 			);
 		}
+	}
+
+	/// <summary>
+	/// The element type of a collection EF Core stores in a single JSON column, or <see langword="null"/>
+	/// when the collection is a navigation.
+	/// </summary>
+	/// <remarks>
+	/// A primitive collection (<c>List&lt;string&gt;</c>, <c>Guid[]</c>), a collection of scalar value
+	/// objects or enums, and a collection of complex value objects are all one JSON column. A collection of
+	/// entities — or of <c>[Owned]</c> types, which EF gives a table of their own — is a navigation. Before
+	/// this distinction every collection was taken for a navigation, so <c>List&lt;string&gt; Tags</c>
+	/// produced a phantom <c>String</c> table with <c>Length</c> and <c>Chars</c> columns.
+	/// </remarks>
+	static ITypeSymbol? ScalarCollectionElement(ITypeSymbol type)
+	{
+		var element = type switch
+		{
+			IArrayTypeSymbol { ElementType.SpecialType: not SpecialType.System_Byte } array => array.ElementType,
+			INamedTypeSymbol { IsGenericType: true } generic when IsCollection(generic) => generic.TypeArguments[0],
+			_ => null,
+		};
+
+		if (element is null || HasAttribute(StoreTypeMap.Unwrap(element), "Owned"))
+		{
+			return null;
+		}
+
+		return StoreTypeMap.IsScalar(element) || StoreTypeMap.ComplexValueObjectMapping(element) != ComplexMapping.None
+			? element
+			: null;
+	}
+
+	/// <summary>
+	/// The domain type shown for a JSON collection column: the element's own domain type, as an array —
+	/// <c>AssetId[]</c>, <c>Colour[]</c> — or none for a collection of primitives.
+	/// </summary>
+	static (string? Name, string? Kind) CollectionDomainType(ITypeSymbol element)
+	{
+		if (StoreTypeMap.ComplexValueObjectMapping(element) != ComplexMapping.None)
+		{
+			return ($"{StoreTypeMap.Unwrap(element).Name}[]", EfTypes.DomainTypeKinds.ComplexValueObject);
+		}
+
+		var (name, kind) = DomainType(element, complexType: null);
+
+		return name is null ? (null, null) : ($"{name}[]", kind);
 	}
 
 	/// <summary>
@@ -359,6 +484,12 @@ static class EfModelAnalyser
 	/// </remarks>
 	static (string? Name, string? Kind) DomainType(ITypeSymbol type, string? complexType)
 	{
+		// First, because a union's case accessor gives it the shape of a scalar value object.
+		if (StoreTypeMap.IsUnion(type))
+		{
+			return (StoreTypeMap.Unwrap(type).Name, EfTypes.DomainTypeKinds.Union);
+		}
+
 		var valueObject = StoreTypeMap.ValueObjectType(type);
 
 		if (valueObject is not null)
@@ -440,8 +571,9 @@ static class EfModelAnalyser
 
 			var explicitName = GetAttributeString(navigation, EfTypes.Attributes.ForeignKey, 0);
 
-			var column =
-				(explicitName is null ? null : table.Columns.FirstOrDefault(c => c.PropertyName == explicitName))
+			var column = (
+				explicitName is null ? null : table.Columns.FirstOrDefault(c => c.PropertyName == explicitName)
+			)
 				?? table.Columns.FirstOrDefault(c => c.PropertyName == navigation.Name + "Id")
 				?? table.Columns.FirstOrDefault(c => c.PropertyName == target.Name + "Id")
 				?? SharedPrimaryKeyColumn(table, target);
@@ -592,9 +724,164 @@ static class EfModelAnalyser
 				var principal = byClrType[foreignKey.PrincipalEntity];
 
 				foreignKey.PrincipalEntity = principal.Name;
-				foreignKey.PrincipalColumns.AddRange(principal.Columns.Where(c => c.IsPrimaryKey).Select(c => c.Name));
+				foreignKey.PrincipalColumns.AddRange(
+					PrincipalColumns(foreignKey, table, [.. principal.Columns.Where(c => c.IsPrimaryKey)])
+				);
 			}
 		}
+	}
+
+	/// <summary>The principal key columns a foreign key's columns point at, one for one.</summary>
+	/// <remarks>
+	/// The foreign key found from a navigation always has one column, but the principal's key can have
+	/// several. Attaching every key column produced a reference whose two sides differ in length — an
+	/// edge d2 paired with whichever key column came first, and DBML that does not parse. Each column is
+	/// paired by type, then by name, so a typed id such as <c>OrderId</c> lands on the key column of that
+	/// type.
+	/// </remarks>
+	static List<string> PrincipalColumns(ForeignKeyShape foreignKey, TableShape dependent, List<ColumnShape> key)
+	{
+		if (key.Count == 0 || key.Count == foreignKey.Columns.Count)
+		{
+			return [.. key.Select(c => c.Name)];
+		}
+
+		List<string> paired = [];
+
+		foreach (var name in foreignKey.Columns)
+		{
+			var column = dependent.Columns.FirstOrDefault(c => c.Name == name);
+			var sameType = key.Where(k => column is not null && k.ClrTypeName == column.ClrTypeName).ToList();
+
+			var match =
+				sameType.Count == 1
+					? sameType[0]
+					: key.FirstOrDefault(k => string.Equals(k.Name, name, StringComparison.OrdinalIgnoreCase))
+						?? sameType.FirstOrDefault()
+						?? key[0];
+
+			paired.Add(match.Name);
+		}
+
+		return paired;
+	}
+
+	/// <summary>
+	/// Adds the relationships EF Core discovers from the principal's side alone: a collection navigation
+	/// on the principal, and no reference navigation — or no matching foreign-key property — on the
+	/// dependent.
+	/// </summary>
+	/// <remarks>
+	/// <see cref="ApplyForeignKeys"/> works from the dependent's reference navigations, so a relationship
+	/// declared only as <c>Asset.Tags</c> used to vanish. EF matches the foreign key by name —
+	/// <c>{Principal}{Key}</c>, then the key's own name when it already starts with the principal's,
+	/// then <c>{Principal}Id</c> — and, when no property matches, adds a shadow foreign key under that
+	/// first name. Both are reproduced, so the column the database really has is shown. A collection
+	/// answered by a collection on the other side is a many-to-many, which EF maps through a join table
+	/// of its own, and is left alone.
+	/// </remarks>
+	static void ApplyPrincipalSideRelationships(Dictionary<INamedTypeSymbol, TableShape> tables)
+	{
+		foreach (var pair in tables)
+		{
+			var principal = pair.Key;
+			var key = pair.Value.Columns.Where(c => c.IsPrimaryKey).ToList();
+
+			if (key.Count != 1)
+			{
+				continue;
+			}
+
+			var principalName = principal.ToDisplayString();
+
+			foreach (var navigation in Properties(principal))
+			{
+				if (
+					!IsCollection(navigation.Type)
+					|| GetNavigationTarget(navigation.Type) is not { } dependent
+					|| !tables.TryGetValue(dependent, out var dependentTable)
+					|| dependentTable.ForeignKeys.Any(fk => fk.PrincipalEntity == principalName)
+				)
+				{
+					continue;
+				}
+
+				// On a self-referencing entity the navigation is its own dependent's property, and is not an inverse.
+				var inverse = Properties(dependent)
+					.Where(p =>
+						SymbolEqualityComparer.Default.Equals(GetNavigationTarget(p.Type), principal)
+						&& !SymbolEqualityComparer.Default.Equals(p, navigation)
+					)
+					.ToList();
+
+				if (inverse.Any(p => IsCollection(p.Type)))
+				{
+					continue;
+				}
+
+				var column = ForeignKeyByConvention(dependentTable, principal.Name, key[0])
+					?? AddShadowForeignKey(dependentTable, principal.Name, key[0]);
+
+				column.IsForeignKey = true;
+
+				ForeignKeyShape foreignKey = new()
+				{
+					PrincipalEntity = principalName,
+					NavigationName = inverse.Count == 1 ? inverse[0].Name : null,
+					PrincipalNavigationName = navigation.Name,
+					IsRequired = !column.IsNullable,
+				};
+
+				foreignKey.Columns.Add(column.Name);
+				dependentTable.ForeignKeys.Add(foreignKey);
+			}
+		}
+	}
+
+	static ColumnShape? ForeignKeyByConvention(TableShape dependent, string principal, ColumnShape key)
+	{
+		string[] candidates = [ShadowForeignKeyName(principal, key), $"{principal}Id"];
+
+		return candidates
+			.Select(name =>
+				dependent.Columns.FirstOrDefault(c =>
+					!c.IsForeignKey && string.Equals(c.PropertyName, name, StringComparison.OrdinalIgnoreCase)
+				)
+			)
+			.FirstOrDefault(c => c is not null);
+	}
+
+	/// <summary>
+	/// The name EF Core gives a foreign key it has to invent: the principal's name and its key's, unless
+	/// the key's name already starts with the principal's.
+	/// </summary>
+	static string ShadowForeignKeyName(string principal, ColumnShape key) =>
+		key.PropertyName.StartsWith(principal, StringComparison.OrdinalIgnoreCase)
+			? key.PropertyName
+			: principal + key.PropertyName;
+
+	/// <summary>
+	/// Adds the shadow foreign-key column EF Core creates when the dependent declares none — optional,
+	/// because nothing on the dependent requires it, and typed like the key it references.
+	/// </summary>
+	static ColumnShape AddShadowForeignKey(TableShape dependent, string principal, ColumnShape key)
+	{
+		var name = ShadowForeignKeyName(principal, key);
+
+		ColumnShape column = new()
+		{
+			PropertyName = name,
+			Name = name,
+			StoreType = key.StoreType,
+			ClrTypeName = key.ClrTypeName,
+			DomainTypeName = key.DomainTypeName,
+			DomainTypeKind = key.DomainTypeKind,
+			IsNullable = true,
+		};
+
+		dependent.Columns.Add(column);
+
+		return column;
 	}
 
 	/// <summary>Reads <c>[Index(nameof(X), IsUnique = true)]</c> declarations from the entity type.</summary>
@@ -646,7 +933,9 @@ static class EfModelAnalyser
 	{
 		if (type is INamedTypeSymbol { IsGenericType: true } generic && IsCollection(type))
 		{
-			return Normalise(generic.TypeArguments[0] as INamedTypeSymbol);
+			return ScalarCollectionElement(type) is null
+				? Normalise(generic.TypeArguments[0] as INamedTypeSymbol)
+				: null;
 		}
 
 		if (type is not INamedTypeSymbol named || named.TypeKind != TypeKind.Class)
@@ -654,8 +943,9 @@ static class EfModelAnalyser
 			return null;
 		}
 
-		// A complex value object is flattened into the owner's table, not modelled as an entity.
-		if (StoreTypeMap.IsComplexValueObject(named))
+		// A complex value object is flattened into the owner's table, or held in a JSON column on it; it is
+		// never an entity of its own.
+		if (StoreTypeMap.ComplexValueObjectMapping(named) != ComplexMapping.None)
 		{
 			return null;
 		}

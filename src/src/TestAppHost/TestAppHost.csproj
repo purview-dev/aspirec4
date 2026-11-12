@@ -1,6 +1,12 @@
-<Project Sdk="Aspire.AppHost.Sdk/13.6.3">
+<Project Sdk="Aspire.AppHost.Sdk">
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
+		<!--
+			Single-target, unlike the libraries: an Aspire AppHost is a runnable project that Aspire
+			starts with `dotnet run`, which cannot choose a target framework for it. It compiles against
+			the net10.0 asset, the TFM an AppHost targets.
+		-->
+		<TargetFramework>net10.0</TargetFramework>
 		<AspireUseCliBundle>true</AspireUseCliBundle>
 		<NoWarn>$(NoWarn);CA2234;</NoWarn>
 	</PropertyGroup>

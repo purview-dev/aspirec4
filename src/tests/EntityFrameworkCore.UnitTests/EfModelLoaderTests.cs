@@ -54,7 +54,64 @@ public sealed class EfModelLoaderTests
 		File.SetLastWriteTimeUtc(destination, writtenUtc);
 	}
 
+	/// <summary>
+	/// A descriptor from a newer analyzer than this AppHost: one column carries a domain kind this
+	/// version has never heard of, and one carries the complex-owner fields.
+	/// </summary>
+	const string NewerDescriptor = /*lang=json,strict*/
+		"""
+		{"schemaVersion":1,"contexts":[{"name":"AppDbContext","typeName":"Sample.AppDbContext","tables":[
+		{"name":"Assets","clrTypeName":"Sample.Asset","columns":[
+		{"name":"Id","storeType":"guid","domainTypeName":"AssetId","domainTypeKind":"ValueObject","isPrimaryKey":true},
+		{"name":"Shape","storeType":"json","domainTypeName":"Shape","domainTypeKind":"SomeFutureKind"},
+		{"name":"Location_City","storeType":"varchar","domainTypeName":"Address","domainTypeKind":"ComplexValueObject",
+		"complexPropertyName":"Location","complexTypeName":"Address"}],
+		"foreignKeys":[]}]}]}
+		""";
+
 	// Tests
+
+	[Test]
+	public async Task Parse_DescriptorWithAnUnknownDomainKind_KeepsTheModelAndDropsOnlyTheKind()
+	{
+		// A strict enum converter threw on the unfamiliar kind, and a parse failure empties the whole model,
+		// so one column from a newer analyzer would have blanked the diagram.
+		// Act
+		var model = EfModelLoader.Parse(NewerDescriptor);
+
+		// Assert
+		var columns = model.Contexts.Single().Tables.Single().Columns;
+		await Assert.That(columns.Count).IsEqualTo(3);
+		await Assert.That(columns.Single(c => c.Name == "Shape").DomainTypeKind).IsNull();
+		await Assert.That(columns.Single(c => c.Name == "Shape").DomainTypeName).IsEqualTo("Shape");
+		await Assert.That(columns.Single(c => c.Name == "Id").DomainTypeKind).IsEqualTo(EfDomainTypeKind.ValueObject);
+	}
+
+	[Test]
+	public async Task Parse_FlattenedComplexMember_ReadsItsOwner()
+	{
+		// Act
+		var model = EfModelLoader.Parse(NewerDescriptor);
+
+		// Assert
+		var city = model.Contexts.Single().Tables.Single().Columns.Single(c => c.Name == "Location_City");
+		await Assert.That(city.ComplexPropertyName).IsEqualTo("Location");
+		await Assert.That(city.ComplexTypeName).IsEqualTo("Address");
+	}
+
+	[Test]
+	public async Task Serialise_DomainKind_RoundTripsByName()
+	{
+		// Arrange
+		var model = EfModelLoader.Parse(NewerDescriptor);
+
+		// Act
+		var json = ErdOutput.Serialise(model);
+
+		// Assert
+		await Assert.That(json).Contains("\"domainTypeKind\": \"ValueObject\"");
+		await Assert.That(EfModelLoader.Parse(json).Contexts.Single().Tables.Single().Columns.Count).IsEqualTo(3);
+	}
 
 	[Test]
 	public async Task Parse_GeneratorDescriptor_ReadsContextMetadata()
@@ -300,6 +357,7 @@ public sealed class EfModelLoaderTests
 		await Assert.That(diagnostics.OutputDirectory).IsNull();
 		await Assert.That(diagnostics.AssembliesScanned).IsEqualTo(0);
 		await Assert.That(diagnostics.DescriptorsFound).IsEqualTo(0);
+		await Assert.That(diagnostics.DumpStatus).IsEqualTo(EfModelDumpStatus.Missing);
 	}
 
 	[Test]
@@ -463,6 +521,7 @@ public sealed class EfModelLoaderTests
 			// Assert
 			await Assert.That(model.Contexts.Select(c => c.Name)).Contains("DumpDbContext");
 			await Assert.That(diagnostics.DumpContextsFound).IsEqualTo(1);
+			await Assert.That(diagnostics.DumpStatus).IsEqualTo(EfModelDumpStatus.Loaded);
 		}
 		finally
 		{
@@ -486,8 +545,9 @@ public sealed class EfModelLoaderTests
 			// Act
 			var model = EfModelLoader.LoadFromProject(projectPath, out var diagnostics);
 
-			// Assert — the descriptor in the assembly is used instead.
+			// Assert — the descriptor in the assembly is used instead, and the reason is reported.
 			await Assert.That(diagnostics.DumpContextsFound).IsEqualTo(0);
+			await Assert.That(diagnostics.DumpStatus).IsEqualTo(EfModelDumpStatus.Stale);
 			await Assert.That(model.Contexts.Select(c => c.Name)).DoesNotContain("DumpDbContext");
 			await Assert.That(model.Contexts.Select(c => c.Name)).Contains("BlogDbContext");
 		}
@@ -526,10 +586,67 @@ public sealed class EfModelLoaderTests
 			// Assert
 			await Assert.That(model.Contexts.Select(c => c.Name)).Contains("DumpDbContext");
 			await Assert.That(diagnostics.DumpContextsFound).IsEqualTo(1);
+			await Assert.That(diagnostics.DumpStatus).IsEqualTo(EfModelDumpStatus.Loaded);
 		}
 		finally
 		{
 			Directory.Delete(serviceRoot, recursive: true);
+		}
+	}
+
+	[Test]
+	public async Task LoadFromProject_WithoutDumpDirectory_ReportsTheDumpAsMissing(CancellationToken cancellationToken)
+	{
+		// Arrange — a build output with no obj/aspirec4/ef directory beside it.
+		var projectPath = await CreateProjectAsync(cancellationToken);
+		var root = Path.GetDirectoryName(projectPath)!;
+		var output = Path.Combine(root, "bin", "Debug", "net10.0");
+		WriteAssembly(output, typeof(EfModelLoaderTests).Assembly.Location, DateTime.UtcNow);
+
+		try
+		{
+			// Act
+			_ = EfModelLoader.LoadFromProject(projectPath, out var diagnostics);
+
+			// Assert
+			await Assert.That(diagnostics.DumpStatus).IsEqualTo(EfModelDumpStatus.Missing);
+		}
+		finally
+		{
+			Directory.Delete(root, recursive: true);
+		}
+	}
+
+	[Test]
+	public async Task LoadFromProject_WithDumpThatDescribesNoContexts_ReportsTheDumpAsEmpty(
+		CancellationToken cancellationToken
+	)
+	{
+		// A dump file that parses but holds nothing is a different problem from a missing dump: the
+		// ModelDump target ran, so the project needs looking at rather than rebuilding.
+		// Arrange
+		var projectPath = await CreateProjectAsync(cancellationToken);
+		var root = Path.GetDirectoryName(projectPath)!;
+		var output = Path.Combine(root, "bin", "Debug", "net10.0");
+		WriteAssembly(output, typeof(EfModelLoaderTests).Assembly.Location, DateTime.UtcNow.AddMinutes(-5));
+		WriteDump(
+			root,
+			"Empty", /*lang=json,strict*/
+			"""{"schemaVersion":1,"contexts":[]}""",
+			DateTime.UtcNow
+		);
+
+		try
+		{
+			// Act
+			_ = EfModelLoader.LoadFromProject(projectPath, out var diagnostics);
+
+			// Assert
+			await Assert.That(diagnostics.DumpStatus).IsEqualTo(EfModelDumpStatus.Empty);
+		}
+		finally
+		{
+			Directory.Delete(root, recursive: true);
 		}
 	}
 

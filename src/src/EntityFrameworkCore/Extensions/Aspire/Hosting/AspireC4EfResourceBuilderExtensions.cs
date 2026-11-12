@@ -223,8 +223,7 @@ public static class AspireC4EfResourceBuilderExtensions
 	{
 		ArgumentNullException.ThrowIfNull(builder);
 
-		var diagram =
-			builder.ApplicationBuilder.Resources.OfType<AspireC4EfResource>().FirstOrDefault()
+		var diagram = builder.ApplicationBuilder.Resources.OfType<AspireC4EfResource>().FirstOrDefault()
 			?? throw new InvalidOperationException(
 				$"No ER diagram resource was found. Call {nameof(WithEntityFrameworkDiagram)}() before {nameof(WithLocalD2CLI)}()."
 			);
@@ -283,14 +282,11 @@ public static class AspireC4EfResourceBuilderExtensions
 				return Task.CompletedTask;
 			})
 			.WithHttpEndpoint(targetPort: D2ServerResource.DefaultPort, name: AspireC4EfResource.HttpEndpointName)
-			.WithUrlForEndpoint(
-				AspireC4EfResource.HttpEndpointName,
-				url =>
-				{
-					url.DisplayText = "View ER Diagram";
-					url.DisplayLocation = UrlDisplayLocation.SummaryAndDetails;
-				}
-			)
+			.WithUrlForEndpoint(AspireC4EfResource.HttpEndpointName, url =>
+			{
+				url.DisplayText = "View ER Diagram";
+				url.DisplayLocation = UrlDisplayLocation.SummaryAndDetails;
+			})
 			.ExcludeFromLikeC4()
 			.ExcludeFromManifest();
 
@@ -330,14 +326,11 @@ public static class AspireC4EfResourceBuilderExtensions
 				targetPort: ErdViewerServerResource.DefaultPort,
 				name: AspireC4EfResource.HttpEndpointName
 			)
-			.WithUrlForEndpoint(
-				AspireC4EfResource.HttpEndpointName,
-				url =>
-				{
-					url.DisplayText = "View ER Diagram";
-					url.DisplayLocation = UrlDisplayLocation.SummaryAndDetails;
-				}
-			)
+			.WithUrlForEndpoint(AspireC4EfResource.HttpEndpointName, url =>
+			{
+				url.DisplayText = "View ER Diagram";
+				url.DisplayLocation = UrlDisplayLocation.SummaryAndDetails;
+			})
 			.WithHttpHealthCheck("/", statusCode: 200, endpointName: AspireC4EfResource.HttpEndpointName)
 			.ExcludeFromLikeC4()
 			.ExcludeFromManifest();
@@ -362,14 +355,11 @@ public static class AspireC4EfResourceBuilderExtensions
 				targetPort: D2ServerResource.DefaultPort,
 				name: AspireC4EfResource.HttpEndpointName
 			)
-			.WithUrlForEndpoint(
-				AspireC4EfResource.HttpEndpointName,
-				url =>
-				{
-					url.DisplayText = "View ER Diagram";
-					url.DisplayLocation = UrlDisplayLocation.SummaryAndDetails;
-				}
-			)
+			.WithUrlForEndpoint(AspireC4EfResource.HttpEndpointName, url =>
+			{
+				url.DisplayText = "View ER Diagram";
+				url.DisplayLocation = UrlDisplayLocation.SummaryAndDetails;
+			})
 			.WithArgs(
 				"--watch",
 				// Without an explicit host d2 binds to localhost inside the container and the

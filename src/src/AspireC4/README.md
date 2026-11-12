@@ -8,12 +8,20 @@ the Aspire dashboard.
 
 ## Prerequisites
 
-- **.NET 10 or later.** This package targets `net10.0`, so the AppHost that references it must too.
-- **Aspire 13.5.3 or later.** The AppHost must reference both the AppHost SDK and
+- **The .NET 11 SDK** to build the AppHost. The package's source generator runs inside the compiler
+  and is built against Roslyn 5.9; an older SDK reports `CS9057` and skips it, which drops the
+  `ASPIREC4xxx` validation and the `[LikeC4Registry]` types.
+- **A `net10.0` or `net11.0` AppHost.** This package ships both assets; an AppHost targeting
+  `net10.0` (the Aspire AppHost framework) resolves the `net10.0` one. .NET 8 and .NET 9 are not
+  supported.
+- **Aspire 13.6.5 or later.** The AppHost must reference both the AppHost SDK and
   `Aspire.Hosting.AppHost`.
 - **Docker** (or Podman) for the default LikeC4 sidecar container.
 - Optional: a local Node.js CLI runtime (`npx`, `pnpm`, `yarn`, `bun` or `deno`) if you call
   `.WithLocalCLI()` instead.
+
+The [requirements page](https://github.com/purview-dev/aspirec4/blob/main/docs/wiki/Requirements.md)
+has the detail behind each of these.
 
 Container image exports verify bind sharing through `Purview.Containers.Environment`, using
 `alpine:3.19` by default. Offline environments must preload the probe image or set
@@ -32,7 +40,7 @@ dotnet add package AspireC4.Hosting
 ```
 
 ```xml
-<Project Sdk="Aspire.AppHost.Sdk/13.5.3">
+<Project Sdk="Aspire.AppHost.Sdk/13.6.5">
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.AppHost" />
     <PackageReference Include="AspireC4.Hosting" />
@@ -92,12 +100,27 @@ builder.AddAspireC4(configure: options => options
 | `ExportImages` | `true` | Export every view as an image to `./.aspirec4/images/` when the model changes |
 | `ImageFormats` | `{Png}` | `Png` and/or `Jpg` |
 | `UseLegacyLayout` | `false` | Restore the pre-13.6 output paths and dashboard names |
+| `ExtensionsDirectory` | `"./likec4-extensions"` | Hand-written `.c4` files beside the AppHost, included automatically when the folder exists |
+| `GenerateGitIgnoreFile` | `true` | Write `.gitignore` files that keep the generated model out of git |
 
 ### Run LikeC4 locally instead of in a container
 
 ```csharp
 builder.AddAspireC4().WithLocalCLI();
 ```
+
+### Source control and your own LikeC4 files
+
+Add nothing to `.gitignore`: AspireC4 writes its own beside the generated files, naming only what it
+writes, and never replaces one it did not write. The exported images stay visible to git so they can be
+committed. Files are written only when their content changes, so restarting an unchanged application
+touches nothing.
+
+Hand-written `.c4` files — people, external systems, `extend` blocks for generated elements, extra
+views — go in a `likec4-extensions/` folder beside the AppHost, which is included automatically. See
+[Source control](https://github.com/purview-dev/aspirec4/blob/main/docs/wiki/Generated-Output.md#source-control)
+and
+[Extending the generated model](https://github.com/purview-dev/aspirec4/blob/main/docs/wiki/Generated-Output.md#extending-the-generated-model).
 
 ### Use your own LikeC4 project
 

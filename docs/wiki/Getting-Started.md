@@ -4,10 +4,12 @@ This guide walks through installing AspireC4 and generating your first live arch
 
 ## Prerequisites
 
-- **.NET 10 or later.** The AppHost targets `net10.0`, and so do the `AspireC4.Hosting` and `AspireC4.Hosting.EntityFrameworkCore` libraries.
-- **Aspire 13.5.3 or later**. Aspire AppHost projects must reference both the AppHost SDK and `Aspire.Hosting.AppHost`.
+- **The .NET 11 SDK** to build the AppHost, which can target `net10.0` or `net11.0`. An older SDK skips AspireC4's source generator.
+- **Aspire 13.6.5 or later**. Aspire AppHost projects must reference both the AppHost SDK and `Aspire.Hosting.AppHost`.
 - **Docker** is used by default to run the LikeC4 sidecar container.
 - Optional: a local Node.js CLI runtime (`npx`, `pnpm`, `yarn`, `bun`, or `deno`) if you call `.WithLocalCLI()`.
+
+[Requirements](Requirements.md) owns the detail: why the SDK matters, the target frameworks each package ships, and what the optional packages need.
 
 ## Installation
 
@@ -18,10 +20,10 @@ dotnet add package AspireC4.Hosting
 dotnet add package Aspire.Hosting.AppHost
 ```
 
-An Aspire 13.5 AppHost project should contain the equivalent of:
+An AppHost project should contain the equivalent of:
 
 ```xml
-<Project Sdk="Aspire.AppHost.Sdk/13.5.3">
+<Project Sdk="Aspire.AppHost.Sdk/13.6.5">
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.AppHost" />
     <PackageReference Include="AspireC4.Hosting" />

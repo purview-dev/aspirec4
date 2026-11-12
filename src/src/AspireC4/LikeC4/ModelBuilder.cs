@@ -472,17 +472,13 @@ static class ModelBuilder
 				: key;
 		}
 
-		var normalised = string.Create(
-			key.Length,
-			key,
-			static (span, src) =>
+		var normalised = string.Create(key.Length, key, static (span, src) =>
+		{
+			for (var i = 0; i < src.Length; i++)
 			{
-				for (var i = 0; i < src.Length; i++)
-				{
-					span[i] = IsValidMetadataKeyChar(src[i]) ? src[i] : '_';
-				}
+				span[i] = IsValidMetadataKeyChar(src[i]) ? src[i] : '_';
 			}
-		);
+		});
 
 		return behaviour == NormaliseMetadataBehaviour.NormaliseLowercase
 			? normalised.ToLowerInvariantSafe()

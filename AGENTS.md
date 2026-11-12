@@ -10,8 +10,11 @@ guide lives in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 generates live [LikeC4](https://likec4.dev) architecture diagrams from the Aspire resource graph. It ships:
 
 - The `AspireC4.Hosting` library (the Aspire integration).
-- An incremental Roslyn source generator (`AspireC4.SourceGenerators`) that validates registry constants and
-  `.c4` DSL files against `.WithTag()`, `.WithKind()`, `.WithLikeC4Group()`, and `.WithMetadata()` call sites.
+- An incremental Roslyn source generator (`src/src/SourceGenerators/`, assembly
+  `Aspire.Hosting.AspireC4.SourceGenerators`) that validates registry constants and `.c4` DSL files against
+  `.WithTag()`, `.WithKind()`, `.WithLikeC4Group()`, and `.WithMetadata()` call sites. It is **not** a
+  package of its own: `AspireC4.csproj` references it as an analyzer, so pack includes it in
+  `AspireC4.Hosting` under `analyzers/dotnet/cs/` automatically, and `.config/purview-build.json` asserts it.
 - An optional Entity Framework Core ER diagram: the `AspireC4.Hosting.EntityFrameworkCore` AppHost library,
   the analyzer-only `AspireC4.EntityFrameworkCore` package and the `AspireC4.EntityFrameworkCore.ModelDump`
   build-time tool. It is **additive** — `WithEntityFrameworkDiagram()` extends the builder `AddAspireC4()`
@@ -20,16 +23,22 @@ generates live [LikeC4](https://likec4.dev) architecture diagrams from the Aspir
 
 ### Packages and target frameworks
 
-| Package | Project | Target framework | Shipped as |
+| Package | Project | Target frameworks | Shipped as |
 |---|---|---|---|
-| `AspireC4.Hosting` | `src/src/AspireC4/` | `net10.0` | `lib/net10.0/` + `analyzers/dotnet/cs/` + `build/` |
-| `AspireC4.Hosting.EntityFrameworkCore` | `src/src/EntityFrameworkCore/` | `net10.0` | `lib/net10.0/` |
+| `AspireC4.Hosting` | `src/src/AspireC4/` | `net10.0`, `net11.0` | `lib/net10.0/` + `lib/net11.0/` + `analyzers/dotnet/cs/` + `build/` |
+| `AspireC4.Hosting.EntityFrameworkCore` | `src/src/EntityFrameworkCore/` | `net10.0`, `net11.0` | `lib/net10.0/` + `lib/net11.0/` |
 | `AspireC4.EntityFrameworkCore` | `src/src/EntityFrameworkCore.Analyzers/` | `netstandard2.0` | `analyzers/dotnet/cs/` only (no runtime assembly) |
 | `AspireC4.EntityFrameworkCore.ModelDump` | `src/src/EntityFrameworkCore.ModelDump/` | `net10.0` | `tools/` + `build/` |
 
-AppHosts therefore target `net10.0`. `src/Directory.Build.props` owns the framework; the two Roslyn
-projects override it to `netstandard2.0`. The packed content is pinned to `lib/net10.0/...` in
-`.config/purview-build.json`, so a framework change has to update that manifest too.
+The target frameworks are **owned by Purview.BuildSdk** (its `Current` set, `net10.0;net11.0`); the two
+Roslyn projects get `netstandard2.0` from the SDK. Never set `TargetFramework`/`TargetFrameworks` in
+`src/Directory.Build.props`: the SDK reads a project's TFM from the project file text, so a directory-level
+value only shadows its list and breaks `pack` (`NU5026`). Projects that must stay single-target — the
+AppHost, the sample services and the ModelDump tool — declare `net10.0` in their own `.csproj`. The
+ModelDump tool also sets `RollForward=LatestMajor`, because it loads the consuming project's assembly and
+must run on a runtime at least that new. The packed content in `.config/purview-build.json` uses
+`lib/$(TFM)/...`, which the validator expands to every framework a package ships, so a change to the
+SDK's set needs no manifest edit.
 
 ### Layout
 
@@ -51,7 +60,8 @@ projects override it to `netstandard2.0`. The packed content is pinned to `lib/n
 | `samples/typescript-app-host/` | TypeScript AppHost sample (`apphost.mts`, generated `.aspire/modules/`) |
 | `assets/likec4-extensions/` | Extra LikeC4 DSL used by the samples |
 | `assets/images/` | LikeC4 logos/icons used by the samples |
-| `.agents/` | Bundled agent skills/agents/prompts (see [Skills](#skills)) |
+| `.agents/` | Agent skills installed from other repositories by the skills CLI, plus agents/prompts (see [Skills](#skills)) |
+| `docs/wiki/` | Wiki source; `Requirements.md` owns consumer requirements (see [Documentation hierarchy](#documentation-hierarchy)) |
 
 ### Package READMEs
 
@@ -60,6 +70,37 @@ Every packable project has its own `README.md` beside its `.csproj`, and that is
 one about its own package, and update it when that package's public API or setup changes. Do not
 link the root `README.md` into a project with `Link="Sdk/README.md"`, which would override it. Use
 absolute URLs in package READMEs, because relative links do not resolve on nuget.org.
+
+### Documentation hierarchy
+
+Each fact has **one owning page**; every other page summarises it in a sentence or two and links to
+the owner rather than restating the detail. Restated detail drifts, which is how the docs came to claim
+an Aspire minimum the packages did not declare.
+
+| Topic | Owner | Summarised in |
+|---|---|---|
+| What a consuming application needs (SDK, target frameworks, Aspire minimum, container and runtime needs) | `docs/wiki/Requirements.md` | root `README.md`, `docs/wiki/Home.md`, `docs/wiki/Getting-Started.md`, package READMEs, the `purview-aspirec4-*` skills |
+| How this repository is built (SDK pin, C# 15, .NET 11 features adopted and avoided, package bands) | `docs/wiki/Toolchain.md` | this file's [Toolchain](#toolchain) section |
+| Generated output, source control (`.gitignore` files) and extending the model with hand-written `.c4` | `docs/wiki/Generated-Output.md` | root `README.md`, `src/src/AspireC4/README.md`, `docs/wiki/Migration.md`, the `purview-aspirec4-configuration` skill |
+| How EF domain types (value objects, enums, unions) and relationships are recognised | `docs/wiki/Entity-Framework-Diagrams.md` | root `README.md`, the EF package READMEs, the `purview-aspirec4-entityframework` skill, the EF section below |
+| A feature's behaviour and options | its wiki reference page | root `README.md` (the complete reference), the package README of the package that owns it |
+
+The wiki is layered in `docs/wiki/_Sidebar.md` and `Home.md` as **Using AspireC4** (Requirements,
+Getting Started), **Reference**, and **Working on AspireC4** (Toolchain, Contributing, Release Flow). A
+new page goes into one of those groups in both files.
+
+Two consumer-facing floors come from `Directory.Packages.props`, and changing either is a breaking
+change that updates `Requirements.md` in the same commit:
+
+- `AspireVersion` — the `Aspire.Hosting` version the libraries declare, and so the **Aspire minimum**
+  (13.6.5 today). Repeated in the AppHost snippets listed under "Keeping this page true" in
+  `Requirements.md`.
+- `RoslynCompilerVersion` — the compiler both shipped generators are built against (5.9.0), which is why
+  consumers must **build with the .NET 11 SDK** even when the AppHost targets `net10.0`. An older
+  compiler reports `CS9057` and skips the generator silently.
+
+Do not write AspireC4's own release number into prose or examples; use the NuGet badge or a
+`<version>` placeholder, because a written version is wrong within one release.
 
 ### Documentation screenshots
 
@@ -74,8 +115,10 @@ them. Use a relative path from the root README, and absolute `raw.githubusercont
 
 | Tool | Purpose | Version source |
 |---|---|---|
-| .NET SDK | Build/test | `global.json` |
-| Target framework | **net10.0** for all shipping and test projects (`src/Directory.Build.props`); Roslyn components override to `netstandard2.0` | `src/Directory.Build.props` |
+| .NET SDK | Build/test — **11.0.100 GA**, `rollForward: latestFeature`, `allowPrerelease: false` | `global.json` |
+| Target frameworks | **net10.0;net11.0** for the libraries and test projects (Purview.BuildSdk's `Current` set; Roslyn components get `netstandard2.0`); single-target `net10.0` declared per project for the AppHost, sample services and ModelDump tool. **.NET 8 and .NET 9 are unsupported.** | Purview.BuildSdk + project files |
+| Language version | **C# 15 (`15.0`, not `preview`)** | `src/Directory.Build.props` |
+| Container test SDK | `mcr.microsoft.com/dotnet/sdk:11.0`, matching `global.json` | `tests/Docker/` |
 | Bun | JS scripts, commit hooks, TS sample | `package.json` → `packageManager` |
 | just | Task runner (single entry point) | system install |
 | Docker | Integration tests, local diagram viewer | system install |
@@ -84,8 +127,16 @@ them. Use a relative path from the root README, and absolute `raw.githubusercont
 
 The repository uses `Purview.BuildSdk` (pinned in `global.json` under `msbuild-sdks`) through
 `src/Directory.Build.props` / `src/Directory.Build.targets`. The SDK classifies projects, adds references,
-sets testing/telemetry defaults, and copies the bundled `.agents/**` skills into this repo. Use the
-`project-placement-defaults` and `sdk-project-behavior-and-detection` skills when reasoning about its behaviour.
+sets testing/telemetry defaults, and bootstraps `.editorconfig`, `global.json` and `Directory.Build.rsp`.
+It never touches agent skills during a build: they change only when someone runs `just skills-update`
+(see `Justfile.skills.just`). Use the `purview-buildsdk-project-layout` and
+`purview-buildsdk-project-detection` skills when reasoning about its behaviour.
+
+Package versions track the **lowest** target framework, not the SDK: runtime and Microsoft packages stay in
+the `10.0.x` band (`10.0.15` today) so a `net10.0` build never acquires a .NET 11-only binary. Build-only
+tooling (SourceLink, CSharpier, `dotnet-inspect`) may track the SDK. `docs/wiki/Toolchain.md` records the
+full matrix and which .NET 11 features are deliberately not used; update it with any TFM, SDK or package-band
+change.
 
 ## Commands
 
@@ -160,21 +211,29 @@ just refresh-icons  # Regenerate the LikeC4 icon manifest (scripts/generate-icon
 just ts-restore     # aspire restore for the TypeScript sample
 just ts-run         # aspire run for the TypeScript sample
 just ts-lint        # oxfmt check on apphost.mts
+just ts-test        # TypeScript test suite (bun test)
+just ts-validate    # global.json Aspire SDK version vs the TypeScript sample
+just ts-validate-fix # Rewrite the TypeScript sample to match global.json
 just scrub          # Remove bin/obj, clean, restore, shutdown build server
 ```
 
 ### Running a single test
 
+Tests run on Microsoft.Testing.Platform (selected in `global.json`), so filtering is a tree-node path:
+`/<assembly>/<namespace>/<class>/<test>`, with `*` as a wildcard.
+
 ```sh
 dotnet test src/tests/AspireC4.UnitTests/AspireC4.UnitTests.csproj \
-  -- --filter "FullyQualifiedName~MyTestMethod"
+  --treenode-filter "/*/*/ImageExportStampTests/*"
 ```
+
+`--filter` is the VSTest option; under MTP it matches nothing and the run reports "Zero tests ran".
 
 ## Non-negotiables
 
 - Always run `just test` (unit + integration) to verify changes. Unit tests alone are not sufficient.
 - Never claim a task complete unless all tests pass (`just test` exits green, zero failures).
-- Never skip tests (`--filter` overrides, `[Skip]`) without explicit user permission.
+- Never skip tests (`--treenode-filter` overrides, `[Skip]`) without explicit user permission.
 - Always run `just lint-check` (or `just lint-fix`) before committing — CSharpier is enforced in CI and by the
   `pre-commit` Lefthook hook.
 - Never add `Co-authored-by` trailers to commit messages.
@@ -193,18 +252,29 @@ dotnet test src/tests/AspireC4.UnitTests/AspireC4.UnitTests.csproj \
   own namespace) with `#pragma warning disable IDE0130` where required.
 - Central package management: all NuGet versions live in the **root** `Directory.Packages.props`. Never add a
   `Version` attribute directly in a `.csproj`; add a `PackageVersion` to `Directory.Packages.props` first.
+- C# 15 is available on both legs, but the `net10.0` leg cannot see types the .NET 11 runtime adds. Declare
+  an **internal** polyfill, guarded by `#if !NET11_0_OR_GREATER`, beside the project that needs one rather
+  than lowering the language version — `src/src/EntityFrameworkCore/Polyfills/CompilerServices.cs` is the
+  pattern. Roslyn resolves these by full name, so it works for consumers on .NET 10 and .NET 11 alike.
+- Use `closed` for an internal hierarchy whose descendants are complete and switched over, as
+  `EfModelDumpRead` does; it turns "a new case silently falls through" into a build failure.
+- Introduce a union only when a value genuinely is one of a fixed set of types. Follow the compiler's
+  **non-boxing access pattern** (`HasValue` + `TryGetValue`) so value-type cases are not boxed during pattern
+  matching — see `docs/wiki/Toolchain.md`.
 
 ## Git hooks and commits
 
 Lefthook (`.config/lefthook.yml`) installs two hooks:
 
-- `pre-commit` — runs `just lint-check` (CSharpier over the repo root). Rejects mis-formatted commits.
-- `commit-msg` — runs `bunx commitlint --edit` to enforce Conventional Commits.
+- `pre-commit` — runs `just ts-validate` (the Aspire version in `global.json` against the TypeScript
+  sample), `just lint-check` (CSharpier over the repo root) and `just ts-lint` (oxfmt over
+  `apphost.mts`). Rejects the commit on any failure.
+- `commit-msg` — runs `bun x commitlint --edit` to enforce Conventional Commits.
 
 Commit rules (enforced by `commitlint.config.mts`):
 
 - Format: `<type>(<optional scope>): <subject>`.
-- Types: `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `revert`, `style`, `test`.
+- Types: `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `revert`, `style`, `test`, `qol`.
 - Subject: lower-case, no trailing period, max 100 characters; body lines max 100 characters.
 - Breaking changes: `!` after type/scope, or a `BREAKING CHANGE:` footer.
 - Bypass temporarily with `git commit --no-verify` only for work-in-progress; never bypass on `main`-bound commits.
@@ -244,6 +314,10 @@ Test authoring requirements (from the source-generator test authoring agent in `
 - One dedicated `{Class}Tests` class per class under test, in the same namespace.
 - Build dependencies/SUTs through `CreateXXX` helpers with optional parameters; never instantiate inside a test.
 - Pass a `CancellationToken` wherever a downstream method accepts one.
+
+The TypeScript suite (`bun test`, under `scripts/`) is run by
+`Repository.UnitTests/TypeScriptTests.cs`. Purview.Build has no JavaScript test module, so that bridge is
+what makes `just test` and the shared pipeline execute it; `just ts-test` runs the same suite directly.
 
 ### Integration tests and the project runner
 
@@ -304,16 +378,35 @@ The ER diagram draws from three sources, in precedence order.
 
 Every context carries an `EfModelFidelity`, so an approximate model is never mistaken for a complete
 one, and `EfModelLoader.Merge` de-duplicates by fully-qualified type name, preferring the higher
-fidelity. `EfColumn.StoreType` is always the real database type; a column's **domain type** — a value
-object or an enum — is carried in `EfColumn.DomainTypeName` with its `EfColumn.DomainTypeKind`
-(`ValueObject`, `ComplexValueObject`, `Enum`), and shown beside the store type according to
+fidelity. `EfColumn.StoreType` is always the real database type; a column's **domain type** is carried
+in `EfColumn.DomainTypeName` with its `EfColumn.DomainTypeKind` (`ValueObject`, `ComplexValueObject`,
+`Enum`, `Union`), and shown beside the store type according to
 `AspireC4EfDiagramOptions.DomainTypeDisplay` (default `DomainTypeFirst`: `AssetId (guid)`,
-`ActorType (int, enum)`). Recognising a scalar value object — a non-generic struct with a public
-`Value` member, as the Purview value-object generator emits — is also what makes its foreign keys, and
-so its relationships, resolve. A complex value object, marked
-`[ValueObject(EFMapping = ComplexType)]`, is flattened into its owner's table. `EfColumnTypeDisplay`
-owns the split, and every renderer keeps the database type in its annotation slot when it is not the
-headline.
+`ActorType (int, enum)`). `EfColumnTypeDisplay` owns the split and the `enum`/`union` markers.
+
+The recognition rules are **identical in the analyzer (`StoreTypeMap`) and the metadata reader**, and
+`EfValueObjectRoundTripTests` reads one compiled model through both to keep them so — change one, change
+both:
+
+- **Scalar value object:** Purview `[Scalar]`/`[Scalar<T>]`/`[Scalar(typeof(T))]` (matched by name; the
+  wrapped type from the attribute or the named property), `IScalarValueObject<TSelf, TValue>`, else a
+  non-generic struct with a public `Value` not typed `object`. Struct or class. The attribute path is
+  load-bearing: a generator never sees another generator's output, so the analyzer cannot see the
+  `Value` Purview's generator writes.
+- **Complex:** `[ValueObject]` by `EFMapping`, else `[ValueObjectDefaults]`, else `ComplexType` (Purview's
+  default); EF `[ComplexType]`; `[Owned]`. `Json` → one `json` column. Flattened members carry
+  `EfColumn.ComplexPropertyName`/`ComplexTypeName`, which the viewer groups by.
+- **Collections** of primitives, value objects, enums or complex types are one `json` column, never a
+  navigation. **Unions** (`ITypeSymbol.IsUnion` — experimental, so isolated in a guarded method — or
+  `[Union]`/`IUnion`) are checked before the value-object shape.
+- **Relationships** come from either end: the dependent's reference navigation, or the principal's
+  collection alone, using EF's foreign-key names and adding EF's shadow foreign key when none matches.
+
+`EfDomainTypeKind` is read leniently (`EfDomainTypeKindConverter`): an unknown kind from a newer analyzer
+becomes `null` rather than failing the parse, which would empty the whole model. A new kind is therefore
+safe to add. The dump projector uses the real model, so fluent `ComplexProperty`, `OwnsOne`/`OwnsMany`,
+`ToJson`, `HasConversion` and `HasColumnType` reach the diagram only through it. The user-facing rules
+live in `docs/wiki/Entity-Framework-Diagrams.md#value-objects-enums-and-unions`.
 
 ## LikeC4 DSL work
 
@@ -329,7 +422,7 @@ When writing or validating `.c4`/`.likec4` files, load the `likec4-dsl` skill
 
 ## Release process
 
-- Version source of truth: `package.json` `version` (e.g. `13.5.3.1`). The CD workflow
+- Version source of truth: `package.json` `version` (e.g. `13.6.5-preview.1`). The CD workflow
   (`.github/workflows/release.yml`, delegating to the `purview-dev/build` reusable `purview-release.yml` with
   `release-mode: NuGet`) reads and validates it, builds, tests, packs, builds release notes from conventional
   commits, and creates a GitHub Release with the `.nupkg`/`.snupkg`. It does **not** push to nuget.org.
@@ -378,7 +471,7 @@ npx skills add purview-dev/aspirec4
 
 | Skill | Answers |
 | -- | -- |
-| `skills/purview-aspirec4-quickstart/` | installing, `AddAspireC4`, what happens on startup, Docker sidecar versus local CLI, and when to add the ER diagram as well |
+| `skills/purview-aspirec4-quickstart/` | requirements (.NET 11 SDK, Aspire minimum), installing, `AddAspireC4`, what happens on startup, Docker sidecar versus local CLI, and when to add the ER diagram as well |
 | `skills/purview-aspirec4-configuration/` | every `AspireC4DiagramOptions` property and its fluent method |
 | `skills/purview-aspirec4-resources/` | `WithLikeC4Details`, `WithLikeC4Reference`, `WithLikeC4Group`, and exclusion |
 | `skills/purview-aspirec4-entityframework/` | `WithEntityFrameworkDiagram`, the three model-discovery sources, renderers, domain types, and ER image export |

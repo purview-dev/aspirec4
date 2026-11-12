@@ -412,6 +412,57 @@ public sealed class AspireC4DiagramOptions
 	public bool GenerateConfigFile { get; set; } = true;
 
 	/// <summary>
+	/// When <see langword="true"/> (default), writes a <c>.gitignore</c> beside the generated files so
+	/// that git ignores them without any entry in the repository's own <c>.gitignore</c>.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// The generated model embeds values that legitimately differ between runs — the endpoint ports
+	/// Aspire allocates, dashboard links, and each resource's run state — so committing it guarantees a
+	/// dirty working tree. The file names exactly what AspireC4 writes (the model, the generated
+	/// <c>likec4.config.json</c>, copies of <see cref="AdditionalDSLFiles"/>), anchored to the output
+	/// directory, so a directory shared with hand-written files does not hide them. Exported images are
+	/// <b>not</b> ignored, only the stamp files recording what they were rendered from: the images are
+	/// stable and are the part of the output worth committing.
+	/// </para>
+	/// <para>
+	/// An existing <c>.gitignore</c> that AspireC4 did not write is never touched. Turn this off when the
+	/// generated model is deliberately committed, for example because a separate LikeC4 project builds
+	/// from it; files are written only when their content changes, so nothing is rewritten on a restart
+	/// of an unchanged application. Prefer <see cref="ExtensionsDirectory"/> for that case — it keeps the
+	/// hand-written files beside the generated model without committing the generated model.
+	/// </para>
+	/// </remarks>
+	public bool GenerateGitIgnoreFile { get; set; } = true;
+
+	/// <summary>The default <see cref="ExtensionsDirectory"/>, relative to the AppHost directory.</summary>
+	public const string DefaultExtensionsDirectory = "./likec4-extensions";
+
+	/// <summary>
+	/// A folder of hand-written LikeC4 (<c>.c4</c>) files, relative to the AppHost directory, that is
+	/// included in the diagram automatically when it exists. Defaults to
+	/// <see cref="DefaultExtensionsDirectory"/>; <see langword="null"/> or empty turns the convention off.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// This is the place for anything the Aspire resource graph cannot describe: <c>extend</c> blocks
+	/// that add descriptions, links or relationships to generated elements (whose identifiers are the
+	/// Aspire resource names), external systems, people, and extra views. It lives outside the
+	/// generated output, so it is committed while the generated model is ignored (see
+	/// <see cref="GenerateGitIgnoreFile"/>).
+	/// </para>
+	/// <para>
+	/// The folder is added to <see cref="AdditionalDSLFolders"/> when the options are resolved, so it is
+	/// referenced from the generated <c>likec4.config.json</c> and mounted into the LikeC4 container
+	/// exactly like a folder registered with
+	/// <see cref="AspireC4DiagramOptionsExtensions.WithAdditionalDSLFolder"/>. A missing folder is not
+	/// an error. It does not apply with <see cref="ProjectDirectory"/>: a hand-authored LikeC4 project
+	/// already holds its own files, and AspireC4 writes no config into it.
+	/// </para>
+	/// </remarks>
+	public string? ExtensionsDirectory { get; set; } = DefaultExtensionsDirectory;
+
+	/// <summary>
 	/// When <see langword="true"/>, adds links from each LikeC4 element back to the Aspire dashboard
 	/// console logs and structured logs pages for that resource. The links are constructed at runtime
 	/// once the Aspire dashboard URL is discovered.

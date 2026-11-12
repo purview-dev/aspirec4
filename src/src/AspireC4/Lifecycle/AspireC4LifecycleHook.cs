@@ -61,11 +61,7 @@ sealed partial class AspireC4LifecycleHook(
 	// When non-null, it is injected as a "Version" metadata property on the AspireC4Resource.
 	volatile string? _resolvedLikeC4Version;
 
-#if NET9_0_OR_GREATER
 	readonly Lock _debounceLock = new();
-#else
-	readonly object _debounceLock = new();
-#endif
 
 	public Task SubscribeAsync(
 		IDistributedApplicationEventing eventing,
@@ -147,9 +143,11 @@ sealed partial class AspireC4LifecycleHook(
 					// dashboard shows it before the inner container emits its first state notification.
 					if (_resolvedLikeC4Version is not null)
 					{
-						await resourceNotificationService.PublishUpdateAsync(
-							aspirec4Resource,
-							s => s with { Properties = WithLikeC4Version(s.Properties) }
+						await resourceNotificationService.PublishUpdateAsync(aspirec4Resource, s =>
+							s with
+							{
+								Properties = WithLikeC4Version(s.Properties),
+							}
 						);
 					}
 

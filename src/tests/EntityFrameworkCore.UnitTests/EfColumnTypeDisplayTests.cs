@@ -29,6 +29,8 @@ public sealed class EfColumnTypeDisplayTests
 
 	static EfColumn CreateEnum() => CreateColumn("ActorType", EfDomainTypeKind.Enum, "int");
 
+	static EfColumn CreateUnion() => CreateColumn("Reading", EfDomainTypeKind.Union, "varchar");
+
 	static AspireC4EfDiagramOptions CreateOptions(DomainTypeDisplay display) => new() { DomainTypeDisplay = display };
 
 	// Tests
@@ -187,5 +189,36 @@ public sealed class EfColumnTypeDisplayTests
 
 		// Assert
 		await Assert.That(databaseType).IsEqualTo("varchar(100)");
+	}
+
+	[Test]
+	public async Task Compose_ForAUnion_MarksIt()
+	{
+		// A union's name says no more than an enum's does, and it changes what the column can hold.
+		// Act
+		var composed = EfColumnTypeDisplay.Compose(CreateUnion(), CreateOptions(DomainTypeDisplay.DomainTypeFirst));
+
+		// Assert
+		await Assert.That(composed).IsEqualTo("Reading (varchar, union)");
+	}
+
+	[Test]
+	public async Task Annotation_ForAUnionShownDatabaseFirst_KeepsTheMarkerWithTheDomainType()
+	{
+		// Act
+		var annotation = EfColumnTypeDisplay.Annotation(CreateUnion(), CreateOptions(DomainTypeDisplay.DatabaseFirst));
+
+		// Assert
+		await Assert.That(annotation).IsEqualTo("Reading, union");
+	}
+
+	[Test]
+	public async Task Marker_ForAValueObject_IsNone()
+	{
+		// Act
+		var marker = EfColumnTypeDisplay.Marker(CreateValueObject());
+
+		// Assert
+		await Assert.That(marker).IsNull();
 	}
 }

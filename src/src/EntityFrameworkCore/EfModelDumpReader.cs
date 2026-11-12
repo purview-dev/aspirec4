@@ -23,35 +23,31 @@ static class EfModelDumpReader
 	/// <summary>Directory holding the dump, relative to a project's directory.</summary>
 	internal const string RelativeDirectory = "obj/aspirec4/ef";
 
-	/// <summary>Attempts to read a fresh dump for a project.</summary>
+	/// <summary>Reads a fresh dump for a project.</summary>
 	/// <param name="projectPath">The project's <c>.csproj</c> path.</param>
 	/// <param name="outputDirectory">
 	/// The project's build output directory, used only for the freshness check. May be
 	/// <see langword="null"/>, in which case the dump is trusted as-is.
 	/// </param>
-	/// <param name="model">The dumped model, or <see cref="EfModel.Empty"/>.</param>
-	/// <returns>Whether a usable dump was found.</returns>
-	public static bool TryRead(string projectPath, string? outputDirectory, out EfModel model)
+	public static EfModelDumpRead Read(string projectPath, string? outputDirectory)
 	{
-		model = EfModel.Empty;
-
 		if (string.IsNullOrWhiteSpace(projectPath))
 		{
-			return false;
+			return new EfModelDumpUnavailable(EfModelDumpStatus.ProjectUnresolved);
 		}
 
 		var projectDirectory = Path.GetDirectoryName(projectPath);
 
 		if (projectDirectory is null)
 		{
-			return false;
+			return new EfModelDumpUnavailable(EfModelDumpStatus.ProjectUnresolved);
 		}
 
 		var directory = Path.Combine(projectDirectory, "obj", "aspirec4", "ef");
 
 		if (!Directory.Exists(directory))
 		{
-			return false;
+			return new EfModelDumpUnavailable(EfModelDumpStatus.Missing);
 		}
 
 		try
@@ -60,7 +56,7 @@ static class EfModelDumpReader
 
 			if (files.Count == 0)
 			{
-				return false;
+				return new EfModelDumpUnavailable(EfModelDumpStatus.Missing);
 			}
 
 			// A dump that predates the built assembly describes a model that no longer exists.
@@ -70,7 +66,7 @@ static class EfModelDumpReader
 				{
 					if (File.GetLastWriteTimeUtc(file) < built)
 					{
-						return false;
+						return new EfModelDumpUnavailable(EfModelDumpStatus.Stale);
 					}
 				}
 			}
@@ -89,20 +85,18 @@ static class EfModelDumpReader
 
 			if (models.Count == 0)
 			{
-				return false;
+				return new EfModelDumpUnavailable(EfModelDumpStatus.Empty);
 			}
 
-			model = EfModelLoader.Merge(models);
-
-			return true;
+			return new EfModelDumpLoaded(EfModelLoader.Merge(models));
 		}
 		catch (IOException)
 		{
-			return false;
+			return new EfModelDumpUnavailable(EfModelDumpStatus.Unreadable);
 		}
 		catch (UnauthorizedAccessException)
 		{
-			return false;
+			return new EfModelDumpUnavailable(EfModelDumpStatus.Unreadable);
 		}
 	}
 
@@ -114,33 +108,33 @@ static class EfModelDumpReader
 	/// persistence project rather than the service the AppHost starts. The restored asset graph carries
 	/// the transitive project closure, so that is what is walked.
 	/// </remarks>
-	public static bool TryReadGraph(string projectPath, string? outputDirectory, out EfModel model)
+	public static EfModelDumpRead ReadGraph(string projectPath, string? outputDirectory)
 	{
-		model = EfModel.Empty;
-
 		List<EfModel> models = [];
 
-		if (TryRead(projectPath, outputDirectory, out var own) && own.Contexts.Count > 0)
+		// The project's own dump decides the reported status: a referenced project is expected to
+		// have no dump at all when it does not own the EF Core provider.
+		var own = Read(projectPath, outputDirectory);
+
+		if (own is EfModelDumpLoaded loaded)
 		{
-			models.Add(own);
+			models.Add(loaded.Model);
 		}
 
 		foreach (var referenced in ReferencedProjects(projectPath))
 		{
-			if (TryRead(referenced, null, out var dump) && dump.Contexts.Count > 0)
+			if (Read(referenced, null) is EfModelDumpLoaded referencedDump)
 			{
-				models.Add(dump);
+				models.Add(referencedDump.Model);
 			}
 		}
 
 		if (models.Count == 0)
 		{
-			return false;
+			return own;
 		}
 
-		model = EfModelLoader.Merge(models);
-
-		return true;
+		return new EfModelDumpLoaded(EfModelLoader.Merge(models));
 	}
 
 	/// <summary>The projects a project references, taken from its restored asset graph.</summary>

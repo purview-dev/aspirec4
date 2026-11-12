@@ -11,7 +11,7 @@ namespace Aspire.Hosting.AspireC4.EntityFrameworkCore;
 /// Verifies the build-time dump projector against a real EF Core model — the authoritative source that
 /// carries conventions, value converters and composite foreign keys.
 /// </summary>
-public sealed class EfModelDumpProjectorTests
+public sealed partial class EfModelDumpProjectorTests
 {
 	// Helpers
 

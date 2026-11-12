@@ -13,7 +13,8 @@
 #     aspirec4-e2e-docker \
 #     dotnet test src/tests/AspireC4.IntegrationTests
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0
+# Must match the feature band pinned in global.json: the repo builds with the .NET 11 SDK.
+FROM mcr.microsoft.com/dotnet/sdk:11.0
 
 RUN apt-get update -qq && \
     apt-get install -y --no-install-recommends \

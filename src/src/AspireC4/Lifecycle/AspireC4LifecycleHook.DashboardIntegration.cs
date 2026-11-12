@@ -14,8 +14,7 @@ sealed partial class AspireC4LifecycleHook
 	)
 	{
 		var aspirec4Resource = appModel.Resources.OfType<AspireC4Resource>().FirstOrDefault();
-		var serverResource =
-			aspirec4Resource?.InnerResource
+		var serverResource = aspirec4Resource?.InnerResource
 			?? appModel.Resources.FirstOrDefault(r => r is LikeC4ServerResource or LikeC4LocalServerResource);
 
 		if (serverResource is null)
@@ -105,28 +104,25 @@ sealed partial class AspireC4LifecycleHook
 				var capturedUrl = url;
 				foreach (var resource in appModel.Resources.OfType<ProjectResource>())
 				{
-					await resourceNotificationService.PublishUpdateAsync(
-						resource,
-						s =>
-							// Avoid duplicates on repeated Running notifications.
-							s.Urls.Any(u => u.Name == "architecture-diagram")
-								? s
-								: (
-									s with
-									{
-										Urls = s.Urls.Add(
-											new UrlSnapshot(
-												Name: "architecture-diagram",
-												Url: capturedUrl,
-												IsInternal: false
-											)
-											{
-												DisplayProperties = new UrlDisplayPropertiesSnapshot(displayName),
-											}
-										),
-									}
-								)
-					);
+					await resourceNotificationService.PublishUpdateAsync(resource, s =>
+						// Avoid duplicates on repeated Running notifications.
+						s.Urls.Any(u => u.Name == "architecture-diagram")
+							? s
+							: (
+								s with
+								{
+									Urls = s.Urls.Add(
+										new UrlSnapshot(
+											Name: "architecture-diagram",
+											Url: capturedUrl,
+											IsInternal: false
+										)
+										{
+											DisplayProperties = new UrlDisplayPropertiesSnapshot(displayName),
+										}
+									),
+								}
+							));
 				}
 
 				break; // Only inject once — the URL persists in the snapshot.
@@ -272,15 +268,13 @@ sealed partial class AspireC4LifecycleHook
 				if (notification.Resource.Name != innerResource.Name)
 					continue;
 
-				await resourceNotificationService.PublishUpdateAsync(
-					outerResource,
-					s =>
-						s with
-						{
-							State = notification.Snapshot.State,
-							Urls = notification.Snapshot.Urls,
-							Properties = WithLikeC4Version(s.Properties),
-						}
+				await resourceNotificationService.PublishUpdateAsync(outerResource, s =>
+					s with
+					{
+						State = notification.Snapshot.State,
+						Urls = notification.Snapshot.Urls,
+						Properties = WithLikeC4Version(s.Properties),
+					}
 				);
 			}
 		}

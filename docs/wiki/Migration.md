@@ -24,13 +24,11 @@
 | `AspireC4DiagramOptions.OutputDirectory` | `./likec4/gen/` | `./.aspirec4/likec4/` |
 | `AspireC4EfDiagramOptions.OutputDirectory` | `./erd/gen/` | `./.aspirec4/erd/` |
 
-Everything AspireC4 generates now sits beneath one `.aspirec4/` directory in the AppHost, so there is a
-single entry to ignore in source control regardless of how many diagrams are enabled:
-
-```gitignore
-# Replaces **/likec4/gen/, **/erd/gen/ and the **/erd/gen/vendor/ entries.
-**/.aspirec4/
-```
+Everything AspireC4 generates now sits beneath one `.aspirec4/` directory in the AppHost, and AspireC4
+writes the `.gitignore` files that keep the generated parts out of git, so **remove** the old
+`**/likec4/gen/`, `**/erd/gen/` and `**/erd/gen/vendor/` entries rather than replacing them. A
+hand-written `**/.aspirec4/` entry still works, but it also hides the exported images, which are meant to
+be committed; see [Source control](Generated-Output.md#source-control).
 
 Delete the stale `likec4/gen/` and `erd/gen/` directories after upgrading — nothing writes to them any
 more, so they will sit there as untracked leftovers.
@@ -101,18 +99,34 @@ Notes:
 ### Migrating off the shim
 
 1. Remove `WithLegacyLayout()` (or the configuration entry).
-2. Replace the `.gitignore` entries with `**/.aspirec4/` and delete the old directories.
+2. Remove the old `.gitignore` entries — AspireC4 writes its own — and delete the old directories.
 3. Update anything that refers to the `aspirec4` resource by name to `aspirec4-likec4`, but only if you
    register a second diagram.
 
 Once legacy mode is off, `./likec4/gen/` and `./erd/gen/` are no longer written. Delete them so they do
 not linger as untracked leftovers.
 
+## Generated output no longer needs ignoring, and is not rewritten
+
+Two behaviour changes with no code to change:
+
+- **AspireC4 writes its own `.gitignore` files** into the directories it generates into, naming only its
+  own files, and never overwrites one it did not write. Remove repository entries for `.aspirec4/`; keep
+  a deliberate `**/.aspirec4/` only if you also mean to hide the exported images.
+  `WithoutGitIgnoreFileGeneration()` opts out.
+- **Files are written only when their content changes**, and the generated headers no longer carry a
+  timestamp, so restarting an unchanged application leaves every file — and its modified time — alone.
+  Tooling that parsed the timestamp out of a header will find none.
+
+A separate LikeC4 project that depended on a committed `model.gen.c4` should move its `.c4` files into a
+`likec4-extensions/` folder beside the AppHost, which is now included automatically; see
+[Extending the generated model](Generated-Output.md#extending-the-generated-model).
+
 ## Source generator migration
 
 This section covers breaking changes introduced by the migration of the source generator to the current `Purview.SourceGeneratorFramework` incremental APIs. Existing applications should review the following when upgrading:
 
-- **Aspire AppHost dependency is explicit.** Aspire 13.5 AppHosts must reference `Aspire.Hosting.AppHost`; relying on the AppHost SDK alone produces `ASPIRE002`.
+- **Aspire AppHost dependency is explicit.** Aspire AppHosts must reference `Aspire.Hosting.AppHost`; relying on the AppHost SDK alone produces `ASPIRE002`.
 - **Only one registry class is supported per assembly.** Merge multiple `[LikeC4Registry]` classes into one class.
 - **Registry declaration styles cannot be mixed per type.** For example, choose either a `Tags` nested class or `[KnownType(LikeC4RegistryType.Tag)]` fields. Mixing both now produces `ASPIREC4005`.
 - **Strict settings are severity-based.** Replace older boolean-only assumptions with `suggestion`, `warning`, `error`, `all`, or `allincludingmetadata`. `true` remains accepted as an alias for error-level validation.

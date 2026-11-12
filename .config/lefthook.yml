@@ -1,12 +1,15 @@
 pre-commit:
   jobs:
+    - name: aspire version check
+      run: just ts-validate
+
     - name: csharpier format check
       run: just lint-check
 
-    # - name: oxlint check
-    #   run: just ts-lint
+    - name: oxfmt check
+      run: just ts-lint
 
 commit-msg:
   jobs:
     - name: conventional commits
-      run: bunx commitlint --edit {1}
+      run: bun x commitlint --edit {1}

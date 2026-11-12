@@ -15,17 +15,21 @@ You install it in the **AppHost** and call one method. Your service projects nee
 
 ## Prerequisites
 
-- **.NET 10 or later.** This package targets `net10.0`; the optional
-  [`AspireC4.EntityFrameworkCore`](https://www.nuget.org/packages/AspireC4.EntityFrameworkCore) analyzer is
-  `netstandard2.0` and the
+- **A `net10.0` or `net11.0` AppHost, built with the .NET 11 SDK.** This package ships both assets.
+  The optional
+  [`AspireC4.EntityFrameworkCore`](https://www.nuget.org/packages/AspireC4.EntityFrameworkCore) analyzer
+  also needs the .NET 11 SDK in the project it is added to, and the optional
   [`AspireC4.EntityFrameworkCore.ModelDump`](https://www.nuget.org/packages/AspireC4.EntityFrameworkCore.ModelDump)
-  tool is `net10.0`.
-- An Aspire 13.5+ AppHost already using [`AspireC4.Hosting`](https://www.nuget.org/packages/AspireC4.Hosting)
+  tool runs on the build machine's latest .NET runtime (10 or later).
+- An Aspire 13.6.5+ AppHost already using [`AspireC4.Hosting`](https://www.nuget.org/packages/AspireC4.Hosting)
   (this package depends on it, so installing this one brings it in).
 - The projects that own your `DbContext` types are registered in the AppHost with
   `AddProject<Projects.X>(...)`.
 - Docker (or Podman) for the default viewer sidecar. See [Without a container runtime](#without-a-container-runtime)
   if you have neither.
+
+The [requirements page](https://github.com/purview-dev/aspirec4/blob/main/docs/wiki/Requirements.md)
+has the detail behind each of these.
 
 Container image exports verify bind sharing through `Purview.Containers.Environment`; preload
 `alpine:3.19` offline or set `CONTAINER_ENVIRONMENT_PROBE_IMAGE`. For WSL or shared remote
@@ -101,6 +105,18 @@ When a context is available from more than one source, the best one is used: **d
 **descriptor**, then **metadata**. Each context in the diagram records its fidelity, so an approximate
 model is never mistaken for a complete one.
 
+### Value objects, enums and unions
+
+All three sources recognise Purview value objects — `[Scalar<T>]`, `[Scalar(typeof(T))]`,
+`[Scalar("Name")]` and `IScalarValueObject<,>` as one column of the wrapped type, a bare `[ValueObject]` as
+a complex value object flattened into its owner's table, `[ValueObject(EFMapping = Json)]` as one `json`
+column — as well as shape-only value objects, EF's `[ComplexType]` and `[Owned]`, collections of
+primitives or value objects (one `json` column), enums by their underlying type, and C# unions, marked
+`union`. Foreign keys typed with a value object resolve from either end of the relationship, including
+EF's shadow foreign key when only the principal declares a collection. The full rules are in the
+[Value objects, enums and unions](https://github.com/purview-dev/aspirec4/blob/main/docs/wiki/Entity-Framework-Diagrams.md#value-objects-enums-and-unions)
+guide.
+
 ## Screenshots
 
 ![AspireC4 interactive ER diagram of the sample AppHost: five DbContext groups of tables with primary and foreign key badges and crow's-foot relationship edges](https://raw.githubusercontent.com/purview-dev/aspirec4/main/docs/images/screenshots/entity-framework-er-diagram.png)
@@ -160,7 +176,8 @@ Set options in the `configure` callback or in the `AspireC4:EntityFramework` con
 | `IncludedContexts` / `ExcludedContexts` | empty | `WithIncludedContexts(...)` / `WithExcludedContexts(...)` |
 | `OutputDirectory` | `"./.aspirec4/erd/"` | Where generated files are written, relative to the AppHost |
 | `FileName` | `"schema.gen"` | Generated file name without extension |
-| `DomainTypeDisplay` | `DomainTypeFirst` | How value objects and enums appear beside the store type: `AssetId (guid)`, `ActorType (int, enum)` |
+| `DomainTypeDisplay` | `DomainTypeFirst` | How value objects, enums and unions appear beside the store type: `AssetId (guid)`, `ActorType (int, enum)` |
+| `GenerateGitIgnoreFile` | `true` | Write a `.gitignore` naming the generated files. `WithoutGitIgnoreFileGeneration()` |
 | `ShowNullability` | `true` | Mark nullable columns with `?` |
 | `GroupBySchema` / `GroupByContext` | `true` | Group tables by database schema, and by `DbContext` when there are several |
 | `UseSubgraphs` | `true` | Mermaid only: one `subgraph` per `DbContext` (Mermaid 11.17+) |
@@ -204,8 +221,11 @@ d2 is a Go binary. Install it with scoop, Homebrew, `install.sh` or `go install`
   (`Approximate`). Add `AspireC4.EntityFrameworkCore` to the project that declares it.
 - **A composite or fluent-only relationship is not drawn.** Only the model dump sees these. Add
   `AspireC4.EntityFrameworkCore.ModelDump` to the project with the provider and a design-time factory.
-- **Not captured from any static source:** owned types, inheritance mapping, delete behaviour,
-  sequences, check constraints. Relationships across `DbContext` boundaries are never drawn.
+- **A complex or owned type configured only fluently is missing.** `ComplexProperty`, `OwnsOne` and
+  `ToJson` are invisible to the static sources: mark the type `[ValueObject]`, `[ComplexType]` or
+  `[Owned]`, or add the model dump.
+- **Not captured from any source:** inheritance mapping, delete behaviour, sequences, check constraints.
+  Relationships across `DbContext` boundaries are never drawn.
 
 ## More information
 

@@ -74,14 +74,21 @@ The build must produce no `RS2000`–`RS2008` diagnostics.
 
 ## Pack validation
 
-`purview-build.json` declares the package content that must be present in the packed `.nupkg`
-(`PackValidation:RequiredContent`). Keep the `lib/...` entries pinned to the concrete target framework
-(`lib/net10.0/...`) rather than the `$(TFM)` token.
+`.config/purview-build.json` declares the package content that must be present in the packed `.nupkg`
+(`PackValidation:RequiredContent`). Because `RequireExplicitContent` is on, it is also the exhaustive
+list: an entry no rule matches fails validation.
 
-The validator expands `$(TFM)` into one entry per framework group it discovers in the package — including the
-framework-agnostic `any` group contributed by the root-level `build/<package-id>.props`. That makes
-`lib/$(TFM)/...` also require a non-existent `lib/any/...` entry, so validation fails with
-`Required content 'lib/any/...' is missing`. Update the pinned framework if the package ever multi-targets.
+The `lib/...` entries use the `$(TFM)` token, which the validator expands to one entry per target
+framework the package ships — `lib/$(TFM)/Aspire.Hosting.AspireC4.dll` requires both
+`lib/net10.0/...` and `lib/net11.0/...` today. The rules therefore follow Purview.BuildSdk's target set
+with no edit. (Earlier Purview.Build releases also expanded the token to the framework-agnostic `any`
+group contributed by a root-level `build/` folder, which made `lib/$(TFM)/...` unsatisfiable; that is why
+older history pins literal frameworks.)
+
+The source generator has no rule of its own beyond its path: it is not a separate package.
+`AspireC4.csproj` references `src/src/SourceGenerators` with `OutputItemType="Analyzer"`, so pack places
+`Aspire.Hosting.AspireC4.SourceGenerators.dll` under `analyzers/dotnet/cs/` in `AspireC4.Hosting`, and
+the `aspirec4.hosting` rule asserts it is there.
 
 ## See also
 

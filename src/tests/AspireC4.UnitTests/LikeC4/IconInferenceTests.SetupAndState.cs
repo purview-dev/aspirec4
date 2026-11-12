@@ -24,11 +24,10 @@ sealed partial class IconInferenceTests
 		{
 			var (visible, hidden) = CreateResources();
 
-			var visibleLabel =
-				visible
-					.Annotations.OfType<ResourceSnapshotAnnotation>()
-					.Select(a => a.InitialSnapshot.ResourceType)
-					.FirstOrDefault(t => t is not null)
+			var visibleLabel = visible
+				.Annotations.OfType<ResourceSnapshotAnnotation>()
+				.Select(a => a.InitialSnapshot.ResourceType)
+				.FirstOrDefault(t => t is not null)
 				?? visible.Name;
 
 			var hiddenSuffix = hidden is null ? "" : $" [hidden: {hidden.GetType().Name}]";

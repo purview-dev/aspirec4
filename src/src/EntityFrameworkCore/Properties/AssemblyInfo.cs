@@ -5,3 +5,6 @@ using System.Runtime.CompilerServices;
 // assembly's internals too. The SDK generates the conventional names per package, which for this
 // package are prefixed "…EntityFrameworkCore.*Tests" and so do not cover the shared suite.
 [assembly: InternalsVisibleTo("Aspire.Hosting.AspireC4.IntegrationTests")]
+// The analyzer suite compiles one model and reads it through both the analyzer's descriptor and the
+// metadata reader, so it can assert the two sources agree; the metadata reader is internal.
+[assembly: InternalsVisibleTo("Aspire.Hosting.AspireC4.EntityFrameworkCore.Analyzers.UnitTests")]

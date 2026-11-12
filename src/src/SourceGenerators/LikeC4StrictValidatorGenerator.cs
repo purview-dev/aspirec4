@@ -47,22 +47,19 @@ public sealed partial class LikeC4StrictValidatorGenerator : IIncrementalGenerat
 
 		// Combine everything and validate.
 		var pipeline = SourceGenHelper.CreateGenerationPipeline(context);
-		context.RegisterSourceOutput(
-			pipeline,
-			static (ctx, model) =>
+		context.RegisterSourceOutput(pipeline, static (ctx, model) =>
+		{
+			if (model.Context.Settings.IsSourceGeneratorDisabled)
 			{
-				if (model.Context.Settings.IsSourceGeneratorDisabled)
-				{
-					model.Context.Debug(
-						$"{nameof(LikeC4StrictValidatorGenerator)} is disabled via the MSBuild '{PropertyLibrary.DisableSourceGenerator}' property."
-					);
+				model.Context.Debug(
+					$"{nameof(LikeC4StrictValidatorGenerator)} is disabled via the MSBuild '{PropertyLibrary.DisableSourceGenerator}' property."
+				);
 
-					return;
-				}
-
-				Validate(ctx, model);
+				return;
 			}
-		);
+
+			Validate(ctx, model);
+		});
 	}
 
 	static DiagnosticDescriptor WithSeverity(DiagnosticDescriptor descriptor, DiagnosticSeverity severity) =>

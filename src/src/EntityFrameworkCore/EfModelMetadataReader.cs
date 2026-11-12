@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
@@ -29,6 +30,8 @@ static class EfModelMetadataReader
 	const string DbSetFullName = "Microsoft.EntityFrameworkCore.DbSet`1";
 	const string NullableFullName = "System.Nullable`1";
 	const string UnknownStoreType = "unknown";
+	const string JsonStoreType = "json";
+	const string CompilerServicesNamespace = "System.Runtime.CompilerServices";
 
 	/// <summary>How deep nested complex value objects are flattened before the walk stops.</summary>
 	const int MaxComplexDepth = 4;
@@ -298,12 +301,17 @@ static class EfModelMetadataReader
 		AddReachableEntities(entities);
 
 		List<TableShape> tables = [];
+		Dictionary<Type, TableShape> tableByEntity = [];
 
 		foreach (var pair in entities)
 		{
-			tables.Add(BuildTable(pair.Key, pair.Value, entities));
+			var table = BuildTable(pair.Key, pair.Value, entities);
+
+			tables.Add(table);
+			tableByEntity[pair.Key] = table;
 		}
 
+		ApplyPrincipalSideRelationships(tableByEntity);
 		ResolveForeignKeyTargets(tables);
 
 		return new EfContext
@@ -356,10 +364,46 @@ static class EfModelMetadataReader
 				continue;
 			}
 
-			// A complex value object is flattened into its members; it is not a table of its own.
-			if (IsComplexValueObject(property.PropertyType))
+			// A complex value object is flattened into its members, or held in one JSON column; it is not a
+			// table of its own.
+			switch (ComplexValueObjectMapping(property.PropertyType))
 			{
-				AddComplexColumns(table, property.Name, property.PropertyType, IsNullable(property), depth: 0);
+				case ComplexMapping.Flattened:
+					AddComplexColumns(
+						table,
+						property.Name,
+						property.PropertyType,
+						IsNullable(property),
+						depth: 0,
+						property.Name,
+						Unwrap(property.PropertyType).Name
+					);
+
+					continue;
+
+				case ComplexMapping.Json:
+					table.Columns.Add(
+						BuildColumn(
+							property,
+							uniqueFromIndexes,
+							JsonStoreType,
+							(Unwrap(property.PropertyType).Name, EfDomainTypeKind.ComplexValueObject)
+						)
+					);
+
+					continue;
+
+				case ComplexMapping.None:
+				default:
+					break;
+			}
+
+			// A collection of primitives or value objects is a JSON column, not a navigation.
+			if (ScalarCollectionElement(property.PropertyType) is { } element)
+			{
+				table.Columns.Add(
+					BuildColumn(property, uniqueFromIndexes, JsonStoreType, CollectionDomainType(element))
+				);
 
 				continue;
 			}
@@ -389,16 +433,29 @@ static class EfModelMetadataReader
 		return table;
 	}
 
-	static ColumnShape BuildColumn(PropertyInfo property, HashSet<string> uniqueFromIndexes)
+	/// <param name="property">The mapped property.</param>
+	/// <param name="uniqueFromIndexes">Properties a unique index covers.</param>
+	/// <param name="inferredStoreType">
+	/// The store type for a column whose CLR type does not say — a JSON-mapped value object or a
+	/// collection. <c>[Column(TypeName = ...)]</c> still wins.
+	/// </param>
+	/// <param name="domain">The domain type to record, in place of the one the property type implies.</param>
+	static ColumnShape BuildColumn(
+		PropertyInfo property,
+		HashSet<string> uniqueFromIndexes,
+		string? inferredStoreType = null,
+		(string? Name, EfDomainTypeKind? Kind)? domain = null
+	)
 	{
-		var (name, kind) = DomainType(property.PropertyType, complexType: null);
+		var (name, kind) = domain ?? DomainType(property.PropertyType, complexType: null);
 
 		return new ColumnShape
 		{
 			PropertyName = property.Name,
 			Name = GetAttributeString(property, "Column", 0) ?? property.Name,
-			StoreType =
-				GetAttributeNamedString(property, "Column", "TypeName") ?? ColumnStoreType(property.PropertyType),
+			StoreType = GetAttributeNamedString(property, "Column", "TypeName")
+				?? inferredStoreType
+				?? ColumnStoreType(property.PropertyType),
 			ClrTypeName = property.PropertyType.FullName,
 			DomainTypeName = name,
 			DomainTypeKind = kind,
@@ -415,8 +472,20 @@ static class EfModelMetadataReader
 	/// <remarks>
 	/// Column names are approximated as <c>{Property}_{Member}</c>. EF's own flattening is only visible
 	/// with a built model, which the build-time dump has and this reader does not.
+	/// <para>
+	/// Every member records the outermost property it came from, whatever its own type, so a member that
+	/// is itself a value object or an enum is still recognised as part of the group.
+	/// </para>
 	/// </remarks>
-	static void AddComplexColumns(TableShape table, string prefix, Type complexType, bool nullable, int depth)
+	static void AddComplexColumns(
+		TableShape table,
+		string prefix,
+		Type complexType,
+		bool nullable,
+		int depth,
+		string ownerProperty,
+		string ownerType
+	)
 	{
 		if (depth > MaxComplexDepth)
 		{
@@ -430,36 +499,62 @@ static class EfModelMetadataReader
 				continue;
 			}
 
-			if (IsComplexValueObject(member.PropertyType))
+			var path = $"{prefix}_{member.Name}";
+			var memberNullable = nullable || IsNullable(member);
+			var mapping = ComplexValueObjectMapping(member.PropertyType);
+
+			if (mapping == ComplexMapping.Flattened)
 			{
 				AddComplexColumns(
 					table,
-					$"{prefix}_{member.Name}",
+					path,
 					member.PropertyType,
-					nullable || IsNullable(member),
-					depth + 1
+					memberNullable,
+					depth + 1,
+					ownerProperty,
+					ownerType
 				);
 
 				continue;
 			}
 
-			if (!IsScalar(member.PropertyType))
+			string storeType;
+			(string? Name, EfDomainTypeKind? Kind) domain;
+
+			if (mapping == ComplexMapping.Json)
+			{
+				storeType = JsonStoreType;
+				domain = (Unwrap(member.PropertyType).Name, EfDomainTypeKind.ComplexValueObject);
+			}
+			else if (ScalarCollectionElement(member.PropertyType) is { } element)
+			{
+				storeType = JsonStoreType;
+				domain = CollectionDomainType(element);
+			}
+			else if (IsScalar(member.PropertyType))
+			{
+				storeType = ColumnStoreType(member.PropertyType);
+				domain = DomainType(member.PropertyType, Unwrap(complexType).Name);
+			}
+			else
 			{
 				continue;
 			}
 
-			var (name, kind) = DomainType(member.PropertyType, Unwrap(complexType).Name);
+			var (name, kind) = domain;
 
 			table.Columns.Add(
 				new ColumnShape
 				{
-					PropertyName = $"{prefix}_{member.Name}",
-					Name = GetAttributeString(member, "Column", 0) ?? $"{prefix}_{member.Name}",
-					StoreType = ColumnStoreType(member.PropertyType),
+					PropertyName = path,
+					Name = GetAttributeString(member, "Column", 0) ?? path,
+					StoreType = GetAttributeNamedString(member, "Column", "TypeName") ?? storeType,
 					ClrTypeName = member.PropertyType.FullName,
 					DomainTypeName = name,
 					DomainTypeKind = kind,
-					IsNullable = nullable || IsNullable(member),
+					ComplexPropertyName = ownerProperty,
+					ComplexTypeName = ownerType,
+					IsNullable = memberNullable,
 					MaxLength = GetAttributeInt(member, "MaxLength", 0) ?? GetAttributeInt(member, "StringLength", 0),
 					Comment = GetAttributeString(member, "Comment", 0),
 				}
@@ -524,8 +619,9 @@ static class EfModelMetadataReader
 
 			var explicitName = GetAttributeString(navigation, "ForeignKey", 0);
 
-			var column =
-				(explicitName is null ? null : table.Columns.FirstOrDefault(c => c.PropertyName == explicitName))
+			var column = (
+				explicitName is null ? null : table.Columns.FirstOrDefault(c => c.PropertyName == explicitName)
+			)
 				?? table.Columns.FirstOrDefault(c => c.PropertyName == navigation.Name + "Id")
 				?? table.Columns.FirstOrDefault(c => c.PropertyName == target.Name + "Id")
 				?? SharedPrimaryKeyColumn(table, target);
@@ -661,9 +757,151 @@ static class EfModelMetadataReader
 				var principal = byClrType[foreignKey.PrincipalEntity];
 
 				foreignKey.PrincipalEntity = principal.Name;
-				foreignKey.PrincipalColumns = [.. principal.Columns.Where(c => c.IsPrimaryKey).Select(c => c.Name)];
+				foreignKey.PrincipalColumns = PrincipalColumns(
+					foreignKey,
+					table,
+					[.. principal.Columns.Where(c => c.IsPrimaryKey)]
+				);
 			}
 		}
+	}
+
+	/// <summary>The principal key columns a foreign key's columns point at, one for one.</summary>
+	/// <remarks>
+	/// A foreign key found from a navigation has one column; a composite principal key has several.
+	/// Attaching them all produced a reference whose sides differ in length — a d2 edge to whichever key
+	/// column came first, and DBML that does not parse — so each column is paired by type, then by name.
+	/// </remarks>
+	static List<string> PrincipalColumns(ForeignKeyShape foreignKey, TableShape dependent, List<ColumnShape> key)
+	{
+		if (key.Count == 0 || key.Count == foreignKey.Columns.Count)
+		{
+			return [.. key.Select(c => c.Name)];
+		}
+
+		List<string> paired = [];
+
+		foreach (var name in foreignKey.Columns)
+		{
+			var column = dependent.Columns.FirstOrDefault(c => c.Name == name);
+			var sameType = key.Where(k => column is not null && k.ClrTypeName == column.ClrTypeName).ToList();
+
+			var match =
+				sameType.Count == 1
+					? sameType[0]
+					: key.FirstOrDefault(k => string.Equals(k.Name, name, StringComparison.OrdinalIgnoreCase))
+						?? sameType.FirstOrDefault()
+						?? key[0];
+
+			paired.Add(match.Name);
+		}
+
+		return paired;
+	}
+
+	/// <summary>
+	/// Adds the relationships EF Core discovers from the principal's side alone — a collection
+	/// navigation on the principal, and no matching reference navigation or foreign-key property on the
+	/// dependent.
+	/// </summary>
+	/// <remarks>
+	/// The analyzer's rule: the foreign key is matched by EF's names — <c>{Principal}{Key}</c>, the key's
+	/// own name when it already starts with the principal's, then <c>{Principal}Id</c> — and when nothing
+	/// matches, EF's shadow foreign key is shown under that first name. A collection answered by a
+	/// collection is a many-to-many through a join table EF owns, and is left alone.
+	/// </remarks>
+	static void ApplyPrincipalSideRelationships(Dictionary<Type, TableShape> tables)
+	{
+		foreach (var (principal, principalTable) in tables)
+		{
+			var key = principalTable.Columns.Where(c => c.IsPrimaryKey).ToList();
+
+			if (key.Count != 1)
+			{
+				continue;
+			}
+
+			var principalName = principal.FullName ?? principal.Name;
+
+			foreach (var navigation in principal.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+			{
+				if (
+					!IsCollection(navigation.PropertyType)
+					|| GetNavigationTarget(navigation.PropertyType) is not { } dependent
+					|| !tables.TryGetValue(dependent, out var dependentTable)
+					|| dependentTable.ForeignKeys.Any(fk => fk.PrincipalEntity == principalName)
+				)
+				{
+					continue;
+				}
+
+				// On a self-referencing entity the navigation is its own dependent's property, and is not an inverse.
+				var inverse = dependent
+					.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+					.Where(p => GetNavigationTarget(p.PropertyType) == principal && p != navigation)
+					.ToList();
+
+				if (inverse.Any(p => IsCollection(p.PropertyType)))
+				{
+					continue;
+				}
+
+				var column = ForeignKeyByConvention(dependentTable, principal.Name, key[0])
+					?? AddShadowForeignKey(dependentTable, principal.Name, key[0]);
+
+				column.IsForeignKey = true;
+
+				dependentTable.ForeignKeys.Add(
+					new ForeignKeyShape
+					{
+						PrincipalEntity = principalName,
+						NavigationName = inverse.Count == 1 ? inverse[0].Name : null,
+						PrincipalNavigationName = navigation.Name,
+						IsRequired = !column.IsNullable,
+						Columns = [column.Name],
+					}
+				);
+			}
+		}
+	}
+
+	static ColumnShape? ForeignKeyByConvention(TableShape dependent, string principal, ColumnShape key) =>
+		new[] { ShadowForeignKeyName(principal, key), $"{principal}Id" }
+			.Select(name =>
+				dependent.Columns.FirstOrDefault(c =>
+					!c.IsForeignKey && string.Equals(c.PropertyName, name, StringComparison.OrdinalIgnoreCase)
+				)
+			)
+			.FirstOrDefault(c => c is not null);
+
+	/// <summary>
+	/// The name EF Core gives a foreign key it has to invent: the principal's name and its key's, unless
+	/// the key's name already starts with the principal's.
+	/// </summary>
+	static string ShadowForeignKeyName(string principal, ColumnShape key) =>
+		key.PropertyName.StartsWith(principal, StringComparison.OrdinalIgnoreCase)
+			? key.PropertyName
+			: principal + key.PropertyName;
+
+	/// <summary>The shadow foreign-key column EF Core creates when the dependent declares none.</summary>
+	static ColumnShape AddShadowForeignKey(TableShape dependent, string principal, ColumnShape key)
+	{
+		var name = ShadowForeignKeyName(principal, key);
+
+		ColumnShape column = new()
+		{
+			PropertyName = name,
+			Name = name,
+			StoreType = key.StoreType,
+			ClrTypeName = key.ClrTypeName,
+			DomainTypeName = key.DomainTypeName,
+			DomainTypeKind = key.DomainTypeKind,
+			IsNullable = true,
+		};
+
+		dependent.Columns.Add(column);
+
+		return column;
 	}
 
 	/// <summary>Reads <c>[Index(nameof(X), IsUnique = true)]</c> declarations from the entity type.</summary>
@@ -715,10 +953,10 @@ static class EfModelMetadataReader
 	{
 		if (type.IsGenericType && IsCollection(type))
 		{
-			return type.GetGenericArguments()[0];
+			return ScalarCollectionElement(type) is null ? type.GetGenericArguments()[0] : null;
 		}
 
-		if (!type.IsClass || IsComplexValueObject(type))
+		if (!type.IsClass || ComplexValueObjectMapping(type) != ComplexMapping.None)
 		{
 			return null;
 		}
@@ -769,7 +1007,7 @@ static class EfModelMetadataReader
 	{
 		var unwrapped = Unwrap(type);
 
-		if (unwrapped.IsEnum || IsValueObject(unwrapped))
+		if (unwrapped.IsEnum || IsValueObject(unwrapped) || IsUnion(unwrapped))
 		{
 			return true;
 		}
@@ -781,20 +1019,79 @@ static class EfModelMetadataReader
 	}
 
 	/// <summary>
-	/// Determines whether a type is a scalar value object: a struct that wraps a single value under a
-	/// <c>Value</c> member, as a strongly-typed identifier does.
+	/// Determines whether a type is a scalar value object: a type that wraps a single value, as a
+	/// strongly-typed identifier does.
 	/// </summary>
 	/// <remarks>
-	/// A struct is never an EF entity, so recognising one as a scalar is safe. The <c>Value</c> member
-	/// is what the value-object generators emit — including a forwarding <c>Value</c> when the author
-	/// names the underlying member something else — so this matches a strongly-typed id without
-	/// depending on the library that produced it.
+	/// Recognised the same way the analyzer does, so the two sources agree: a Purview <c>[Scalar]</c>,
+	/// <c>[Scalar&lt;T&gt;]</c> or <c>[Scalar(typeof(T))]</c> attribute on a struct or a class;
+	/// <c>IScalarValueObject&lt;TSelf, TValue&gt;</c>; or a non-generic struct with a public instance
+	/// <c>Value</c> that is not typed <c>object</c>. A union is never one. Compiled metadata already holds
+	/// a generated <c>Value</c>, so the shape alone finds more here than in source — the attributes are
+	/// what make a class-based value object a column rather than a phantom table.
 	/// </remarks>
-	static bool IsValueObject(Type type) =>
-		type.IsValueType
-		&& !type.IsEnum
-		&& !type.IsGenericType
-		&& type.GetProperty("Value", BindingFlags.Public | BindingFlags.Instance) is not null;
+	static bool IsValueObject(Type type) => ScalarValueObject(type).IsValueObject;
+
+	static (bool IsValueObject, Type? Underlying) ScalarValueObject(Type type)
+	{
+		if (type.IsEnum || type.IsPrimitive || !(type.IsValueType || type.IsClass) || IsUnion(type))
+		{
+			return (false, null);
+		}
+
+		foreach (var attribute in Attributes(type))
+		{
+			if (
+				!TryAttributeType(attribute, out var attributeType)
+				|| attributeType.Name is not ("ScalarAttribute" or "ScalarAttribute`1")
+			)
+			{
+				continue;
+			}
+
+			if (attributeType.IsGenericType)
+			{
+				return (true, attributeType.GetGenericArguments()[0]);
+			}
+
+			string? propertyName = null;
+
+			foreach (var argument in attribute.ConstructorArguments)
+			{
+				if (argument.Value is Type valueType)
+				{
+					return (true, valueType);
+				}
+
+				propertyName ??= argument.Value as string;
+			}
+
+			var named = type.GetProperty(propertyName ?? "Value", BindingFlags.Public | BindingFlags.Instance)
+				?? type.GetProperty("Value", BindingFlags.Public | BindingFlags.Instance);
+
+			return (true, named?.PropertyType);
+		}
+
+		foreach (var contract in Interfaces(type))
+		{
+			if (contract.IsGenericType && contract.Name == "IScalarValueObject`2")
+			{
+				return (true, contract.GetGenericArguments()[1]);
+			}
+		}
+
+		if (type.IsValueType && !type.IsGenericType)
+		{
+			var value = type.GetProperty("Value", BindingFlags.Public | BindingFlags.Instance);
+
+			if (value is not null && value.PropertyType.FullName != "System.Object")
+			{
+				return (true, value.PropertyType);
+			}
+		}
+
+		return (false, null);
+	}
 
 	/// <summary>The scalar value-object type a property is backed by, or <see langword="null"/>.</summary>
 	static Type? ValueObjectType(Type type)
@@ -804,18 +1101,49 @@ static class EfModelMetadataReader
 		return IsValueObject(unwrapped) ? unwrapped : null;
 	}
 
-	/// <summary>The primitive a scalar value object wraps.</summary>
-	static Type? ValueObjectUnderlying(Type valueObject) =>
-		valueObject.GetProperty("Value", BindingFlags.Public | BindingFlags.Instance)?.PropertyType;
-
 	/// <summary>The real database type for a property, resolving a scalar value object to its primitive.</summary>
 	static string ColumnStoreType(Type propertyType)
 	{
-		var valueObject = ValueObjectType(propertyType);
+		var (isValueObject, underlying) = ScalarValueObject(Unwrap(propertyType));
 
-		return valueObject is not null && ValueObjectUnderlying(valueObject) is { } underlying
-			? ResolveStoreType(underlying)
-			: ResolveStoreType(propertyType);
+		if (isValueObject)
+		{
+			return underlying is null ? UnknownStoreType : ResolveStoreType(underlying);
+		}
+
+		return IsUnion(propertyType) ? UnknownStoreType : ResolveStoreType(propertyType);
+	}
+
+	/// <summary>
+	/// Whether a type is a C# union — marked <c>[Union]</c> or implementing <c>IUnion</c>, as the
+	/// compiler makes a <c>union</c> declaration.
+	/// </summary>
+	/// <remarks>
+	/// Checked before the value-object shape, because a union's generated <c>Value</c> accessor matches
+	/// it. Both types live in the .NET 11 runtime, so a host on .NET 10 cannot resolve them; that is read
+	/// as "not a union" for that one type rather than failing the whole assembly.
+	/// </remarks>
+	static bool IsUnion(Type type)
+	{
+		var unwrapped = Unwrap(type);
+
+		if (!unwrapped.IsValueType || unwrapped.IsEnum || unwrapped.IsPrimitive)
+		{
+			return false;
+		}
+
+		foreach (var attribute in Attributes(unwrapped))
+		{
+			if (
+				TryAttributeType(attribute, out var attributeType)
+				&& attributeType is { Name: "UnionAttribute", Namespace: CompilerServicesNamespace }
+			)
+			{
+				return true;
+			}
+		}
+
+		return Interfaces(unwrapped).Any(i => i is { Name: "IUnion", Namespace: CompilerServicesNamespace });
 	}
 
 	/// <summary>
@@ -829,14 +1157,19 @@ static class EfModelMetadataReader
 	/// </remarks>
 	static (string? Name, EfDomainTypeKind? Kind) DomainType(Type type, string? complexType)
 	{
+		var unwrapped = Unwrap(type);
+
+		if (IsUnion(unwrapped))
+		{
+			return (unwrapped.Name, EfDomainTypeKind.Union);
+		}
+
 		var valueObject = ValueObjectType(type);
 
 		if (valueObject is not null)
 		{
 			return (valueObject.Name, EfDomainTypeKind.ValueObject);
 		}
-
-		var unwrapped = Unwrap(type);
 
 		if (unwrapped.IsEnum)
 		{
@@ -846,50 +1179,208 @@ static class EfModelMetadataReader
 		return complexType is not null ? (complexType, EfDomainTypeKind.ComplexValueObject) : (null, null);
 	}
 
-	/// <summary>
-	/// Whether a type is mapped as an EF Core complex type — a Purview complex value object.
-	/// </summary>
-	/// <remarks>Matched by attribute name, so no dependency on the value-object package is taken.</remarks>
-	static bool IsComplexValueObject(Type type)
+	/// <summary>How a type is mapped as a complex value object, or <see cref="ComplexMapping.None"/>.</summary>
+	/// <remarks>
+	/// The analyzer's rules: Purview's <c>[ValueObject]</c> by its <c>EFMapping</c>, else the assembly's
+	/// <c>[ValueObjectDefaults]</c>, else <c>ComplexType</c> — the library default, so a bare
+	/// <c>[ValueObject]</c> is flattened; EF Core's <c>[ComplexType]</c>; and <c>[Owned]</c>, whose single
+	/// reference shares its owner's table under the same <c>{Navigation}_{Property}</c> names.
+	/// </remarks>
+	static ComplexMapping ComplexValueObjectMapping(Type type)
 	{
-		foreach (var attribute in Unwrap(type).GetCustomAttributesData())
+		var unwrapped = Unwrap(type);
+
+		if (unwrapped.IsPrimitive || unwrapped.IsEnum || IsFrameworkType(unwrapped) || IsValueObject(unwrapped))
 		{
-			if (attribute.AttributeType.Name is not ("ValueObjectAttribute" or "ValueObject"))
+			return ComplexMapping.None;
+		}
+
+		foreach (var attribute in Attributes(unwrapped))
+		{
+			if (!TryAttributeType(attribute, out var attributeType))
 			{
 				continue;
 			}
 
-			var named = attribute.NamedArguments.FirstOrDefault(a => a.MemberName == "EFMapping");
-
-			if (IsNamedEnumMember(named.TypedValue.ArgumentType, named.TypedValue.Value, "ComplexType"))
+			switch (attributeType.Name)
 			{
-				return true;
+				case "ValueObjectAttribute":
+					return MappingOf(
+						EnumMemberName(attribute, "EFMapping") ?? AssemblyDefaultMapping(unwrapped) ?? "ComplexType"
+					);
+
+				case "ComplexTypeAttribute"
+				or "OwnedAttribute":
+					return ComplexMapping.Flattened;
+
+				default:
+					break;
 			}
 		}
 
-		return false;
+		return ComplexMapping.None;
+	}
+
+	static ComplexMapping MappingOf(string member) =>
+		member switch
+		{
+			"ComplexType" => ComplexMapping.Flattened,
+			"Json" => ComplexMapping.Json,
+			_ => ComplexMapping.None,
+		};
+
+	static string? AssemblyDefaultMapping(Type type)
+	{
+		IList<CustomAttributeData> attributes;
+
+		try
+		{
+			attributes = type.Assembly.GetCustomAttributesData();
+		}
+		catch (Exception ex) when (IsLoadFailure(ex))
+		{
+			return null;
+		}
+
+		foreach (var attribute in attributes)
+		{
+			if (
+				TryAttributeType(attribute, out var attributeType)
+				&& attributeType.Name == "ValueObjectDefaultsAttribute"
+			)
+			{
+				return EnumMemberName(attribute, "EFMapping");
+			}
+		}
+
+		return null;
 	}
 
 	/// <summary>
-	/// Whether a constant is the named member of its enum type.
+	/// The member name of an enum-typed named argument, or <see langword="null"/> when it was not set.
 	/// </summary>
-	/// <remarks>
-	/// The compiler reports either the member or its underlying value, so both are accepted.
-	/// </remarks>
-	static bool IsNamedEnumMember(Type type, object? value, string member)
+	/// <remarks>Metadata reports the underlying value, so it is mapped back to the member that declares it.</remarks>
+	static string? EnumMemberName(CustomAttributeData attribute, string argumentName)
 	{
-		if (value is null)
+		foreach (var argument in attribute.NamedArguments)
 		{
-			return false;
+			if (argument.MemberName != argumentName || argument.TypedValue.Value is not { } value)
+			{
+				continue;
+			}
+
+			var type = argument.TypedValue.ArgumentType;
+
+			try
+			{
+				if (type.IsEnum && Enum.GetName(type, value) is { } name)
+				{
+					return name;
+				}
+			}
+			catch (Exception ex) when (IsLoadFailure(ex) || ex is InvalidOperationException)
+			{
+				// Fall through to the raw value.
+			}
+
+			return value.ToString();
 		}
 
-		if (string.Equals(value.ToString(), member, StringComparison.Ordinal))
+		return null;
+	}
+
+	/// <summary>A member's attributes, or none when their types cannot be resolved from metadata.</summary>
+	static IList<CustomAttributeData> Attributes(MemberInfo member)
+	{
+		try
 		{
+			return member.GetCustomAttributesData();
+		}
+		catch (Exception ex) when (IsLoadFailure(ex))
+		{
+			return [];
+		}
+	}
+
+	static bool TryAttributeType(CustomAttributeData attribute, [NotNullWhen(true)] out Type? attributeType)
+	{
+		try
+		{
+			attributeType = attribute.AttributeType;
+
 			return true;
 		}
+		catch (Exception ex) when (IsLoadFailure(ex))
+		{
+			attributeType = null;
 
-		// EF's attribute reader reports the underlying value, so check that too.
-		return type.IsEnum && string.Equals(Enum.GetName(type, value), member, StringComparison.Ordinal);
+			return false;
+		}
+	}
+
+	static Type[] Interfaces(Type type)
+	{
+		try
+		{
+			return type.GetInterfaces();
+		}
+		catch (Exception ex) when (IsLoadFailure(ex))
+		{
+			return [];
+		}
+	}
+
+	/// <summary>
+	/// The element type of a collection EF Core stores in one JSON column, or <see langword="null"/> when
+	/// the collection is a navigation.
+	/// </summary>
+	/// <remarks>
+	/// Primitive, value-object, enum and complex collections are a JSON column; a collection of entities —
+	/// or of <c>[Owned]</c> types, which get a table of their own — is a navigation. Without this a
+	/// <c>List&lt;string&gt;</c> became a <c>String</c> table with <c>Length</c> and <c>Chars</c> columns.
+	/// </remarks>
+	static Type? ScalarCollectionElement(Type type)
+	{
+		var element = type switch
+		{
+			{ IsArray: true } when type.GetElementType() is { FullName: not "System.Byte" } arrayElement =>
+				arrayElement,
+			{ IsGenericType: true } when IsCollection(type) => type.GetGenericArguments()[0],
+			_ => null,
+		};
+
+		if (element is null || HasAttribute(Unwrap(element), "Owned"))
+		{
+			return null;
+		}
+
+		return IsScalar(element) || ComplexValueObjectMapping(element) != ComplexMapping.None ? element : null;
+	}
+
+	/// <summary>The domain type of a JSON collection column: the element's own, as an array.</summary>
+	static (string? Name, EfDomainTypeKind? Kind) CollectionDomainType(Type element)
+	{
+		if (ComplexValueObjectMapping(element) != ComplexMapping.None)
+		{
+			return ($"{Unwrap(element).Name}[]", EfDomainTypeKind.ComplexValueObject);
+		}
+
+		var (name, kind) = DomainType(element, complexType: null);
+
+		return name is null ? (null, null) : ($"{name}[]", kind);
+	}
+
+	/// <summary>An enum is stored as its underlying integral type, which need not be <c>int</c>.</summary>
+	static string EnumUnderlyingStoreType(Type enumType)
+	{
+		try
+		{
+			return ResolveStoreType(enumType.GetEnumUnderlyingType());
+		}
+		catch (Exception ex) when (IsLoadFailure(ex) || ex is InvalidOperationException)
+		{
+			return "int";
+		}
 	}
 
 	static string ResolveStoreType(Type type)
@@ -898,7 +1389,7 @@ static class EfModelMetadataReader
 
 		if (unwrapped.IsEnum)
 		{
-			return "int";
+			return EnumUnderlyingStoreType(unwrapped);
 		}
 
 		if (unwrapped.IsArray)
@@ -971,10 +1462,10 @@ static class EfModelMetadataReader
 	}
 
 	static bool HasAttribute(MemberInfo member, string name) =>
-		member.GetCustomAttributesData().Any(attribute => IsAttribute(attribute, name));
+		Attributes(member).Any(attribute => IsAttribute(attribute, name));
 
 	static bool IsAttribute(CustomAttributeData attribute, string name) =>
-		attribute.AttributeType.Name == name || attribute.AttributeType.Name == name + "Attribute";
+		TryAttributeType(attribute, out var type) && (type.Name == name || type.Name == name + "Attribute");
 
 	static string? GetAttributeString(MemberInfo member, string name, int index) =>
 		GetConstructorArgument(member, name, index)?.Value as string;
@@ -1024,6 +1515,8 @@ static class EfModelMetadataReader
 					ClrTypeName = c.ClrTypeName,
 					DomainTypeName = c.DomainTypeName,
 					DomainTypeKind = c.DomainTypeKind,
+					ComplexPropertyName = c.ComplexPropertyName,
+					ComplexTypeName = c.ComplexTypeName,
 					IsNullable = c.IsNullable,
 					IsPrimaryKey = c.IsPrimaryKey,
 					IsUnique = c.IsUnique,
@@ -1046,6 +1539,19 @@ static class EfModelMetadataReader
 				}),
 			],
 		};
+
+	/// <summary>How a complex value object reaches the database.</summary>
+	enum ComplexMapping
+	{
+		/// <summary>Not a complex value object.</summary>
+		None,
+
+		/// <summary>Flattened into the owner's table, one column per member.</summary>
+		Flattened,
+
+		/// <summary>Serialised into one JSON column on the owner's table.</summary>
+		Json,
+	}
 
 	sealed class TableShape
 	{
@@ -1075,6 +1581,10 @@ static class EfModelMetadataReader
 		public string? DomainTypeName { get; init; }
 
 		public EfDomainTypeKind? DomainTypeKind { get; init; }
+
+		public string? ComplexPropertyName { get; init; }
+
+		public string? ComplexTypeName { get; init; }
 
 		public bool IsNullable { get; set; }
 

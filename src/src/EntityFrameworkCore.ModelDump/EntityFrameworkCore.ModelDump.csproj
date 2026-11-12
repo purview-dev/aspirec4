@@ -1,6 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
+		<!--
+			Single-target: the tool ships once under tools/ and runs as `dotnet <tool>.dll`, so it needs
+			one runtime. net10.0 keeps the build machine requirement at .NET 10 or later.
+
+			LatestMajor rather than the default (Minor): the tool loads the project's own built assembly,
+			so it has to run on a runtime at least as new as the one that assembly targets. A machine with
+			only the .NET 11 SDK has no .NET 10 runtime, and a project building net11.0 cannot be loaded
+			by a .NET 10 process even when one is installed. Stable runtimes only - rolling forward to a
+			prerelease still needs DOTNET_ROLL_FORWARD_TO_PRERELEASE.
+		-->
+		<TargetFramework>net10.0</TargetFramework>
+		<RollForward>LatestMajor</RollForward>
 		<IsPackable>true</IsPackable>
 		<PackageId>AspireC4.EntityFrameworkCore.ModelDump</PackageId>
 		<AssemblyTitle>AspireC4 Entity Framework Core Model Dump</AssemblyTitle>

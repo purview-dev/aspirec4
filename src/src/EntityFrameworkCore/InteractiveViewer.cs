@@ -166,8 +166,7 @@ public static class InteractiveViewer
 
 	static string Read(string name)
 	{
-		using var stream =
-			typeof(InteractiveViewer).Assembly.GetManifestResourceStream(Prefix + name)
+		using var stream = typeof(InteractiveViewer).Assembly.GetManifestResourceStream(Prefix + name)
 			?? throw new InvalidOperationException(
 				$"Embedded viewer asset '{name}' was not found. Expected resource '{Prefix}{name}'."
 			);

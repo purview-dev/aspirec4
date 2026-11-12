@@ -49,10 +49,11 @@ dotnet add package Purview.Containers
 
 Three things make it work, and nothing else is required:
 
-- **A platform-neutral target framework** (`net10.0`). `Purview.Containers.Wsl` is multi-targeted; a
-  `net10.0` project binds its **portable facade**, which runs the WSLC implementation on Windows and
-  reports `wsl` unavailable everywhere else. A Windows target framework binds the implementation
-  directly — and then cannot run on a Linux CI runner.
+- **A platform-neutral target framework** (`net10.0` or `net11.0`; .NET 8 and .NET 9 are unsupported).
+  `Purview.Containers.Wsl` is multi-targeted; a platform-neutral project binds its **portable facade**,
+  which runs the WSLC implementation on Windows and reports `wsl` unavailable everywhere else. A Windows
+  target framework binds the implementation directly — and then cannot run on a Linux CI runner. The
+  `net11.0` assets are compiled with `runtime-async=on`.
 - **The umbrella package**, bringing `Core` and both backends.
 - **No registration line and no environment variable.** Each backend package ships `buildTransitive`
   assets that generate a module initializer in your assembly, so the process discovers the registered
@@ -147,8 +148,9 @@ string same             = container.GetConnectionString(ConnectionMode.Host);
 | `Host` | test host → container, via the mapped host port (`127.0.0.1:{port}`) | both backends |
 | `Container` | container → container, via the container network | **not supported** — throws `ConnectionStringModeNotSupportedException` |
 
-Container-to-container is deliberately deferred: WSLC has no managed networks or inter-container DNS,
-and the Docker backend does not attach containers to a shared network.
+Built-in container-to-container connection-string providers remain deferred. Both backends now support
+explicit managed networks and aliases (`CreateNetworkAsync`, `WithNetwork`, `WithNetworkAliases`).
+Use an explicit alias/service port to construct a container-to-container URL.
 
 **Use `127.0.0.1`, never `localhost`.** `localhost` resolves to `::1` first on .NET, and while most
 clients fall back to IPv4, `Microsoft.Data.SqlClient` **hangs** on `::1` without falling back — which
@@ -179,3 +181,4 @@ provider producing an empty string throws `ConnectionStringNotAvailableException
 `purview-containers-lifecycle` for start/stop/dispose semantics, wait strategies and networking;
 `purview-containers-testing` for suite layout, serial execution and CI; and
 `purview-containers-consumer-requirements` for the target-framework contract and the `PCC` guards.
+Use `purview-containers-capabilities` for copy, builds, managed networks, reuse and cancellation defaults.

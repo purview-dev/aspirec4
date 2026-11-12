@@ -83,6 +83,14 @@ Two distinct brands exist in this repository. Use them consistently:
 | `just lint-fix` | Auto-fix formatting with CSharpier |
 | `just pack` | Build and pack NuGet artifacts into `artifacts/nuget/` |
 
+### TypeScript
+
+| Recipe | Description |
+|---|---|
+| `just ts-test` | Run the TypeScript test suite with Bun |
+| `just ts-validate` | Check the TypeScript sample's Aspire version against `global.json` |
+| `just ts-validate-fix` | Rewrite the TypeScript sample to the Aspire version in `global.json` |
+
 ### Container runtime tests (local only)
 
 The sample AppHost uses `Purview.Containers.Aspire` to verify bind mounts before containers
@@ -116,12 +124,16 @@ helpers configured on your machine must be installed and on `PATH`, including wh
 
 ### Filtering a single test
 
+Tests run on Microsoft.Testing.Platform, so the filter is a tree-node path
+(`/<assembly>/<namespace>/<class>/<test>`, `*` is a wildcard). `--filter` is the VSTest option and
+matches nothing here.
+
 ```sh
 dotnet test src/tests/AspireC4.UnitTests/AspireC4.UnitTests.csproj \
-  -- --filter "FullyQualifiedName~MyTestMethod"
+  --treenode-filter "/*/*/MyClassTests/*"
 
 dotnet test src/tests/AspireC4.IntegrationTests/AspireC4.IntegrationTests.csproj \
-  -- --filter "FullyQualifiedName~MyTestMethod"
+  --treenode-filter "/*/*/MyClassTests/*"
 ```
 
 ---
@@ -147,7 +159,7 @@ CSharpier runs automatically on every `git commit` via Lefthook. Commits with fo
 
 | Hook | What it does |
 |---|---|
-| `pre-commit` | Runs `just lint-check` (CSharpier over the repo root). Rejects the commit if any file is mis-formatted. |
+| `pre-commit` | Runs `just ts-validate` (the Aspire version in `global.json` against the TypeScript sample) `just lint-check` (CSharpier over the repo root) and `just ts-lint` (oxfmt over `apphost.mts`). Rejects the commit on any failure. |
 | `commit-msg` | Runs `commitlint` to enforce [conventional commit](#commit-messages) format. |
 
 Lefthook installs when you run `just init`. To verify it is active:
@@ -195,6 +207,7 @@ Commit messages must follow [Conventional Commits](https://www.conventionalcommi
 | `chore` | Maintenance, tooling, dependency updates |
 | `style` | Formatting, whitespace (code not logic) |
 | `revert` | Reverting a previous commit |
+| `qol` | Quality-of-life improvement to the developer experience |
 
 **Rules:**
 
@@ -264,11 +277,25 @@ config.Item("AppHost:BrowserToken").Returns("value");
 | `EntityFrameworkCore.UnitTests` | d2 model builder, d2 DSL generator and descriptor loader — no Docker required |
 | `EntityFrameworkCore.Analyzers.UnitTests` | EF model generator, plus the generator→assembly→AppHost round-trip |
 | `SourceGenerators.UnitTests` | The registry/DSL strict-validation generator |
-| `Repository.UnitTests` | Repository-level rules, including the authored skills in `skills/` |
+| `Repository.UnitTests` | Repository-level rules, including the authored skills in `skills/`. Also runs the TypeScript suite via `bun test`, because Purview.Build has no JavaScript test module. |
 
-Every project targets `net10.0` except the two Roslyn components (`SourceGenerators` and
-`EntityFrameworkCore.Analyzers`), which target `netstandard2.0`. The framework is set once in
-`src/Directory.Build.props`, which is also where the `Aspire.Hosting.AspireC4` namespace prefix lives.
+The libraries and test projects multi-target `net10.0;net11.0` — Purview.BuildSdk's `Current` set of the
+releases still in support. The two Roslyn components (`SourceGenerators` and
+`EntityFrameworkCore.Analyzers`) get `netstandard2.0` from the SDK. The AppHost, the sample services and
+the ModelDump tool are single-target and declare `net10.0` in their own project file, because Aspire
+starts them with `dotnet run` and the tool ships once under `tools/`.
+
+The C# 15 language version and the `Aspire.Hosting.AspireC4` namespace prefix live in
+`src/Directory.Build.props`; the SDK is pinned in `global.json`. Never set
+`TargetFramework`/`TargetFrameworks` in the directory-level props file — the SDK reads a project's TFM
+from the project file text and a directory-level value shadows its list, which breaks `pack`. .NET 8
+and .NET 9 are not supported, and package versions stay in the `10.0.x` servicing band to match the
+lowest target framework. See [Toolchain and support matrix](docs/wiki/Toolchain.md) before changing any
+of it.
+
+Two versions in `Directory.Packages.props` are floors every consumer inherits: `AspireVersion` is the
+Aspire minimum, and `RoslynCompilerVersion` is why consumers must build with the .NET 11 SDK. Raising
+either is a breaking change, and [Requirements](docs/wiki/Requirements.md) is updated in the same commit.
 
 Integration tests require Docker to be running. They pull `ghcr.io/likec4/likec4` on first run.
 

@@ -16,6 +16,7 @@ namespace Aspire.Hosting.AspireC4.EntityFrameworkCore.ModelDump;
 static class EfModelDumpProjector
 {
 	const string UnknownStoreType = "unknown";
+	const string JsonStoreType = "json";
 
 	static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web) { WriteIndented = false };
 
@@ -51,7 +52,9 @@ static class EfModelDumpProjector
 
 		foreach (var entityType in model.GetEntityTypes())
 		{
-			if (entityType.IsOwned())
+			// An owned type that shares its owner's table, or lives in a JSON column on it, is part of the
+			// owner's table; one with a table of its own — OwnsMany, or OwnsOne with ToTable — is a table.
+			if (entityType.IsOwned() && (entityType.IsMappedToJson() || SharesOwnerTable(entityType)))
 			{
 				continue;
 			}
@@ -75,27 +78,48 @@ static class EfModelDumpProjector
 		}
 	}
 
+	static bool SharesOwnerTable(IEntityType owned) =>
+		owned.FindOwnership() is { } ownership
+		&& owned.GetTableName() == ownership.PrincipalEntityType.GetTableName()
+		&& owned.GetSchema() == ownership.PrincipalEntityType.GetSchema();
+
 	static DumpTable Table(IEntityType entityType)
 	{
 		var foreignKeys = entityType.GetForeignKeys().ToList();
 		var uniqueProperties = UniqueProperties(entityType);
 		var foreignKeyProperties = foreignKeys.SelectMany(fk => fk.Properties).ToHashSet();
+		var store = StoreObjectIdentifier.Table(entityType.GetTableName()!, entityType.GetSchema());
 
 		List<DumpColumn> columns = [];
 
-		foreach (var (property, complexType) in Columns(entityType))
+		foreach (var column in Columns(entityType))
 		{
-			var (name, kind) = DomainType(property, complexType);
+			if (column.Json is { } json)
+			{
+				columns.Add(json);
+
+				continue;
+			}
+
+			var property = column.Property!;
+			var (name, kind) = DomainType(property, column.ComplexType);
 
 			columns.Add(
 				new DumpColumn
 				{
-					Name = property.GetColumnName(),
-					StoreType = ResolveStoreType(ProviderType(property)),
+					Name = property.GetColumnName(store) ?? property.GetColumnName(),
+					StoreType = ExplicitColumnType(property)
+						// EF stores a primitive collection as a JSON document in a string column; the other two
+						// sources call it json, and so does this one.
+						?? (property.IsPrimitiveCollection ? JsonStoreType : ResolveStoreType(ProviderType(property))),
 					ClrTypeName = property.ClrType.FullName,
 					DomainTypeName = name,
 					DomainTypeKind = kind,
-					IsNullable = property.IsNullable,
+					ComplexPropertyName = column.Owner?.Property,
+					ComplexTypeName = column.Owner?.Type,
+					// The column's nullability, not the property's: a member of an optional complex type, or a
+					// property of an owned type sharing the table, is a required property in a nullable column.
+					IsNullable = property.IsColumnNullable(store),
 					IsPrimaryKey = property.IsPrimaryKey(),
 					IsUnique = uniqueProperties.Contains(property),
 					IsForeignKey = foreignKeyProperties.Contains(property),
@@ -142,48 +166,141 @@ static class EfModelDumpProjector
 		};
 	}
 
-	/// <summary>Every column of a table: the entity's own properties, then each complex type's members.</summary>
+	/// <summary>One column of a table, as it reaches the projection.</summary>
+	/// <param name="Property">The mapped property, for an ordinary column.</param>
+	/// <param name="ComplexType">The immediately enclosing complex or owned type, for a member of one.</param>
+	/// <param name="Owner">The outermost property and type a flattened member came from.</param>
+	/// <param name="Json">A whole JSON-mapped complex or owned value, already projected.</param>
+	sealed record ColumnSource(
+		IProperty? Property,
+		string? ComplexType,
+		(string Property, string Type)? Owner,
+		DumpColumn? Json = null
+	);
+
+	/// <summary>
+	/// Every column of a table: the entity's own properties, then each complex type's members, then the
+	/// properties of owned types that share the table.
+	/// </summary>
 	/// <remarks>
 	/// The complex type name travels with each member so the column can show it beside the database
-	/// type, which is what makes a flattened complex value object legible.
+	/// type, and the outermost owner travels too, so a renderer can fold the members back under the
+	/// property they came from. A complex or owned value mapped to JSON — and a complex collection, which
+	/// can only be — is the one column that holds it.
 	/// </remarks>
-	static IEnumerable<(IProperty Property, string? ComplexType)> Columns(IEntityType entityType)
+	static IEnumerable<ColumnSource> Columns(IEntityType entityType)
 	{
 		foreach (var property in entityType.GetProperties())
 		{
-			yield return (property, null);
+			yield return new(property, null, null);
 		}
 
 		foreach (var complex in entityType.GetComplexProperties())
 		{
-			foreach (var column in ComplexColumns(complex))
+			var owner = (complex.Name, complex.ComplexType.ClrType.Name);
+
+			foreach (var column in ComplexColumns(complex, owner))
 			{
 				yield return column;
 			}
 		}
+
+		foreach (var navigation in entityType.GetNavigations())
+		{
+			if (
+				navigation.IsCollection
+				|| navigation.ForeignKey.IsOwnership is false
+				|| navigation.TargetEntityType == entityType
+				|| !navigation.TargetEntityType.IsOwned()
+			)
+			{
+				continue;
+			}
+
+			var owned = navigation.TargetEntityType;
+			var owner = (navigation.Name, owned.ClrType.Name);
+
+			if (owned.IsMappedToJson())
+			{
+				yield return JsonColumn(owned.GetContainerColumnName() ?? navigation.Name, owned.ClrType.Name, owner);
+
+				continue;
+			}
+
+			if (!SharesOwnerTable(owned))
+			{
+				continue;
+			}
+
+			// The owned type's key is the owner's, carried through the shared table, so it is not a column
+			// of its own.
+			foreach (var property in owned.GetProperties().Where(p => !p.IsPrimaryKey()))
+			{
+				yield return new(property, owned.ClrType.Name, owner);
+			}
+		}
 	}
 
-	static IEnumerable<(IProperty Property, string? ComplexType)> ComplexColumns(IComplexProperty complex)
+	static IEnumerable<ColumnSource> ComplexColumns(IComplexProperty complex, (string Property, string Type) owner)
 	{
 		var complexName = complex.ComplexType.ClrType.Name;
 
+		if (complex.IsCollection || complex.ComplexType.IsMappedToJson())
+		{
+			var name = complex.ComplexType.GetContainerColumnName() ?? complex.Name;
+			var type = complex.IsCollection ? $"{complexName}[]" : complexName;
+
+			yield return JsonColumn(name, type, owner == (complex.Name, complexName) ? null : owner);
+
+			yield break;
+		}
+
 		foreach (var property in complex.ComplexType.GetProperties())
 		{
-			yield return (property, complexName);
+			yield return new(property, complexName, owner);
 		}
 
 		foreach (var nested in complex.ComplexType.GetComplexProperties())
 		{
-			foreach (var column in ComplexColumns(nested))
+			foreach (var column in ComplexColumns(nested, owner))
 			{
 				yield return column;
 			}
 		}
 	}
 
+	static ColumnSource JsonColumn(string name, string domainTypeName, (string Property, string Type)? owner) =>
+		new(
+			null,
+			null,
+			owner,
+			new DumpColumn
+			{
+				Name = name,
+				StoreType = JsonStoreType,
+				DomainTypeName = domainTypeName,
+				DomainTypeKind = "ComplexValueObject",
+				ComplexPropertyName = owner?.Property,
+				ComplexTypeName = owner?.Type,
+				IsNullable = true,
+			}
+		);
+
 	/// <summary>The CLR type EF actually stores — the converted type for a value object.</summary>
 	static Type ProviderType(IProperty property) =>
 		property.GetTypeMapping().Converter?.ProviderClrType ?? property.ClrType;
+
+	/// <summary>
+	/// A column type set explicitly with <c>HasColumnType</c> or <c>[Column(TypeName = ...)]</c>.
+	/// </summary>
+	/// <remarks>
+	/// Read from the annotation rather than <c>GetColumnType()</c>, which also answers with the provider's
+	/// default mapping. That default is provider-specific (<c>INTEGER</c>, <c>nvarchar(max)</c>), and the
+	/// diagram's generic names are deliberate; only an explicit choice — <c>decimal(18,4)</c> — is real
+	/// information the generic name would lose.
+	/// </remarks>
+	static string? ExplicitColumnType(IProperty property) =>
+		property.FindAnnotation(RelationalAnnotationNames.ColumnType)?.Value as string;
 
 	/// <summary>
 	/// The domain type a column is backed by, when its declared type is not a primitive.
@@ -192,21 +309,50 @@ static class EfModelDumpProjector
 	/// <param name="complexType">The enclosing complex type's name, for a plain member of one.</param>
 	/// <remarks>
 	/// The kind strings match the AppHost's <c>EfDomainTypeKind</c> member names, which is how the
-	/// emitted JSON round-trips.
+	/// emitted JSON round-trips. <c>Nullable&lt;T&gt;</c> is unwrapped first: an optional value object or
+	/// enum is still that value object or enum. A primitive collection shows its element's domain type as
+	/// an array.
 	/// </remarks>
 	static (string? Name, string? Kind) DomainType(IProperty property, string? complexType)
 	{
-		if (IsValueObject(property.ClrType))
+		if (property.IsPrimitiveCollection && property.GetElementType() is { } element)
 		{
-			return (property.ClrType.Name, "ValueObject");
+			var (elementName, elementKind) = DomainTypeOf(element.ClrType);
+
+			return elementName is null ? (null, null) : ($"{elementName}[]", elementKind);
 		}
 
-		if (property.ClrType.IsEnum)
+		var (name, kind) = DomainTypeOf(property.ClrType);
+
+		if (name is not null)
 		{
-			return (property.ClrType.Name, "Enum");
+			return (name, kind);
 		}
 
 		return complexType is not null ? (complexType, "ComplexValueObject") : (null, null);
+	}
+
+	static (string? Name, string? Kind) DomainTypeOf(Type type)
+	{
+		var unwrapped = Nullable.GetUnderlyingType(type) ?? type;
+
+		// First, because a union's case accessor gives it the shape of a scalar value object.
+		if (IsUnion(unwrapped))
+		{
+			return (unwrapped.Name, "Union");
+		}
+
+		if (IsValueObject(unwrapped))
+		{
+			return (unwrapped.Name, "ValueObject");
+		}
+
+		if (unwrapped.IsEnum)
+		{
+			return (unwrapped.Name, "Enum");
+		}
+
+		return (null, null);
 	}
 
 	static HashSet<IProperty> UniqueProperties(IEntityType entityType)
@@ -243,9 +389,11 @@ static class EfModelDumpProjector
 	{
 		var unwrapped = Nullable.GetUnderlyingType(type) ?? type;
 
+		// An enum stored as itself is its underlying integral type; one converted to a string arrives here
+		// as string, the provider type.
 		if (unwrapped.IsEnum)
 		{
-			return "int";
+			return ResolveStoreType(Enum.GetUnderlyingType(unwrapped));
 		}
 
 		if (unwrapped == typeof(byte[]))
@@ -275,11 +423,49 @@ static class EfModelDumpProjector
 		};
 	}
 
-	static bool IsValueObject(Type type) =>
+	/// <summary>
+	/// Whether a type is a scalar value object, by the same rules the analyzer and the metadata reader
+	/// use: Purview's <c>[Scalar]</c> attributes or <c>IScalarValueObject&lt;,&gt;</c> on a struct or a
+	/// class, else a non-generic struct with a public <c>Value</c> that is not typed <c>object</c>.
+	/// </summary>
+	/// <remarks>
+	/// Only reached for a property EF has mapped, so a class here has a value converter — which is what
+	/// makes a class-based value object a column rather than a navigation.
+	/// </remarks>
+	static bool IsValueObject(Type type)
+	{
+		if (type.IsEnum || type.IsPrimitive || type == typeof(string) || IsUnion(type))
+		{
+			return false;
+		}
+
+		if (
+			type.GetCustomAttributes(inherit: false)
+				.Any(a => a.GetType().Name is "ScalarAttribute" or "ScalarAttribute`1")
+		)
+		{
+			return true;
+		}
+
+		if (type.GetInterfaces().Any(i => i.IsGenericType && i.Name == "IScalarValueObject`2"))
+		{
+			return true;
+		}
+
+		return type.IsValueType
+			&& !type.IsGenericType
+			&& type.GetProperty("Value", BindingFlags.Public | BindingFlags.Instance) is { } value
+			&& value.PropertyType != typeof(object);
+	}
+
+	/// <summary>Whether a type is a C# union: marked <c>[Union]</c> or implementing <c>IUnion</c>.</summary>
+	static bool IsUnion(Type type) =>
 		type.IsValueType
-		&& !type.IsEnum
-		&& !type.IsGenericType
-		&& type.GetProperty("Value", BindingFlags.Public | BindingFlags.Instance) is not null;
+		&& (
+			type.GetCustomAttributes(inherit: false)
+				.Any(a => a.GetType() is { Name: "UnionAttribute", Namespace: "System.Runtime.CompilerServices" })
+			|| type.GetInterfaces().Any(i => i is { Name: "IUnion", Namespace: "System.Runtime.CompilerServices" })
+		);
 
 	// The dump contract, mirroring EfModel's JSON shape. Fidelity is omitted: a dump is authoritative,
 	// which is the deserialisation default.
@@ -330,6 +516,10 @@ static class EfModelDumpProjector
 		public string? DomainTypeName { get; init; }
 
 		public string? DomainTypeKind { get; init; }
+
+		public string? ComplexPropertyName { get; init; }
+
+		public string? ComplexTypeName { get; init; }
 
 		public bool IsNullable { get; init; }
 

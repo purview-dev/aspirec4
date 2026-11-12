@@ -10,13 +10,15 @@ public sealed class LikeC4ProjectLayoutTests
 	static AspireC4DiagramOptions CreateOptions(
 		string? projectDirectory = null,
 		string? outputDirectory = null,
-		bool useLegacyLayout = false
+		bool useLegacyLayout = false,
+		string? extensionsDirectory = AspireC4DiagramOptions.DefaultExtensionsDirectory
 	)
 	{
 		AspireC4DiagramOptions options = new()
 		{
 			ProjectDirectory = projectDirectory,
 			UseLegacyLayout = useLegacyLayout,
+			ExtensionsDirectory = extensionsDirectory,
 		};
 
 		if (outputDirectory is not null)
@@ -25,6 +27,15 @@ public sealed class LikeC4ProjectLayoutTests
 		}
 
 		return options;
+	}
+
+	static string CreateExtensionsFolder(string baseDirectory, string name = "likec4-extensions")
+	{
+		var folder = Path.Combine(baseDirectory, name);
+
+		Directory.CreateDirectory(folder);
+
+		return folder;
 	}
 
 	// Tests
@@ -161,5 +172,119 @@ public sealed class LikeC4ProjectLayoutTests
 
 		// Assert
 		await Assert.That(result).IsTrue();
+	}
+
+	[Test]
+	public async Task IncludeExtensionsFolder_WhenTheConventionalFolderExists_AddsIt()
+	{
+		// Hand-written .c4 files beside the AppHost join the diagram with no call at all.
+		// Arrange
+		var baseDirectory = CreateBaseDirectory();
+		var folder = CreateExtensionsFolder(baseDirectory);
+		var options = CreateOptions();
+
+		// Act
+		var added = LikeC4ProjectLayout.IncludeExtensionsFolder(baseDirectory, options);
+
+		// Assert
+		await Assert.That(added).IsEqualTo(folder);
+		await Assert.That(options.AdditionalDSLFolders).Contains(folder);
+	}
+
+	[Test]
+	public async Task IncludeExtensionsFolder_WhenTheFolderIsMissing_AddsNothing()
+	{
+		// Arrange
+		var baseDirectory = CreateBaseDirectory();
+		var options = CreateOptions();
+
+		// Act
+		var added = LikeC4ProjectLayout.IncludeExtensionsFolder(baseDirectory, options);
+
+		// Assert
+		await Assert.That(added).IsNull();
+		await Assert.That(options.AdditionalDSLFolders).IsEmpty();
+	}
+
+	[Test]
+	public async Task IncludeExtensionsFolder_WhenTurnedOff_AddsNothing()
+	{
+		// Arrange
+		var baseDirectory = CreateBaseDirectory();
+		CreateExtensionsFolder(baseDirectory);
+		var options = CreateOptions(extensionsDirectory: null);
+
+		// Act
+		var added = LikeC4ProjectLayout.IncludeExtensionsFolder(baseDirectory, options);
+
+		// Assert
+		await Assert.That(added).IsNull();
+		await Assert.That(options.AdditionalDSLFolders).IsEmpty();
+	}
+
+	[Test]
+	public async Task IncludeExtensionsFolder_WithACustomFolder_AddsThatFolder()
+	{
+		// Arrange
+		var baseDirectory = CreateBaseDirectory();
+		var folder = CreateExtensionsFolder(baseDirectory, "architecture");
+		var options = CreateOptions(extensionsDirectory: "./architecture");
+
+		// Act
+		var added = LikeC4ProjectLayout.IncludeExtensionsFolder(baseDirectory, options);
+
+		// Assert
+		await Assert.That(added).IsEqualTo(folder);
+	}
+
+	[Test]
+	public async Task IncludeExtensionsFolder_WhenAlreadyRegistered_DoesNotAddItTwice()
+	{
+		// Resolving the options again, or registering the folder explicitly as well, must not list it twice.
+		// Arrange
+		var baseDirectory = CreateBaseDirectory();
+		var folder = CreateExtensionsFolder(baseDirectory);
+		var options = CreateOptions();
+		options.AdditionalDSLFolders.Add(folder);
+
+		// Act
+		var added = LikeC4ProjectLayout.IncludeExtensionsFolder(baseDirectory, options);
+
+		// Assert
+		await Assert.That(added).IsNull();
+		await Assert.That(options.AdditionalDSLFolders.Count).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task IncludeExtensionsFolder_ForAHandAuthoredProject_AddsNothing()
+	{
+		// A hand-authored project serves its own files, and AspireC4 writes no config into it to list the
+		// folder in.
+		// Arrange
+		var baseDirectory = CreateBaseDirectory();
+		CreateExtensionsFolder(baseDirectory);
+		var options = CreateOptions(projectDirectory: Path.Combine(baseDirectory, "my-arch"));
+
+		// Act
+		var added = LikeC4ProjectLayout.IncludeExtensionsFolder(baseDirectory, options);
+
+		// Assert
+		await Assert.That(added).IsNull();
+	}
+
+	[Test]
+	public async Task IncludeExtensionsFolder_WhenTheFolderIsTheOutputDirectory_AddsNothing()
+	{
+		// Including the output directory in itself would load the generated model twice.
+		// Arrange
+		var baseDirectory = CreateBaseDirectory();
+		CreateExtensionsFolder(baseDirectory, "generated");
+		var options = CreateOptions(outputDirectory: "./generated", extensionsDirectory: "./generated");
+
+		// Act
+		var added = LikeC4ProjectLayout.IncludeExtensionsFolder(baseDirectory, options);
+
+		// Assert
+		await Assert.That(added).IsNull();
 	}
 }
