@@ -63,6 +63,49 @@ static class LikeC4ProjectLayout
 		!PathsEqual(serveDirectory, outputDirectory);
 
 	/// <summary>
+	/// Adds the conventional extensions folder to <see cref="AspireC4DiagramOptions.AdditionalDSLFolders"/>
+	/// when it exists, so hand-written <c>.c4</c> files beside the AppHost join the diagram with no call.
+	/// </summary>
+	/// <remarks>
+	/// Applied when the options are resolved, after configuration binding, so an
+	/// <c>AspireC4:ExtensionsDirectory</c> setting is honoured. Skipped for a hand-authored project, which
+	/// already serves its own files and gets no generated config to list the folder in, and when the
+	/// folder is the output directory itself or already registered.
+	/// </remarks>
+	/// <param name="baseDirectory">The AppHost directory the folder is resolved against.</param>
+	/// <param name="options">The resolved options to add the folder to.</param>
+	/// <returns>The absolute folder that was added, or <see langword="null"/> when nothing was.</returns>
+	internal static string? IncludeExtensionsFolder(string baseDirectory, AspireC4DiagramOptions options)
+	{
+		ArgumentException.ThrowIfNullOrWhiteSpace(baseDirectory);
+		ArgumentNullException.ThrowIfNull(options);
+
+		if (
+			string.IsNullOrWhiteSpace(options.ExtensionsDirectory)
+			|| !string.IsNullOrWhiteSpace(options.ProjectDirectory)
+		)
+		{
+			return null;
+		}
+
+		var folder = MakeAbsolute(baseDirectory, options.ExtensionsDirectory);
+		if (!Directory.Exists(folder))
+		{
+			return null;
+		}
+
+		var (outputDirectory, _) = Resolve(baseDirectory, options);
+		if (PathsEqual(folder, outputDirectory) || options.AdditionalDSLFolders.Any(f => PathsEqual(f, folder)))
+		{
+			return null;
+		}
+
+		options.AdditionalDSLFolders.Add(folder);
+
+		return folder;
+	}
+
+	/// <summary>
 	/// Resolves a configured path to an absolute one without a trailing separator, so the two
 	/// directories compare and combine consistently however they were written in configuration.
 	/// </summary>

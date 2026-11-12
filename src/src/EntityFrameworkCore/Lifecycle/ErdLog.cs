@@ -36,6 +36,13 @@ static partial class ErdLog
 	public static partial void Unchanged(ILogger logger);
 
 	[LoggerMessage(
+		Level = LogLevel.Information,
+		Message = "{Path} was not written by AspireC4, so it was left alone; the generated ER diagram files "
+			+ "may show up in git. Add them to it, or remove it to let AspireC4 manage the file."
+	)]
+	public static partial void GitIgnoreFileKept(ILogger logger, string path);
+
+	[LoggerMessage(
 		Level = LogLevel.Warning,
 		Message = "No Entity Framework Core models were found. Ensure at least one project resource that "
 			+ "owns a DbContext has been built at least once."

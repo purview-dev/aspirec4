@@ -67,6 +67,13 @@ public static class AspireC4DistributedApplicationBuilderExtensions
 			.Configure(options => configure?.Invoke(options))
 			.BindConfiguration(AspireC4DiagramOptions.SectionName);
 
+		// After binding, so an AspireC4:ExtensionsDirectory setting is honoured; registered here rather than
+		// in the callback so the convention applies with no configure call at all.
+		var appHostDirectory = builder.AppHostDirectory;
+		builder.Services.PostConfigure<AspireC4DiagramOptions>(resolved =>
+			LikeC4ProjectLayout.IncludeExtensionsFolder(appHostDirectory, resolved)
+		);
+
 		var (outputDir, serveDir) = ResolveLayout(builder, options);
 
 		var imageTag = options.ContainerImageTag ?? LikeC4ServerResource.DefaultTag;

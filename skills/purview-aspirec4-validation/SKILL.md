@@ -4,7 +4,8 @@ description: >-
   Use when an AspireC4 build reports an ASPIREC4xxx diagnostic, or when setting up the
   [LikeC4Registry] class that makes tags, kinds, groups and metadata keys refactor-safe - the nested
   class names, [KnownType] fields, the three severity levels, the AspireC4Strict MSBuild property,
-  and validating hand-authored .c4 specification files.
+  and validating hand-authored .c4 specification files. Also use when the generator is not running at
+  all - a CS9057 warning, or [LikeC4Registry] not found - which means the build is not on the .NET 11 SDK.
 metadata:
   product: AspireC4
   repository: purview-dev/aspirec4
@@ -19,6 +20,21 @@ validates the **constant** values passed to `.WithTag()`, `.WithKind()`, `.WithL
 The registry attributes and enums are injected by `AspireC4.Hosting` itself — there is no separate
 generator package to add. TypeScript AppHosts are not validated this way; they use the generated
 fluent API.
+
+## The generator needs the .NET 11 SDK
+
+The generator runs inside the compiler and is built against Roslyn 5.9, so the AppHost must be built
+with the **.NET 11 SDK**, even when it targets `net10.0`. The target framework has no bearing on it.
+On an older compiler (a .NET 10 SDK, or an IDE bundling an older Roslyn) the build reports `CS9057`
+(*the analyzer assembly references a newer version of the compiler*) and the generator does not run:
+
+- no `ASPIREC4xxx` diagnostic is ever reported, so a missing one does not mean the values are valid;
+- the injected `[LikeC4Registry]`, `[KnownType]`, `[Severity]`, `LikeC4RegistryType` and
+  `LikeC4Severity` types are absent, so code that uses them fails with `CS0246`.
+
+Fix it by building with the .NET 11 SDK. Pin `"sdk": { "version": "11.0.100", "rollForward": "latestFeature" }`
+in `global.json` so every machine and CI agent agrees. Do **not** declare the types by hand to make
+`CS0246` go away: they collide with the generated ones once the generator runs.
 
 ## The registry class
 

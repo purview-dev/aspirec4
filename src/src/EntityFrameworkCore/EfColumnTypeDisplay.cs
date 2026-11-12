@@ -40,8 +40,8 @@ static class EfColumnTypeDisplay
 	}
 
 	/// <summary>
-	/// The label kept alongside the headline — the other type, plus the <c>enum</c> marker when the
-	/// column's declared type is an enum.
+	/// The label kept alongside the headline — the other type, plus the <see cref="Marker"/> when the
+	/// column's declared type is an enum or a union.
 	/// </summary>
 	/// <returns><see langword="null"/> when there is nothing to keep.</returns>
 	public static string? Annotation(EfColumn column, AspireC4EfDiagramOptions options)
@@ -54,13 +54,17 @@ static class EfColumnTypeDisplay
 			return null;
 		}
 
-		var marker = column.DomainTypeKind == EfDomainTypeKind.Enum;
+		var marker = Marker(column);
 
 #pragma warning disable IDE0072 // Add missing cases
 		return options.DomainTypeDisplay switch
 		{
-			DomainTypeDisplay.DomainTypeFirst => marker ? $"{DatabaseType(column)}, enum" : DatabaseType(column),
-			DomainTypeDisplay.DatabaseFirst => marker ? $"{column.DomainTypeName}, enum" : column.DomainTypeName,
+			DomainTypeDisplay.DomainTypeFirst => marker is null
+				? DatabaseType(column)
+				: $"{DatabaseType(column)}, {marker}",
+			DomainTypeDisplay.DatabaseFirst => marker is null
+				? column.DomainTypeName
+				: $"{column.DomainTypeName}, {marker}",
 			// The database type is not the headline, so it is kept here; the enum marker is inline.
 			DomainTypeDisplay.DomainTypeOnly => DatabaseType(column),
 			_ => null,
@@ -89,11 +93,28 @@ static class EfColumnTypeDisplay
 			);
 		}
 
-		if (column.DomainTypeKind == EfDomainTypeKind.Enum)
+		if (Marker(column) is { } marker)
 		{
-			parts.Add("enum");
+			parts.Add(marker);
 		}
 
 		return parts.Count == 0 ? primary : $"{primary} ({string.Join(", ", parts)})";
 	}
+
+	/// <summary>
+	/// The word that says what kind of type a column holds when the type name alone does not: <c>enum</c>
+	/// for an enum, <c>union</c> for a C# union.
+	/// </summary>
+	/// <remarks>
+	/// A value object needs no marker — its name is the point — but an enum and a union both look like
+	/// any other type name, and both change what the column can hold: a fixed set of values, or one of a
+	/// fixed set of types.
+	/// </remarks>
+	internal static string? Marker(EfColumn column) =>
+		column.DomainTypeKind switch
+		{
+			EfDomainTypeKind.Enum => "enum",
+			EfDomainTypeKind.Union => "union",
+			_ => null,
+		};
 }

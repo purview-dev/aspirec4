@@ -1,26 +1,19 @@
 # Toolchain and support matrix
 
-This page records which .NET versions AspireC4 supports, how the packages are built, and which .NET 11
-features are deliberately used or deliberately not used. It is the reference for "can I move this
-project to .NET 11?" questions; the consumer-facing requirements are repeated in
-[Getting Started](Getting-Started.md).
+This page records how this repository is built and which .NET 11 features are deliberately used or
+deliberately not used. It is the reference for "can I move this project to .NET 11?" questions. What a
+**consuming application** needs — the .NET 11 SDK, the target frameworks each package ships, the Aspire
+minimum — is owned by [Requirements](Requirements.md); this page explains where those facts come from in
+the build.
 
 ## Support matrix
 
 **.NET 8 and .NET 9 are not supported.** They were removed from the build, the tests, the packages and
 the container test images; nothing in this repository targets them.
 
-| Component | Targets | Shipped as | Notes |
-| --- | --- | --- | --- |
-| `AspireC4.Hosting` | `net10.0`, `net11.0` | `lib/net10.0/`, `lib/net11.0/` | the AppHost assembly; NuGet picks the asset that matches the consumer |
-| `AspireC4.Hosting.EntityFrameworkCore` | `net10.0`, `net11.0` | `lib/net10.0/`, `lib/net11.0/` | the ER diagram assembly |
-| `AspireC4.EntityFrameworkCore` | `netstandard2.0` | `analyzers/dotnet/cs/` | analyzer only, no runtime assembly |
-| `AspireC4.EntityFrameworkCore.ModelDump` | `net10.0` | `tools/` | build-time tool, run once by MSBuild |
-
-The two libraries multi-target the **lowest common supported pair**: `net10.0` is the LTS and the
-framework an Aspire AppHost targets, and `net11.0` is the current release. A `net10.0` asset is what a
-.NET 10 AppHost resolves; a consumer that has moved to .NET 11 gets the `net11.0` asset without a
-package change. Both are built from the same source.
+The per-package targets are listed in [Requirements](Requirements.md#target-frameworks). The two
+libraries multi-target the **lowest common supported pair**, `net10.0` (the LTS, and the framework an
+Aspire AppHost targets) and `net11.0` (the current release), both built from the same source.
 
 Projects that cannot sensibly multi-target declare a single framework **in their own project file**:
 
@@ -65,8 +58,8 @@ match, because they build this repository from inside the container.
 | --- | --- | --- |
 | GA SDK and compiler | `global.json` pins 11.0.100 | deterministic, non-preview build |
 | `net11.0` target | Purview.BuildSdk's default set | consumers on .NET 11 get an asset built for that runtime; .NET 10 hosts keep the LTS asset |
-| Runtime Async | `runtime-async=on` on the `net11.0` leg only (SDK-applied) | lower await overhead and cleaner live stack traces in the .NET 11 asset, with no change to the `net10.0` asset |
 | C# 15, `LangVersion 15.0` | `src/Directory.Build.props` | same compiler behaviour on both legs; new language features available |
+| C# 15 updated memory-safety rules | Purview.BuildSdk's default tier (`MemorySafetyRules=2`) on the `net11.0` leg, not overridden | the `net11.0` assembly carries the updated rules. The `safe` modifier is still preview in C# 15.0, so a type System.Text.Json serializes must not use `init`-only properties: for those the generator emits `safe extern` accessors and the build fails with `CS8652` (see `LikeC4IconManifest`) |
 | Closed hierarchies | `EfModelDumpRead` in `src/src/EntityFrameworkCore/` | the set of dump outcomes is complete, so a switch over it is exhaustive and a new outcome fails the build |
 | MSBuild build server | `DOTNET_CLI_USE_MSBUILD_SERVER=1` in the `Justfile` | warm evaluation for repeated `just build` / `just test` runs |
 | Multithreaded MSBuild | SDK-bootstrapped `Directory.Build.rsp` with `-mt` | runs a build's projects concurrently in one process |
@@ -77,7 +70,7 @@ match, because they build this repository from inside the container.
 
 | Feature | Why not |
 | --- | --- |
-| C# 15 updated memory-safety rules (`MemorySafetyRules=2`) | still preview-only: compiling it forces `LangVersion=preview`, which would let preview syntax into every project. The repository has no unsafe code, so the tier buys nothing. Set to `0` in `src/Directory.Build.props` until the rules are GA. |
+| Runtime Async (`runtime-async=on`) | it changes how every `await` compiles, so the `net11.0` asset would behave differently from the `net10.0` one built from the same source. Purview.BuildSdk 2.0.1 makes it opt-in (`PurviewRuntimeAsync=true`) and this repository does not opt in. |
 | .NET 11-only library APIs | `Process` run-and-capture, the new `Stream` types, `FullJoin`, async validation, and Zstandard compression only exist in the .NET 11 reference assemblies. The shared source also has to compile for the `net10.0` leg, and the diagram work does not need them. |
 | `net11.0`-only asset | the packages ship `net11.0` **in addition to** `net10.0`, never instead of it. Dropping `net10.0` would raise the floor above the Aspire AppHost. |
 | Union types | no surface needs one today; see below. |
@@ -91,6 +84,17 @@ currently `10.0.15` — never to `11.0.x`. The code that consumes them compiles 
 `11.0.x` reference would either fail to resolve or drag a .NET 11-only binary into a .NET 10 process.
 Versions live in `Directory.Packages.props`; the rule when bumping is "newest patch in the band that
 matches the lowest target framework", not "newest version published".
+
+Two floors are consumer-facing and are recorded in [Requirements](Requirements.md):
+
+- **`Aspire.Hosting`** (`AspireVersion`) is the Aspire minimum every consuming AppHost inherits.
+- **`Microsoft.CodeAnalysis.*`** (`RoslynCompilerVersion`, `5.9.0`) is the compiler both shipped source
+  generators are built against, and so the compiler a consumer must build with: the .NET 11 SDK. It is
+  not a target-framework choice — the generators are `netstandard2.0` — and lowering it would mean an
+  older `Purview.SourceGeneratorFramework`, which is itself built against Roslyn 5.9.
+
+Raising either is a breaking change for consumers; update [Requirements](Requirements.md) in the same
+change.
 
 Build-only tooling may track the SDK instead, because it is never part of a consumer's output:
 `Microsoft.SourceLink.GitHub` is `11.0.100`, and CSharpier and `dotnet-inspect` are pinned in
@@ -129,6 +133,14 @@ No type in the packages is a union today: the closed hierarchy above covers the 
 outcomes" shape, and the other discriminated shapes are enums that are already exhaustive by
 construction. Introducing a union purely to use the feature would add a wrapper without removing one.
 
+A union in a *consumer's* EF model is a different matter, and the ER diagram recognises one in all three
+model sources: it is marked `union` rather than mistaken for a scalar value object, which its `Value`
+accessor resembles. The analyzer asks Roslyn through `ITypeSymbol.IsUnion`, which Roslyn 5.9 marks
+experimental (`RSEXPERIMENTAL006`). The analyzer runs inside whatever compiler the consumer has, so the
+call is isolated in one non-inlined method that treats a missing member as "not a union", and the
+`[Union]` attribute and `IUnion` interface checks stand behind it. The metadata reader resolves those two
+types defensively too: on a .NET 10 host they do not exist, and an unresolvable attribute must not drop
+the whole assembly. See [Value objects, enums and unions](Entity-Framework-Diagrams.md#value-objects-enums-and-unions).
 If a union is added, follow the compiler's **non-boxing access pattern** rather than relying on the
 generated `Value` property, so value-type cases are not boxed during pattern matching:
 
@@ -177,19 +189,20 @@ pattern; without them it falls back to `Value` and boxes. The same polyfill rule
 | Stability | GA SDK pinned, no preview SDK, no roll-forward to a future major, no shadowed TFM evaluation | `global.json`, `src/Directory.Build.props` |
 | Stability | the sample AppHost now resolves `Aspire.Hosting.AppHost` from `global.json` instead of a stale SDK-embedded 13.6.3, which carried a high-severity advisory (`NU1903`) | `TestAppHost.csproj` |
 | Runtime | a .NET 11 host gets a `net11.0` assembly built against the .NET 11 reference assemblies; a .NET 10 host keeps the LTS assembly | `lib/net10.0/`, `lib/net11.0/` |
-| Async | the `net11.0` assembly is compiled with Runtime Async, so its awaits avoid compiler-generated state machines | `Features=runtime-async=on` on that leg |
-| Testing | the suite runs twice, once per TFM, on Microsoft.Testing.Platform — 2,468 tests, including both integration runs | `just test` |
+| Testing | the suite runs twice, once per TFM, on Microsoft.Testing.Platform, including both integration runs | `just test` |
 | Build | warm MSBuild server, SDK-bootstrapped `-mt` multithreaded builds, SDK-owned TFM sets | `Directory.Build.rsp`, `Justfile` |
-| Debug | cleaner async stack traces on the `net11.0` assembly; a missing or stale model dump is now named in the ER diagram log instead of being indistinguishable from "no model" | `ErdLog.ProjectProducedNoModel` |
+| Debug | a missing or stale model dump is now named in the ER diagram log instead of being indistinguishable from "no model" | `ErdLog.ProjectProducedNoModel` |
 | Packaging | both framework assets ship and are asserted by pack validation; package versions stay on the `10.0.x` band | `.config/purview-build.json`, `Directory.Packages.props` |
 
 ## Keeping this page true
 
-When the target frameworks, SDK pin, or a package band change, update:
+When the target frameworks, SDK pin, a package band, or a consumer-facing floor change, update:
 
-- `src/Directory.Build.props` (language version, memory-safety tier, CA1307 suppression)
+- `src/Directory.Build.props` (language version, CA1307 suppression)
 - `global.json` (SDK and test runner)
-- `.config/purview-build.json` (`lib/net10.0/...` **and** `lib/net11.0/...` in `RequiredContent`)
+- `.config/purview-build.json` only if a package gains or loses a non-`lib/` folder — its `lib/$(TFM)/...`
+  rules follow the target set on their own
 - `tests/Docker/Dockerfile.e2e` and `Dockerfile.e2e-cli` (SDK image)
 - the single-target project files listed above
-- this page, `README.md`, `AGENTS.md`, and [Getting Started](Getting-Started.md)
+- this page, [Requirements](Requirements.md) (which lists the summaries that repeat a requirement), and
+  `AGENTS.md`

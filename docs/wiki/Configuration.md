@@ -46,6 +46,8 @@ builder.AddAspireC4(options =>
 | `AdditionalDSLFolders` | `[]` | Directories scanned recursively for `.c4` files, added to `include.paths` in the generated config. |
 | `ImageAliases` | `{}` | Image alias definitions (keys start with `@`) written to the `imageAliases` section of the generated config. |
 | `GenerateConfigFile` | `true` | Generate a `likec4.config.json` in the output directory. |
+| `GenerateGitIgnoreFile` | `true` | Write a `.gitignore` beside the generated files naming exactly what AspireC4 writes, and one in the image directory ignoring only the export stamps. A `.gitignore` AspireC4 did not write is never touched. See [Source control](Generated-Output.md#source-control). |
+| `ExtensionsDirectory` | `"./likec4-extensions"` | A folder of hand-written `.c4` files, relative to the AppHost directory, included automatically when it exists. `null`/empty turns the convention off. See [Extending the generated model](Generated-Output.md#extending-the-generated-model). |
 | `IncludeAspireDashboardLinks` | `true` | Add links from each element to the Aspire dashboard console/structured-logs pages (requires `AutoIncludeAspireMetadata.Links`). |
 | `IncludeAspireTokenInDashboardLinks` | `false` | **Security risk** — embed the Aspire browser token in dashboard links. See below. |
 | `StateTagMap` | `{}` | Override the `aspire-run-state-*` tag applied for a given resource state; `null` suppresses the tag. |
@@ -71,7 +73,8 @@ Every property has a corresponding fluent `With*` method, for example:
 - `WithFormatGeneratedFile(bool = true)`
 - `WithAutoIncludeAspireMetadata(AspireMetadataInclusion)`
 - `WithNormaliseMetadataBehaviour(NormaliseMetadataBehaviour)`
-- `WithoutConfigFileGeneration()`
+- `WithoutConfigFileGeneration()`, `WithoutGitIgnoreFileGeneration()`
+- `WithExtensionsFolder(string)`, `WithoutExtensionsFolder()`
 - `WithAspireDashboardLinks(bool = true)`, `WithAspireTokenInDashboardLinks(bool = true)`
 - `WithDefaultStateStyles(bool = true)`, `WithStateTag(string state, string? tag)`
 - `WithUseDotIfAvailable(bool)`

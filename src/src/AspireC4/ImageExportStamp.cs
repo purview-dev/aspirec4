@@ -110,10 +110,27 @@ static partial class ImageExportStamp
 	/// Written last for the same reason the vendor stamp is: a run interrupted part-way through leaves
 	/// no stamp, so the next one re-exports rather than trusting a half-written directory.
 	/// </remarks>
-	internal static Task WriteAsync(
+	internal static Task<bool> WriteAsync(
 		string directory,
 		string diagram,
 		string stamp,
 		CancellationToken cancellationToken
-	) => File.WriteAllTextAsync(Path.Combine(directory, FileName(diagram)), stamp, cancellationToken);
+	) => GeneratedOutput.WriteIfChangedAsync(Path.Combine(directory, FileName(diagram)), stamp, cancellationToken);
+
+	/// <summary>
+	/// Makes git ignore the stamps in <paramref name="directory"/>, and nothing else.
+	/// </summary>
+	/// <remarks>
+	/// The images are the stable, reviewable part of the output and stay visible to git. The stamps are
+	/// a local cache of what they were rendered from, and one pattern covers both diagrams' stamps, so
+	/// either diagram can write it. Called before the "already current" check: a directory whose images
+	/// are up to date never re-exports, and would otherwise never get the file.
+	/// </remarks>
+	internal static Task<GitIgnoreWrite> WriteGitIgnoreAsync(string directory, CancellationToken cancellationToken) =>
+		GeneratedOutput.WriteGitIgnoreAsync(
+			directory,
+			"Stamps recording what AspireC4's exported images were rendered from. The images themselves are not ignored.",
+			[".aspirec4-*"],
+			cancellationToken
+		);
 }

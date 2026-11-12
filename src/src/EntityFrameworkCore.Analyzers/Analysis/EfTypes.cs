@@ -46,6 +46,7 @@ static class EfTypes
 		public const string ValueObject = "ValueObject";
 		public const string ComplexValueObject = "ComplexValueObject";
 		public const string Enum = "Enum";
+		public const string Union = "Union";
 	}
 
 	/// <summary>Fluent builder members the analyser interprets.</summary>

@@ -148,6 +148,21 @@ public sealed class AspireC4EfDiagramOptions
 	public bool ExportImages { get; set; } = true;
 
 	/// <summary>
+	/// When <see langword="true"/> (default), writes a <c>.gitignore</c> into <see cref="OutputDirectory"/>
+	/// listing the files this diagram generates there, and one into the image directory ignoring only the
+	/// export stamps.
+	/// </summary>
+	/// <remarks>
+	/// The diagram itself is regenerated on every run from whatever the projects were last built with,
+	/// so it is build output rather than source; the exported images are the stable, reviewable part
+	/// and stay visible to git. Only the files AspireC4 writes are listed, anchored to the directory, and
+	/// a <c>.gitignore</c> AspireC4 did not write is never touched. Files are rewritten only when their
+	/// content changes, so turning this off to commit the diagram produces a diff only when the model
+	/// really changed.
+	/// </remarks>
+	public bool GenerateGitIgnoreFile { get; set; } = true;
+
+	/// <summary>
 	/// The formats written when <see cref="ExportImages"/> is set. Defaults to both SVG and PNG.
 	/// </summary>
 	/// <remarks>
@@ -332,6 +347,19 @@ public sealed class AspireC4EfDiagramOptions
 	public AspireC4EfDiagramOptions WithoutImageExport()
 	{
 		ExportImages = false;
+
+		return this;
+	}
+
+	/// <summary>
+	/// Stops AspireC4 writing a <c>.gitignore</c> beside the generated ER diagram, for a repository that
+	/// commits it deliberately.
+	/// </summary>
+	/// <returns>This options instance, for chaining.</returns>
+	/// <seealso cref="GenerateGitIgnoreFile"/>
+	public AspireC4EfDiagramOptions WithoutGitIgnoreFileGeneration()
+	{
+		GenerateGitIgnoreFile = false;
 
 		return this;
 	}

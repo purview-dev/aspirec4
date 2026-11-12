@@ -4,8 +4,10 @@ description: >-
   Use when generating an Entity Framework Core ER diagram from an Aspire AppHost with AspireC4 -
   installing AspireC4.Hosting.EntityFrameworkCore, calling WithEntityFrameworkDiagram, how the model is
   discovered (assembly metadata, an analyzer descriptor, or the opt-in build-time dump), filtering and
-  excluding DbContexts, domain types (value objects and enums) and the DomainTypeDisplay option, the
-  renderers, exporting the diagram as SVG and PNG on startup, and the dashboard integration.
+  excluding DbContexts, domain types (Purview [Scalar] and [ValueObject] value objects, owned and JSON
+  types, enums and C# unions) and the DomainTypeDisplay option, relationships through value-object keys,
+  the renderers, exporting the diagram as SVG and PNG on startup, and the dashboard integration. Also use
+  when a value object shows as a bare primitive, or a collection or complex type appears as a table.
 metadata:
   product: AspireC4
   repository: purview-dev/aspirec4
@@ -21,16 +23,27 @@ It is **additive and optional**. `AddAspireC4()` is always the base, and `WithEn
 an extension on the `IResourceBuilder<AspireC4Resource>` it returns, so the architecture diagram is always
 present — run one diagram or both, but never the ER diagram alone.
 
-## Target frameworks
+## Requirements and target frameworks
 
-| Package | Target frameworks | Shipped as |
-| --- | --- | --- |
-| `AspireC4.Hosting.EntityFrameworkCore` | `net10.0`, `net11.0` | `lib/net10.0/` and `lib/net11.0/` libraries |
-| `AspireC4.EntityFrameworkCore` | `netstandard2.0` | analyzer-only under `analyzers/dotnet/cs/`, so it loads into any project's compiler and adds no runtime assembly |
-| `AspireC4.EntityFrameworkCore.ModelDump` | `net10.0` | build-time tool under `tools/`, invoked by MSBuild, so the building machine needs a .NET 10 runtime or later |
+| Package | Target frameworks | Shipped as | Needs |
+| --- | --- | --- | --- |
+| `AspireC4.Hosting.EntityFrameworkCore` | `net10.0`, `net11.0` | `lib/net10.0/` and `lib/net11.0/` libraries | an Aspire 13.6.5+ AppHost built with the .NET 11 SDK |
+| `AspireC4.EntityFrameworkCore` | `netstandard2.0` | analyzer-only under `analyzers/dotnet/cs/`; adds no runtime assembly | the **.NET 11 SDK** in the project it is added to |
+| `AspireC4.EntityFrameworkCore.ModelDump` | `net10.0` | build-time tool under `tools/`, invoked by MSBuild | a .NET 10 or later runtime on the build machine; it rolls forward to the latest major, so the .NET 11 SDK alone is enough |
 
 The libraries ship the lowest common supported pair: `net10.0` is the LTS and the Aspire AppHost
 framework, and `net11.0` serves a host on the current release. .NET 8 and .NET 9 are not supported.
+
+Both optional packages fail **quietly**, and the diagram just loses fidelity, so check these first when
+a context shows `Approximate` unexpectedly:
+
+- **Analyzer on an older compiler.** It runs inside the compiler and is built against Roslyn 5.9, so a
+  .NET 10 SDK reports `CS9057` and skips it. The target framework is irrelevant. No descriptor is
+  emitted, and the context falls back to the metadata read.
+- **Dump tool that could not run.** It runs as `dotnet <tool>.dll` with `RollForward=LatestMajor`, so
+  any .NET 10+ runtime works, and a `net11.0` project is loaded by the newest installed runtime. When it
+  still fails (no design-time factory, or a factory that throws), the target is `ContinueOnError`: the
+  build succeeds, no dump is written, and the ER diagram log names the missing dump.
 
 ## Packages
 
@@ -106,25 +119,56 @@ projects marked with `WithEntityFrameworkModel()`.
 ## Domain types
 
 A column's **domain type** is the type your application declares, as opposed to the type the database
-stores. Three kinds are recognised, and each is distinct:
+stores. Four kinds are recognised, and each is distinct:
 
 | Kind | What it is | Example |
 | --- | --- | --- |
-| `ValueObject` | a scalar value object: a struct wrapping a single `Value` | `AssetId` |
-| `ComplexValueObject` | a complex value object, flattened into its owner's table | `Address` |
-| `Enum` | an enum, stored as its underlying primitive | `ActorType` |
+| `ValueObject` | a scalar value object: a struct or class wrapping one value | `AssetId (guid)` |
+| `ComplexValueObject` | a complex value object, flattened into its owner's table — or one `json` column | `Address` |
+| `Enum` | an enum, stored as its underlying integral type (or `varchar` when converted to a string) | `ActorType (tinyint, enum)` |
+| `Union` | a C# union; EF stores it through a value converter | `Reading (varchar, union)` |
 
-A scalar value object becomes a column, and its foreign keys carry the relationships between entities.
-A complex value object, marked `[ValueObject(EFMapping = ComplexType)]`, is flattened into its owner's
-table. An enum is shown as itself and marked `enum`.
+How each is recognised — the same rules in all three sources:
 
+- **Scalar value object:** Purview's `[Scalar<T>]`, `[Scalar(typeof(T))]` or `[Scalar("Amount")]` (the
+  wrapped type comes from the attribute, or from the named property), `IScalarValueObject<TSelf, TValue>`,
+  or a non-generic struct with a public `Value` not typed `object`. `Nullable<T>` keeps the type. The
+  attributes are what the analyzer needs: Purview's generator writes `Value` into a file no other
+  generator can see.
+- **Complex value object, flattened:** Purview's `[ValueObject]` — its `EFMapping` **defaults to
+  `ComplexType`**, so a bare attribute is enough — EF's `[ComplexType]`, or an `[Owned]` reference. Columns
+  are `{Property}_{Member}`, each recording the property it came from, so the viewer folds them under it
+  even when a member is itself a value object or an enum.
+- **One `json` column:** `[ValueObject(EFMapping = Json)]`, a complex collection, or a collection of
+  primitives, value objects or enums (`List<AssetId>` shows as `AssetId[]`). None of these is a table.
+- **Union:** declared with `union`, or a struct marked `[Union]` / implementing `IUnion`. Checked before
+  the value-object rules, because a union's `Value` accessor has their shape.
+- `OwnsMany`, or an `[Owned]` type in a collection, is a table of its own with a foreign key to its owner.
+
+Fluent configuration — `ComplexProperty`, `OwnsOne`, `OwnsMany`, `ToJson`, `HasConversion`,
+`HasOne(...).HasForeignKey(...)` — is a method call the analyzer and the metadata reader do not
+interpret; only the **model dump** sees it. Prefer the attribute when the static sources matter.
+
+### Relationships through value objects
+
+A foreign key typed with a value object resolves like any other, from **either end**: a reference
+navigation on the dependent (`[ForeignKey]`, `{Navigation}Id`, `{Principal}Id`), or only a collection on
+the principal, where EF's naming finds the key — and when the dependent declares none, EF's **shadow
+foreign key** column is shown. A single-column foreign key into a composite key pairs with the key
+column of its own type. Collections on both sides are a many-to-many through EF's own join table.
+
+When a context shows `Approximate`, or a value object shows as a bare primitive, check:
+
+1. Is the value object declared with a Purview attribute, or a `Value` member in source? A
+   hand-rolled wrapper with neither is invisible to the analyzer.
+2. Is the complex type configured only fluently? Mark it, or add the model dump.
 The database type is always kept; `DomainTypeDisplay` chooses which is the headline:
 
 | `DomainTypeDisplay` | Renders |
 | --- | --- |
 | `DomainTypeFirst` *(default)* | `AssetId (guid)`, `ActorType (int, enum)` |
 | `DatabaseFirst` | `guid (AssetId)`, `int (ActorType, enum)` |
-| `DomainTypeOnly` | `AssetId`, `ActorType (enum)` — the database type moves to the annotation slot |
+| `DomainTypeOnly` | `AssetId`, `ActorType (enum)` — the database type moves to the annotation slot (a Mermaid comment, a DBML note, the viewer's tooltip); **d2 has no such slot**, so its tables show the domain type alone |
 | `DatabaseOnly` | `guid`, `int (enum)` |
 
 ```csharp
@@ -151,7 +195,8 @@ Options bind from the **`AspireC4:EntityFramework`** section, applied on top of 
 | `ShowNullability` | `true` | render nullable columns with a trailing `?` |
 | `GroupBySchema` | `true` | group tables into containers by database schema |
 | `GroupByContext` | `true` | group by `DbContext` when more than one is discovered |
-| `DomainTypeDisplay` | `DomainTypeFirst` | how a column shows its domain type (a value object or an enum) beside the database type |
+| `DomainTypeDisplay` | `DomainTypeFirst` | how a column shows its domain type (a value object, an enum or a union) beside the database type |
+| `GenerateGitIgnoreFile` | `true` | write a `.gitignore` naming the generated files; `WithoutGitIgnoreFileGeneration()` turns it off |
 | `ContainerImageTag` | `null` | pin the `d2lang/d2` image tag |
 | `UseViewerServer` | `true` | serve the viewer so the dashboard can link to it; `false` where there is no container runtime |
 | `ViewerServerImageTag` | `null` | pin the viewer `nginx` image tag |

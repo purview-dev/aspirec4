@@ -113,7 +113,7 @@ CSharpier runs automatically on every `git commit` via Lefthook. **Do not pin a 
 
 | Hook | What it does |
 |---|---|
-| `pre-commit` | Runs `just ts-validate` (the Aspire version in `global.json` against the TypeScript sample) and `just lint-check` (CSharpier over the repo root). Rejects the commit on either failure. |
+| `pre-commit` | Runs `just ts-validate` (the Aspire version in `global.json` against the TypeScript sample) `just lint-check` (CSharpier over the repo root) and `just ts-lint` (oxfmt over `apphost.mts`). Rejects the commit on any failure. |
 | `commit-msg` | Runs `commitlint` to enforce conventional commit format. |
 
 Lefthook installs when you run `just init`. To verify it is active:
@@ -144,7 +144,7 @@ Commit messages must follow [Conventional Commits](https://www.conventionalcommi
 <optional footer>
 ```
 
-**Allowed types:** `feat`, `fix`, `refactor`, `perf`, `test`, `docs`, `ci`, `build`, `chore`, `style`, `revert`.
+**Allowed types:** `feat`, `fix`, `refactor`, `perf`, `test`, `docs`, `ci`, `build`, `chore`, `style`, `revert`, `qol`.
 
 **Rules:**
 
@@ -175,6 +175,10 @@ The C# 15 language version lives in `src/Directory.Build.props`; the SDK is pinn
 Never set `TargetFramework`/`TargetFrameworks` in the directory-level props file — the SDK reads a
 project's TFM from the project file text, and a directory-level value shadows its list, which breaks
 `pack`. See [Toolchain and support matrix](Toolchain.md) before changing any of it.
+
+Two versions in `Directory.Packages.props` are floors every consumer inherits: `AspireVersion` is the
+Aspire minimum, and `RoslynCompilerVersion` is why consumers must build with the .NET 11 SDK. Raising
+either is a breaking change, and [Requirements](Requirements.md) is updated in the same commit.
 
 ```csharp
 [Test]

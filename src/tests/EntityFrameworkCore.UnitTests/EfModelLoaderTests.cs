@@ -54,7 +54,64 @@ public sealed class EfModelLoaderTests
 		File.SetLastWriteTimeUtc(destination, writtenUtc);
 	}
 
+	/// <summary>
+	/// A descriptor from a newer analyzer than this AppHost: one column carries a domain kind this
+	/// version has never heard of, and one carries the complex-owner fields.
+	/// </summary>
+	const string NewerDescriptor = /*lang=json,strict*/
+		"""
+		{"schemaVersion":1,"contexts":[{"name":"AppDbContext","typeName":"Sample.AppDbContext","tables":[
+		{"name":"Assets","clrTypeName":"Sample.Asset","columns":[
+		{"name":"Id","storeType":"guid","domainTypeName":"AssetId","domainTypeKind":"ValueObject","isPrimaryKey":true},
+		{"name":"Shape","storeType":"json","domainTypeName":"Shape","domainTypeKind":"SomeFutureKind"},
+		{"name":"Location_City","storeType":"varchar","domainTypeName":"Address","domainTypeKind":"ComplexValueObject",
+		"complexPropertyName":"Location","complexTypeName":"Address"}],
+		"foreignKeys":[]}]}]}
+		""";
+
 	// Tests
+
+	[Test]
+	public async Task Parse_DescriptorWithAnUnknownDomainKind_KeepsTheModelAndDropsOnlyTheKind()
+	{
+		// A strict enum converter threw on the unfamiliar kind, and a parse failure empties the whole model,
+		// so one column from a newer analyzer would have blanked the diagram.
+		// Act
+		var model = EfModelLoader.Parse(NewerDescriptor);
+
+		// Assert
+		var columns = model.Contexts.Single().Tables.Single().Columns;
+		await Assert.That(columns.Count).IsEqualTo(3);
+		await Assert.That(columns.Single(c => c.Name == "Shape").DomainTypeKind).IsNull();
+		await Assert.That(columns.Single(c => c.Name == "Shape").DomainTypeName).IsEqualTo("Shape");
+		await Assert.That(columns.Single(c => c.Name == "Id").DomainTypeKind).IsEqualTo(EfDomainTypeKind.ValueObject);
+	}
+
+	[Test]
+	public async Task Parse_FlattenedComplexMember_ReadsItsOwner()
+	{
+		// Act
+		var model = EfModelLoader.Parse(NewerDescriptor);
+
+		// Assert
+		var city = model.Contexts.Single().Tables.Single().Columns.Single(c => c.Name == "Location_City");
+		await Assert.That(city.ComplexPropertyName).IsEqualTo("Location");
+		await Assert.That(city.ComplexTypeName).IsEqualTo("Address");
+	}
+
+	[Test]
+	public async Task Serialise_DomainKind_RoundTripsByName()
+	{
+		// Arrange
+		var model = EfModelLoader.Parse(NewerDescriptor);
+
+		// Act
+		var json = ErdOutput.Serialise(model);
+
+		// Assert
+		await Assert.That(json).Contains("\"domainTypeKind\": \"ValueObject\"");
+		await Assert.That(EfModelLoader.Parse(json).Contexts.Single().Tables.Single().Columns.Count).IsEqualTo(3);
+	}
 
 	[Test]
 	public async Task Parse_GeneratorDescriptor_ReadsContextMetadata()

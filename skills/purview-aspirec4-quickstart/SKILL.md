@@ -17,10 +17,13 @@ it beside your application.
 
 ## Prerequisites
 
-- .NET 10 or .NET 11. `AspireC4.Hosting` ships `net10.0` and `net11.0` assets; an AppHost targeting
-  `net10.0` (the Aspire AppHost framework) resolves the `net10.0` one. .NET 8 and .NET 9 are not
-  supported.
-- **Aspire 13.5.3 or later.** An AppHost project must reference both the AppHost SDK and
+- **The .NET 11 SDK** to build. AspireC4's source generator runs inside the compiler and is built
+  against Roslyn 5.9; an older SDK reports `CS9057` and silently skips it. See
+  `purview-aspirec4-validation` for what that breaks.
+- A `net10.0` or `net11.0` AppHost. `AspireC4.Hosting` ships both assets, so the SDK requirement does
+  not force the AppHost onto .NET 11. .NET 8 and .NET 9 are not supported.
+- **Aspire 13.6.5 or later.** `AspireC4.Hosting` depends on `Aspire.Hosting` 13.6.5, so NuGet
+  resolves no older Aspire. An AppHost project must reference both the AppHost SDK and
   `Aspire.Hosting.AppHost`.
 - **Docker**, to run the LikeC4 sidecar container — or a local Node CLI runtime if you use
   `.WithLocalCLI()`.
@@ -31,7 +34,7 @@ dotnet add package Aspire.Hosting.AppHost
 ```
 
 ```xml
-<Project Sdk="Aspire.AppHost.Sdk/13.5.3">
+<Project Sdk="Aspire.AppHost.Sdk/13.6.5">
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.AppHost" />
     <PackageReference Include="AspireC4.Hosting" />

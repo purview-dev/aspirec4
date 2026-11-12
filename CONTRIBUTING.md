@@ -159,7 +159,7 @@ CSharpier runs automatically on every `git commit` via Lefthook. Commits with fo
 
 | Hook | What it does |
 |---|---|
-| `pre-commit` | Runs `just ts-validate` (the Aspire version in `global.json` against the TypeScript sample) and `just lint-check` (CSharpier over the repo root). Rejects the commit on either failure. |
+| `pre-commit` | Runs `just ts-validate` (the Aspire version in `global.json` against the TypeScript sample) `just lint-check` (CSharpier over the repo root) and `just ts-lint` (oxfmt over `apphost.mts`). Rejects the commit on any failure. |
 | `commit-msg` | Runs `commitlint` to enforce [conventional commit](#commit-messages) format. |
 
 Lefthook installs when you run `just init`. To verify it is active:
@@ -207,6 +207,7 @@ Commit messages must follow [Conventional Commits](https://www.conventionalcommi
 | `chore` | Maintenance, tooling, dependency updates |
 | `style` | Formatting, whitespace (code not logic) |
 | `revert` | Reverting a previous commit |
+| `qol` | Quality-of-life improvement to the developer experience |
 
 **Rules:**
 
@@ -291,6 +292,10 @@ from the project file text and a directory-level value shadows its list, which b
 and .NET 9 are not supported, and package versions stay in the `10.0.x` servicing band to match the
 lowest target framework. See [Toolchain and support matrix](docs/wiki/Toolchain.md) before changing any
 of it.
+
+Two versions in `Directory.Packages.props` are floors every consumer inherits: `AspireVersion` is the
+Aspire minimum, and `RoslynCompilerVersion` is why consumers must build with the .NET 11 SDK. Raising
+either is a breaking change, and [Requirements](docs/wiki/Requirements.md) is updated in the same commit.
 
 Integration tests require Docker to be running. They pull `ghcr.io/likec4/likec4` on first run.
 

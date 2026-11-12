@@ -3,7 +3,7 @@
 		<NamespacePrefix>Aspire.Hosting.AspireC4</NamespacePrefix>
 
 		<!--
-			Purview.BuildSdk 2.0.0 owns the target-framework decision: its default set is
+			Purview.BuildSdk 2.0.1 owns the target-framework decision: its default set is
 			net10.0;net11.0, the two releases still in support. Do not set TargetFramework or
 			TargetFrameworks here. The SDK reads a project's TFM from the project file text (an
 			evaluation-stable check), so a value set here after the import only shadows the SDK's
@@ -27,13 +27,6 @@
 			src/src/EntityFrameworkCore/Polyfills/CompilerServices.cs.
 		-->
 		<LangVersion>15.0</LangVersion>
-		<!--
-			The SDK opts a net11.0 target into the C# 15 updated-memory-safety rules. That feature is
-			still preview-only, and compiling it forces LangVersion=preview, which would let preview
-			syntax into every project. There is no unsafe code in this repository, so the rules buy
-			nothing; take the GA language version and leave the tier off until it is GA too.
-		-->
-		<MemorySafetyRules>0</MemorySafetyRules>
 		<NoWarn>$(NoWarn);ASPIREATS001</NoWarn>
 		<ExcludeMSTelemetryExtension>true</ExcludeMSTelemetryExtension>
 		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>

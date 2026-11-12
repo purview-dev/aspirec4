@@ -30,20 +30,18 @@
 		],
 		// RequireExplicitContent defaults to true, so this is the exhaustive declaration of what each
 		// package ships: a package with no rule here, or an entry matching none of its globs, fails
-		// validation. The lib/ paths are literal because the two libraries multi-target net10.0 and
-		// net11.0 (Purview.BuildSdk's default set); update them alongside the sets in that SDK, not
-		// from a per-project TFM. $(TFM) is deliberately not used: AspireC4.Hosting ships a TFM-less
-		// build/ folder, so the token expands to include "any" and the rule could never be met.
+		// validation. $(TFM) expands to every target framework the package ships, so the lib/ rules
+		// follow Purview.BuildSdk's set (net10.0;net11.0 today) with nothing to edit when it changes.
 		"RequiredContent": {
-			// The Aspire integration: the library, the registry/DSL source generator that ships beside
-			// it, and the props file that wires the generator up in a consuming AppHost.
+			// The Aspire integration: the library, the registry/DSL source generator, and the props
+			// file that wires the generator up in a consuming AppHost. The generator is not a package
+			// of its own: AspireC4.csproj references src/src/SourceGenerators as an analyzer, and pack
+			// places it under analyzers/dotnet/cs/ automatically. This rule is what proves it shipped.
 			"aspirec4.hosting": [
 				"analyzers/dotnet/cs/Aspire.Hosting.AspireC4.SourceGenerators.dll",
 				"build/AspireC4.Hosting.props",
-				"lib/net10.0/Aspire.Hosting.AspireC4.dll",
-				"lib/net10.0/Aspire.Hosting.AspireC4.xml",
-				"lib/net11.0/Aspire.Hosting.AspireC4.dll",
-				"lib/net11.0/Aspire.Hosting.AspireC4.xml",
+				"lib/$(TFM)/Aspire.Hosting.AspireC4.dll",
+				"lib/$(TFM)/Aspire.Hosting.AspireC4.xml",
 				"likec4-logo.png",
 				"README.md"
 			],
@@ -51,10 +49,8 @@
 			// the separate analyzer-only AspireC4.EntityFrameworkCore package below, and the opt-in
 			// build-time dump as AspireC4.EntityFrameworkCore.ModelDump.
 			"aspirec4.hosting.entityframeworkcore": [
-				"lib/net10.0/Aspire.Hosting.AspireC4.EntityFrameworkCore.dll",
-				"lib/net10.0/Aspire.Hosting.AspireC4.EntityFrameworkCore.xml",
-				"lib/net11.0/Aspire.Hosting.AspireC4.EntityFrameworkCore.dll",
-				"lib/net11.0/Aspire.Hosting.AspireC4.EntityFrameworkCore.xml",
+				"lib/$(TFM)/Aspire.Hosting.AspireC4.EntityFrameworkCore.dll",
+				"lib/$(TFM)/Aspire.Hosting.AspireC4.EntityFrameworkCore.xml",
 				"likec4-logo.png",
 				"README.md"
 			],

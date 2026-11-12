@@ -4,7 +4,7 @@ description: >-
   Use when reasoning about a Purview.Containers container's lifecycle or readiness - StartAsync,
   StopAsync and DisposeAsync semantics, cleanup guarantees and why there is no restart, the Wait
   strategy family and started-versus-ready, and WSL Containers networking, port mapping and the
-  absence of inter-container DNS.
+  default-bridge DNS limitations and managed network aliases.
 metadata:
   product: Purview.Containers
   repository: purview-dev/containers
@@ -19,47 +19,69 @@ public interface IContainer : IAsyncDisposable
 {
     Task StartAsync(CancellationToken ct = default);
     Task StopAsync(CancellationToken ct = default);
+    Task DeleteAsync(CancellationToken ct = default);
+    Task<long> WaitForExitAsync(CancellationToken ct = default);
     ValueTask DisposeAsync();
     // restart is intentionally NOT offered
 }
 ```
 
-**There is no `RestartAsync`.** WSLC has no restart operation, and stop-then-start is not equivalent,
-so offering one would be a method that quietly means something different per backend.
+**There is no `RestartAsync` in the shared contract.** Do not infer native runtime capabilities from
+that API choice.
 
 WSLC's `ContainerState` runs `Invalid → Created → Running → Exited → Deleted`.
 
 | Operation | Behaviour |
 | --- | --- |
 | `StartAsync` | creates the session if needed, ensures the image per the pull policy, creates the container, starts it, then waits. A missing init binary throws `ArgumentException 0x80070057` with the OCI message, surfaced as `WslContainerStartupException`. |
-| `StopAsync` | `Stop(SIGTERM, grace)`, then `Stop(SIGKILL, …)` if still running. **Idempotent** — WSLC accepts stopping an already-stopped container. |
+| `StopAsync` | Signal init with SIGTERM, poll up to 10 seconds, then SIGKILL and up to 5 seconds more, bounded by `StopTimeout`. Cancellation propagates; no blocking native `Container.Stop`. |
 | `DeleteAsync` | `Delete(Force)`. A double delete throws `0x80010108` (`RPC_E_DISCONNECTED`) and is swallowed. |
-| `DisposeAsync` | stop if running → delete → release the WinRT object. **Idempotent.** |
+| `DisposeAsync` | normally stop, delete and release handles; reusable containers are retained. **Idempotent.** |
 
 ## Cleanup guarantees
 
 These are the ones that matter when a test throws:
 
-- `DisposeAsync` runs in a `finally` by callers, **and** the container object is registered for
-  cleanup by the runtime, so disposal happens even if a test throws after `StartAsync`.
+- Use `await using` so failures run `DisposeAsync`. The process-exit hook owns session cleanup,
+  not a per-container disposal registry.
+- `EnableCleanUp` defaults to **`true`** (Testcontainers' `WithCleanUp`): `DisposeAsync` stops and
+  deletes the container; Docker also removes its anonymous volumes. Named `WithVolumeMount` volumes
+  are shared data and survive (WSLC volumes live on the session). `.WithCleanUp(false)` stops the
+  container and keeps it — and its volumes — for inspection; remove it with `DeleteAsync` before
+  disposal, or with the backend's own tooling.
 - `EnableAutoRemove` defaults to **`false`**: the library owns deletion. WSLC auto-removal would
   delete a one-shot container before its state or output could be inspected — precisely when you need
-  them. Opt in with `.WithAutoRemove()`.
+  them. Opt in with `.WithAutoRemove()`. It is independent of cleanup and wins when the init process
+  exits.
+- `WithReuse()` implies cleanup off, and `WithReuse().WithCleanUp(true)` is rejected at build time.
+- Named volumes are **retained by default**, matching Docker. Set
+  `ContainerCleanup.CleanUpVolumesOnExit = true`, or `PURVIEW_CONTAINERS_CLEAN_VOLUMES=true` before the
+  first container is created, to delete the volumes the active backend created when the process exits or
+  its session terminates. `ContainerBackends.CleanUpAsync()` / `IContainerBackend.CleanUpAsync()` does it
+  explicitly; pre-existing volumes, the shared image store and host bind mounts are never touched. On WSLC,
+  `WslContainerRuntimeOptions.CleanUpVolumesOnTerminate` overrides the shared switch.
 - A **partial startup failure** — image pull, create, start or wait — tears down through the same
   `DisposeAsync` path. So does a **cancelled** `StartAsync` or wait.
-- A **container crash** fires `InitProcess.Exited`; the container is then `Exited` and `DisposeAsync`
-  deletes it.
+- Builder-produced containers serialize lifecycle operations; disposal cancels an in-flight startup
+  before waiting for cleanup. A failed-start wrapper is terminal: build a new one to retry.
+- A **container crash** is observable through live state/exit-code reads, even if an exit event is
+  missed; normal disposal deletes it.
 - A **session crash** marks the runtime session dead, and subsequent operations throw
   `WslContainerSessionTerminatedException` rather than failing obscurely.
 - **Test-process termination** disposes the shared session through a process-exit hook, freeing the
-  name. A *crashed* process leaves an orphaned session that only reserves its name; sweep it with
-  `wslc --session <name> system session terminate`.
+  name. A *crashed* process leaves an orphaned session; the runtime sweeps `purview-*` (and legacy
+  `wslc-*`) sessions whose creator PID is gone before the next session starts, deletes their
+  per-session storage directories, removes stale containers whose generated name embeds a dead PID and
+  prunes unused anonymous volumes. `WslContainerRuntime.SweepOrphanedSessionsAsync()` does the session
+  sweep explicitly; `CleanUpAsync()` also removes container residue.
 
 ## Secrets and names
 
 Container names are generated uniquely as `{service}-{processId}-{random8}` and **never contain
-credentials**; session names are `wslc-{pid}-{random8}`. Diagnostics redact secrets through a
+credentials**; session names are `purview-{pid}-{random8}`. Diagnostics redact secrets through a
 `Secret` wrapper whose `ToString()` returns `<redacted>`.
+Application output can contain secrets; do not assume log snapshots or timeout diagnostics are safe
+to publish. CLI failures omit raw command/build output.
 
 ## Wait strategies
 
@@ -92,10 +114,10 @@ Details worth knowing:
 
 - Waits run **inside** `StartAsync()`, after the container starts. `StartAsync` only returns when
   every strategy is ready, or throws `ContainerTimeoutException`.
-- The default timeout is the container's `StartupTimeout` — 5 minutes, overridable with
-  `.WithStartupTimeout(…)` or per-strategy.
-- A timeout diagnostic includes the container name, image, state, mapped ports, the strategy type,
-  the last check error, and a bounded, secret-redacted tail of stdout/stderr.
+- `StartupTimeout` is a five-minute total managed budget for backend resolution, image, creation,
+  start and readiness. A strategy may shorten that budget, never extend it.
+- A timeout diagnostic includes the container name, image, state, mapped ports, strategy and a bounded
+  log tail. Application logs can contain secrets; do not print them indiscriminately.
 - The container buffers output from process start, so a log message emitted **before** the waiter's
   first check still matches.
 - HTTP TLS validation is **on** by default. `AllowInsecureTls()` disables it for that request handler
@@ -122,11 +144,11 @@ Verified WSLC behaviour, and the parts that surprise people:
   Npgsql and StackExchange.Redis fall back to IPv4; `Microsoft.Data.SqlClient` **hangs** without
   falling back.
 - Containers in the same session **can** reach each other by IP under `Bridged`.
-- There is **no name or DNS resolution between containers**. `http://<hostname>:8080/` and
+- On the **default bridge** there is no name/DNS resolution between containers. `http://<hostname>:8080/` and
   `http://<container-name>:8080/` fail with "bad address"; `/etc/hosts` holds only localhost and the
   container's own `IP <short-id>`.
-- There are **no managed network objects** — `Microsoft.WSL.Containers` has no `network
-  create/connect`, unlike the CLI.
+- Use `IContainerBackend.CreateNetworkAsync` and `WithNetwork`/`WithNetworkAliases` for managed
+  networks with alias DNS on both backends. WSLC uses the managed SDK network API in the SDK-owned session.
 
 How the library models it: `GetMappedPublicPort(containerPort)` reads
 `Inspect().Ports["<port>/tcp"][0].HostPort`; `IContainer.NetworkIp` is the bridge IP after start
@@ -134,14 +156,26 @@ How the library models it: `GetMappedPublicPort(containerPort)` reads
 `IpAddress`; `null` before start or without a network); TCP and HTTP waits connect to
 `127.0.0.1:<hostPort>`.
 
-**What not to model.** Do not invent Docker-style `Network` objects — the semantics are just "bridged
-with IPs". Do not claim container-name resolution works; it does not. Containers are wired
-together by passing a dependency's `NetworkIp` into configuration or environment: a module that owns a
-dependency starts it first and injects the address from `ContainerBase.ConfigureForStart` (the Azure
-Service Bus Emulator does this with its SQL Server sidecar). A general multi-container environment
-builder is still deferred.
+Built-in modules can still wire dependencies by `NetworkIp` through `ConfigureForStart`. Managed
+networks add explicit alias DNS; they do not automatically add `ConnectionMode.Container` providers.
+Dispose attached containers before the owned network.
+
+## Cancellation, exit waits and reuse
+
+Defaults are one minute for exec/exit waits and copy/read/log snapshots, 15 seconds for stop and
+30 seconds for cleanup. Use `WithExecTimeout`, `WithStopTimeout`, `WithCleanupTimeout` and
+`WithOperationTimeout` to override. `ExecOptions.Timeout` overrides one exec call.
+Cancellation/operation deadlines throw `OperationCanceledException`, never a successful exec result.
+Readiness exhaustion throws `ContainerTimeoutException`. Live log tails need a caller token.
+
+Native synchronous WSLC calls cannot be interrupted safely. Managed waits and CLI processes are
+bounded, but do not claim hard zero-hang guarantees for a blocked native runtime.
+`Wait.ForExitCode(expected)` handles one-shot jobs; `WaitForExitAsync(ct)` returns the actual code.
+`WithName(...).WithReuse()` retains a named container on disposal, with cleanup implied off; `DeleteAsync(ct)` explicitly removes
+it. WSLC reuse ends with the owning session; Docker follows Testcontainers reuse semantics.
 
 ## Related skills
 
 `purview-containers-quickstart` for packages, backends and connection strings;
-`purview-containers-testing` for how a suite is organised and why it runs serially.
+`purview-containers-testing` for how a suite is organised and why it runs serially;
+`purview-containers-capabilities` for networks, files, builds and the SDK/CLI boundary.

@@ -2,6 +2,12 @@
 
 Configuration topics beyond the core options in [Configuration](Configuration.md).
 
+> [!TIP]
+> For hand-written LikeC4 files beside the AppHost you usually need neither method below: a
+> `likec4-extensions/` folder there is included automatically. See
+> [Extending the generated model](Generated-Output.md#extending-the-generated-model). Use these for files
+> kept somewhere else, such as a shared folder of the repository.
+
 ## Additional DSL files
 
 Copy extra user-managed `.c4` files into the output directory (and sync them to the Docker volume in container mode). LikeC4 discovers all `.c4` files in the project directory, so they are included in the diagram without further configuration:

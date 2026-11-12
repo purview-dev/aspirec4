@@ -32,9 +32,16 @@ sealed class ColumnShape
 	public string? DomainTypeName { get; set; }
 
 	/// <summary>
-	/// Which kind of domain type it is: <c>ValueObject</c>, <c>ComplexValueObject</c> or <c>Enum</c>.
+	/// Which kind of domain type it is: <c>ValueObject</c>, <c>ComplexValueObject</c>, <c>Enum</c> or
+	/// <c>Union</c>.
 	/// </summary>
 	public string? DomainTypeKind { get; set; }
+
+	/// <summary>For a member flattened out of a complex value object, the owning entity property.</summary>
+	public string? ComplexPropertyName { get; set; }
+
+	/// <summary>The complex value object type <see cref="ComplexPropertyName"/> holds.</summary>
+	public string? ComplexTypeName { get; set; }
 
 	public bool IsNullable { get; set; }
 

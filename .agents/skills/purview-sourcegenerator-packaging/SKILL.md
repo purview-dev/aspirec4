@@ -76,10 +76,14 @@ identity. Both are `IsRoslynComponent`; only the generator references the framew
 - The referenced component is returned as **its own merged assembly** and is never IL-merged into the
   dependent one — that would duplicate its types, including `InternalsVisibleTo`-visible internals,
   inside a second analyzer in the same host.
-- The framework assembly is declared as copy-to-output content beside the generator's `bin`, and
-  content with `CopyToOutputDirectory` flows transitively through `ProjectReference`. That is what
-  lets Visual Studio load the dependent code-fix provider from its own `bin` without a
-  `FileNotFoundException` for the framework assembly.
+- The framework assembly is copied beside the generator's `bin` (a plain copy, not copy-to-output
+  content). A dependent component that references the generator as an assembly gets it copied
+  beside its own `bin` by ordinary assembly-reference resolution, which is what lets Visual Studio
+  load the dependent code-fix provider without a `FileNotFoundException` for the framework assembly.
+- A project that references a component only as an analyzer (`ReferenceOutputAssembly="false"`)
+  never receives the framework assembly, and neither does any application downstream of it. Since
+  1.2.2 it no longer leaks into app build output, `deps.json`, publish output, single-file bundles or
+  Blazor WebAssembly `_framework`, where it broke Native AOT and WebAssembly AOT publishing.
 - Visual Studio's project system resolves an `OutputItemType=Analyzer` project reference to the
   referenced project's **unmerged** `bin` assembly and adds it to the compiler's analyzers — the
   command-line build does not. `Purview.BuildSdk` removes that item before adding the resolved
@@ -181,10 +185,12 @@ marker is the preferred configuration.
 | 4.8 | VS 2022 17.8 | C# 12 / .NET 8 |
 | 4.12 | VS 2022 17.12 | C# 13 / .NET 9 |
 | 5.0 | VS 2026 18.0 | C# 14 / .NET 10 |
+| 5.12 | VS 2026 18.x | C# 15 / .NET 11 |
 
-**This framework is built against Roslyn 5.0**, so a host loading it must be Roslyn 5.0 or later
-(.NET 10 SDK / Visual Studio 2026 18.0). The testing packages multi-target `net8.0`–`net10.0`, and
-Roslyn 5.x ships `net8.0`/`net9.0` assets, so those test targets still load the runner.
+**This framework is built against Roslyn 5.9**, so a host loading it must ship Roslyn 5.9 or later
+(.NET 11 SDK / Visual Studio 2026). The .NET 11 SDK ships Roslyn 5.12. The testing packages
+multi-target `netstandard2.0`, `net10.0`, and `net11.0`, and Roslyn 5.9 ships `net10.0`/
+`netstandard2.0` assets, so both test targets load the runner.
 
 ## A generator project to start from
 

@@ -168,10 +168,20 @@ const columnBadges = (col) => {
 
 const isEnumColumn = (col) => col.domainTypeKind === "Enum";
 
+/** The word shown beside a type that does not say what it is: an enum's, or a union's. */
+const markerOf = (col) => (isEnumColumn(col) ? "enum" : col.domainTypeKind === "Union" ? "union" : null);
+
 const COMPLEX_KIND = "ComplexValueObject";
 
-/** The property a flattened complex member belongs to: the segment before the first underscore. */
-const complexOwner = (col) => col.name.split("_")[0];
+/**
+ * The property a flattened complex member belongs to. Recorded in the model as complexPropertyName;
+ * a model written before that field existed falls back to the segment before the first underscore,
+ * which a renamed member or an underscored property name defeats.
+ */
+const complexOwner = (col) => col.complexPropertyName ?? col.name.split("_")[0];
+
+/** Whether a column was flattened out of a complex value object. */
+const isComplexMember = (col) => !!col.complexPropertyName || col.domainTypeKind === COMPLEX_KIND;
 
 /**
  * Folds a table's flattened complex value-object columns under the property that owns them.
@@ -186,14 +196,14 @@ const complexOwner = (col) => col.name.split("_")[0];
  */
 function rowPlan(table) {
 	const columns = table.columns ?? [];
-	const owners = new Set(columns.filter((c) => c.domainTypeKind === COMPLEX_KIND).map(complexOwner));
+	const owners = new Set(columns.filter(isComplexMember).map(complexOwner));
 	const rows = [];
 	const groups = new Map();
 
 	for (const col of columns) {
 		const owner = complexOwner(col);
 
-		if (!col.name.includes("_") || !owners.has(owner)) {
+		if (!owners.has(owner) || (!col.complexPropertyName && !col.name.includes("_"))) {
 			rows.push({ kind: "column", key: col.name, col });
 
 			continue;
@@ -212,7 +222,9 @@ function rowPlan(table) {
 		// so the shallowest member is the one that reports the property's own type.
 		const shallow = !col.name.slice(owner.length + 1).includes("_");
 
-		if (group.typeName === null && col.domainTypeKind === COMPLEX_KIND && shallow) {
+		if (group.typeName === null && col.complexTypeName) {
+			group.typeName = col.complexTypeName;
+		} else if (group.typeName === null && col.domainTypeKind === COMPLEX_KIND && shallow) {
 			group.typeName = col.domainTypeName;
 		}
 
@@ -227,11 +239,14 @@ function rowPlan(table) {
 }
 
 /** Whether any table flattens a complex value object, and so has anything to expand. */
-const hasComplexColumns = (tables) =>
-	tables.some((t) => (t.columns ?? []).some((c) => c.domainTypeKind === COMPLEX_KIND));
+const hasComplexColumns = (tables) => tables.some((t) => (t.columns ?? []).some(isComplexMember));
 
-/** The member name shown inside its group, with the owning property's prefix removed. */
-const memberName = (group, col) => col.name.slice(group.name.length + 1);
+/**
+ * The member name shown inside its group, with the owning property's prefix removed. A member renamed
+ * with HasColumnName does not carry the prefix, and is shown as it is.
+ */
+const memberName = (group, col) =>
+	col.name.startsWith(`${group.name}_`) ? col.name.slice(group.name.length + 1) : col.name;
 
 /** A group row's type cell: the value object, and when it is closed what it is holding. */
 const groupType = (group, open) => (open ? group.typeName : `${group.typeName} (${group.columns.length})`);
@@ -262,12 +277,12 @@ const bothShown = () =>
 const columnAnnotation = (col) => {
 	if (!col.domainTypeName) return null;
 
-	const marker = isEnumColumn(col);
+	const marker = markerOf(col);
 	let db = col.storeType ?? "";
 	if (col.maxLength > 0 && !db.includes("(")) db += `(${col.maxLength})`;
 
-	if (DOMAIN_TYPE_DISPLAY === "DomainTypeFirst") return marker ? `${db}, enum` : db;
-	if (DOMAIN_TYPE_DISPLAY === "DatabaseFirst") return marker ? `${col.domainTypeName}, enum` : col.domainTypeName;
+	if (DOMAIN_TYPE_DISPLAY === "DomainTypeFirst") return marker ? `${db}, ${marker}` : db;
+	if (DOMAIN_TYPE_DISPLAY === "DatabaseFirst") return marker ? `${col.domainTypeName}, ${marker}` : col.domainTypeName;
 	if (DOMAIN_TYPE_DISPLAY === "DomainTypeOnly") return db;
 	return null;
 };
@@ -284,7 +299,8 @@ const columnType = (col) => {
 	if (bothShown() && col.domainTypeName) {
 		parts.push(DOMAIN_TYPE_DISPLAY === "DatabaseFirst" ? col.domainTypeName : db);
 	}
-	if (isEnumColumn(col)) parts.push("enum");
+	const marker = markerOf(col);
+	if (marker) parts.push(marker);
 
 	let t = parts.length === 0 ? primary : `${primary} (${parts.join(", ")})`;
 	if (col.isNullable && !col.isPrimaryKey) t += "?";

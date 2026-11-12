@@ -261,6 +261,46 @@ public static class AspireC4DiagramOptionsExtensions
 		return options;
 	}
 
+	/// <summary>
+	/// Stops AspireC4 writing a <c>.gitignore</c> beside its generated files, for a repository that
+	/// commits the generated model deliberately.
+	/// </summary>
+	/// <seealso cref="AspireC4DiagramOptions.GenerateGitIgnoreFile"/>
+	[AspireExport]
+	public static AspireC4DiagramOptions WithoutGitIgnoreFileGeneration([NotNull] this AspireC4DiagramOptions options)
+	{
+		options.GenerateGitIgnoreFile = false;
+		return options;
+	}
+
+	/// <summary>
+	/// Sets the folder of hand-written <c>.c4</c> files that is included in the diagram automatically
+	/// when it exists, in place of the default <c>./likec4-extensions</c>.
+	/// </summary>
+	/// <param name="options"></param>
+	/// <param name="folderPath">A path relative to the AppHost directory, or an absolute path.</param>
+	/// <seealso cref="AspireC4DiagramOptions.ExtensionsDirectory"/>
+	[AspireExport]
+	public static AspireC4DiagramOptions WithExtensionsFolder(
+		[NotNull] this AspireC4DiagramOptions options,
+		string folderPath
+	)
+	{
+		ArgumentException.ThrowIfNullOrWhiteSpace(folderPath);
+
+		options.ExtensionsDirectory = folderPath;
+		return options;
+	}
+
+	/// <summary>Turns off the automatic inclusion of the <c>./likec4-extensions</c> folder.</summary>
+	/// <seealso cref="AspireC4DiagramOptions.ExtensionsDirectory"/>
+	[AspireExport]
+	public static AspireC4DiagramOptions WithoutExtensionsFolder([NotNull] this AspireC4DiagramOptions options)
+	{
+		options.ExtensionsDirectory = null;
+		return options;
+	}
+
 	/// <summary>Enables or disables Aspire dashboard links on generated diagram elements.</summary>
 	/// <seealso cref="AspireC4DiagramOptions.IncludeAspireDashboardLinks"/>
 	[AspireExport]

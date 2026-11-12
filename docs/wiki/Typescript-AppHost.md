@@ -54,16 +54,16 @@ Declare the integration and its Aspire dependencies in `aspire.config.json`:
     "language": "typescript/nodejs"
   },
   "sdk": {
-    "version": "13.5.3"
+    "version": "13.6.5"
   },
   "packages": {
-    "Aspire.Hosting.JavaScript": "13.5.3",
-    "AspireC4.Hosting": "13.5.3"
+    "Aspire.Hosting.JavaScript": "13.6.5",
+    "AspireC4.Hosting": "<version>"
   }
 }
 ```
 
-Use the AspireC4 package version appropriate for the application. The repository sample points `AspireC4.Hosting` at `../../src/src/AspireC4/AspireC4.csproj` so it exercises the local source instead of a published package.
+Replace `<version>` with the current [`AspireC4.Hosting` release on NuGet](https://www.nuget.org/packages/AspireC4.Hosting). The Aspire pins must be at least 13.6.5, the minimum in [Requirements](Requirements.md#aspire). A TypeScript AppHost does not compile C#, so the .NET 11 SDK requirement for the source generator does not apply to it. The repository sample points `AspireC4.Hosting` at `../../src/src/AspireC4/AspireC4.csproj` so it exercises the local source instead of a published package.
 
 ### Keeping the Aspire version in step
 
@@ -125,9 +125,9 @@ the package is declared, so add it to `packages` in `aspire.config.json` and run
 ```json
 {
   "packages": {
-    "Aspire.Hosting.JavaScript": "13.5.3",
-    "AspireC4.Hosting": "13.5.3",
-    "AspireC4.Hosting.EntityFrameworkCore": "13.5.3"
+    "Aspire.Hosting.JavaScript": "13.6.5",
+    "AspireC4.Hosting": "<version>",
+    "AspireC4.Hosting.EntityFrameworkCore": "<version>"
   }
 }
 ```

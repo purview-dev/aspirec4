@@ -15,13 +15,19 @@ metadata:
 
 | Package | Target frameworks | Notes |
 | --- | --- | --- |
-| `Purview.Containers` | `net10.0`, any platform | the umbrella: `Core` plus both backends |
-| `Purview.Containers.Core` | `net10.0`, any platform | backend-neutral abstractions |
-| `Purview.Containers.<Module>` | `net10.0`, any platform | service modules; restore anywhere, need a backend to run |
-| `Purview.Containers.Wsl` | `net10.0` **and** `net10.0-windows10.0.19041.0` | a portable facade plus the Windows implementation. **Everything below is its contract.** |
-| `Purview.Containers.Docker` | `net10.0`, any platform | needs a reachable Docker daemon, not a Windows target framework |
+| `Purview.Containers` | `net10.0` and `net11.0`, any platform | the umbrella: `Core` plus both backends |
+| `Purview.Containers.Core` | `net10.0` and `net11.0`, any platform | backend-neutral abstractions |
+| `Purview.Containers.<Module>` | `net10.0` and `net11.0`, any platform | service modules; restore anywhere, need a backend to run |
+| `Purview.Containers.Wsl` | `net10.0`, `net11.0`, `net10.0-windows10.0.19041.0` and `net11.0-windows10.0.19041.0` | portable facades plus the Windows implementations. **Everything below is its contract.** |
+| `Purview.Containers.Docker` | `net10.0` and `net11.0`, any platform | needs a reachable Docker daemon, not a Windows target framework |
 
-A consumer of any backend other than WSL needs only a portable `net10.0` project.
+A consumer of any backend other than WSL needs only a portable `net10.0` or `net11.0` project. .NET 8 and
+.NET 9 are unsupported.
+
+WSLC features missing from the managed SDK (entrypoint/user/labels, reuse, copy
+and Dockerfile builds) additionally require `wslc` on PATH; networks/aliases, Linux capabilities and
+host loopback use the managed SDK 3.0.5. The ordinary SDK-only path is unchanged.
+Use `purview-containers-capabilities` for the feature/cancellation boundary.
 
 ## Most projects need nothing
 
@@ -51,11 +57,11 @@ value you have not chosen.
 
 | # | Requirement | Why |
 | --- | --- | --- |
-| 1 | **.NET 10 or later** | the package ships `lib/net10.0/` (facade) and `lib/net10.0-windows10.0.19041/` (implementation) |
+| 1 | **.NET 10 or .NET 11** (.NET 8 and .NET 9 are unsupported) | the package ships `lib/net10.0/` and `lib/net11.0/` (facades) plus `lib/net10.0-windows10.0.19041/` and `lib/net11.0-windows10.0.19041/` (implementations) |
 | 2 | **A Windows target framework that names the OS version** — *only* if you want the implementation bound directly | the `Microsoft.WSL.Containers` projection ships Windows assets only |
 | 3 | **64-bit** — `PlatformTarget` `x64`/`arm64`, or a matching `RuntimeIdentifier` | the native `wslcsdk.dll` ships for `win-x64` and `win-arm64` only |
 | 4 | **`WindowsSdkPackageVersion` ≥ `10.0.26100.80`** | the projection is compiled against `Microsoft.Windows.SDK.NET` `10.0.26100.79`, and the pack the SDK resolves for a `10.0.19041.0` target framework is older |
-| 5 | **A Windows 10/11 host with WSL Containers**, to actually run anything | the library drives WSLC; it never installs or updates it for you |
+| 5 | **Windows 11 or Windows Server 2025 with WSL Containers**, to actually run anything | the library drives WSLC; it never installs or updates it for you; a Windows target framework does not imply Windows 10 runtime support |
 
 ### Always spell out the Windows version
 
@@ -67,7 +73,7 @@ value you have not chosen.
 `net10.0-windows` resolves its platform version to **7.0**, older than the `10.0.19041.0` the
 implementation was built against, so NuGet selects no compile assets at all. (The
 `Microsoft.WSL.Containers` package is itself `net8.0-windows10.0.19041.0`, which a
-`net10.0-windows10.0.19041.0` project consumes without issue.)
+`net10.0-windows10.0.19041.0` or `net11.0-windows10.0.19041.0` project consumes without issue.)
 
 ## What the package does for you
 
@@ -94,7 +100,7 @@ package, and use `PURVIEW_CONTAINERS_BACKEND` to pin which one runs.
 
 | Error | Raised by | Means | Fix |
 | --- | --- | --- | --- |
-| `PCC0001` | the shipped guard target | the target framework is neither .NET 10+ on Windows `10.0.19041.0`+ nor a platform-neutral .NET 10+ framework | retarget as above |
+| `PCC0001` | the shipped guard target | the target framework is neither .NET 10 nor .NET 11 on Windows `10.0.19041.0`+ nor a platform-neutral .NET 10/.NET 11 framework | retarget as above |
 | `PCC0002` | the shipped guard target | the consumer is not 64-bit | remove `PlatformTarget`, set it to `x64`/`arm64`, or choose a matching `RuntimeIdentifier` |
 | `CS1705` naming `Microsoft.Windows.SDK.NET` | the compiler | the resolved Windows SDK targeting pack is older than the projection's | pin `WindowsSdkPackageVersion` to `10.0.26100.80` |
 | `CS0234`/`CS0246` for `Microsoft.WSL`/`Purview` types | the compiler | the package contributed no compile assets — an unsupported target framework, or an unverified escape hatch | fix the target framework; `PCC0001` says the same thing more clearly |
@@ -111,9 +117,10 @@ Use it to keep one solution building in CI, not as a way to run WSLC off Windows
 The repository proves every row above rather than asserting it:
 
 - `Wsl.UnitTests/ConsumerRequirementsTests.cs` guards the **shape** inside the normal unit run — the
-  Windows build targets `.NETCoreApp,Version=v10.0`, targets `Windows10.0.19041.0`, and declares only
-  that OS platform. If the target framework drifts, that test fails, and this page, the package
-  READMEs and the `buildTransitive` defaults all have to move with it.
+  Windows build targets `.NETCoreApp,Version=v11.0`, targets `Windows10.0.19041.0`, and declares only
+  that OS platform. `Wsl.UnitTests/BuildFeatureTests.cs` guards that the net11.0 build has no
+  compiler-generated async state machines (runtime-async is on). If either drifts, the test fails, and
+  this page, the package READMEs and the `buildTransitive` defaults all have to move with it.
 - `just verify-consumers` proves the **behaviour**: it packs, then builds throwaway consumer projects
   for every documented outcome, including the guard errors (`PlatformTarget=x86` → `PCC0002`;
   `net8.0-windows` → `PCC0001`; `net11.0-windows` without an OS version → `PCC0001`). It sits outside

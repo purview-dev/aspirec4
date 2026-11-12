@@ -33,34 +33,21 @@ architecture diagram and owns the dashboard integration. Everything else hangs o
 The same split applies to dependencies: the ER diagram needs the projects that own your `DbContext`
 types to be registered with `AddProject<Projects.X>(...)`.
 
-### Target frameworks
+## Requirements
 
-| Package | Target frameworks | Shipped as |
-| --- | --- | --- |
-| `AspireC4.Hosting` | `net10.0`, `net11.0` | `lib/net10.0/` and `lib/net11.0/` libraries |
-| `AspireC4.Hosting.EntityFrameworkCore` | `net10.0`, `net11.0` | `lib/net10.0/` and `lib/net11.0/` libraries |
-| `AspireC4.EntityFrameworkCore` | `netstandard2.0` | `analyzers/dotnet/cs/` — analyzer-only, no runtime assembly |
-| `AspireC4.EntityFrameworkCore.ModelDump` | `net10.0` | `tools/` — a build-time tool invoked by MSBuild |
-
-The libraries multi-target the lowest common supported pair. `net10.0` is the LTS, the framework an
-Aspire AppHost targets, and therefore the asset a .NET 10 host resolves; `net11.0` is the current
-release, and a consumer on .NET 11 gets that asset without a package change. `.NET 8` and `.NET 9` are
-not supported.
-
-The analyzer package is `netstandard2.0` so it loads into any compiler, and it adds no assembly to
-your output; the model dump is a `net10.0` tool run by the build, so the build machine needs a .NET 10
-runtime or later. The repository itself builds with the .NET 11 SDK and C# 15. See
-[Toolchain and support matrix](docs/wiki/Toolchain.md) for the SDK pin, the target-framework policy and
-what was deliberately not adopted.
-
-## Prerequisites
-
-- **.NET 10 or .NET 11.** An Aspire 13.5 AppHost targets `net10.0`, and that is the lowest asset the
-  packages ship; a .NET 11 host resolves the `net11.0` asset. **.NET 8 and .NET 9 are not supported.**
-- **Aspire 13.5.3 or later**. Aspire AppHost projects must reference both the AppHost SDK and
+- **The .NET 11 SDK** to build. The AppHost itself can target `net10.0` or `net11.0`: the libraries
+  ship both assets. The SDK requirement comes from the bundled source generators, which run inside the
+  compiler and are built against Roslyn 5.9. An older SDK reports `CS9057` and skips them, which
+  drops the `ASPIREC4xxx` validation and the `[LikeC4Registry]` types.
+- **Aspire 13.6.5 or later**. Aspire AppHost projects must reference both the AppHost SDK and
   `Aspire.Hosting.AppHost`.
 - **Docker** is used by default to run the LikeC4 sidecar container.
 - Optional: a local Node.js CLI runtime (`npx`, `pnpm`, `yarn`, `bun`, or `deno`) if you call `.WithLocalCLI()`.
+
+**.NET 8 and .NET 9 are not supported.** [Requirements](docs/wiki/Requirements.md) owns the detail: the
+target frameworks each package ships, what each optional package needs, and what happens when a
+requirement is missing. How this repository is built is in
+[Toolchain and support matrix](docs/wiki/Toolchain.md).
 
 ## Installation
 
@@ -71,10 +58,10 @@ dotnet add package AspireC4.Hosting
 dotnet add package Aspire.Hosting.AppHost
 ```
 
-An Aspire 13.5 AppHost project should contain the equivalent of:
+An AppHost project should contain the equivalent of:
 
 ```xml
-<Project Sdk="Aspire.AppHost.Sdk/13.5.3">
+<Project Sdk="Aspire.AppHost.Sdk/13.6.5">
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.AppHost" />
     <PackageReference Include="AspireC4.Hosting" />
@@ -221,33 +208,38 @@ Nothing is rendered — and **no container is started** — unless the output wo
   is fire-and-forget, so on publish it would be killed part-way through — and publish is expected to be
   hermetic, which reaching for a container runtime a build agent may not have would break.
 
-#### Committing the images
+#### Source control
 
-The images are the one piece of generated output worth tracking: a diagram that shows up in a pull
-request is documentation, and because export only runs when the diagram changes they do not churn.
-Ignore the generated directory but carve the images out of it:
+You need no `.gitignore` entry. AspireC4 writes one beside each thing it generates, naming exactly the
+files it writes, and leaves a `.gitignore` it did not write alone:
 
-```gitignore
-# Note the trailing /* rather than /: git will not descend into an excluded directory, so the
-# children have to be excluded individually for the re-include to be reachable.
-**/.aspirec4/*
-!**/.aspirec4/images/
-# The stamp recording what the images were rendered from is a local cache, not documentation.
-**/.aspirec4/images/.aspirec4-*
-```
+- `likec4/` and `erd/` — the generated models and viewer are ignored. The architecture model carries
+  this run's ports, links and run states, so tracking it would dirty every working tree.
+- `images/` — only the `.aspirec4-*` stamps are ignored. **The images stay visible to git**: a diagram
+  in a pull request is documentation, and an image is replaced only when its bytes change.
 
-The two diagrams differ in how well they cache, though both are stable in source control:
+Every file is also written only when its content changes — compared against the file on disk, and with
+no timestamp in the header — so restarting an unchanged application touches nothing.
+`WithoutGitIgnoreFileGeneration()` turns the ignore files off for a repository that commits the model
+deliberately. See [Source control](docs/wiki/Generated-Output.md#source-control).
+
+#### Your own LikeC4 files
+
+Put hand-written `.c4` files — people, external systems, `extend` blocks, extra views — in a
+`likec4-extensions/` folder beside the AppHost and they are included automatically. Generated elements
+are named after their Aspire resources, so those files can extend and reference them. This replaces a
+separate LikeC4 project reading a committed model. See
+[Extending the generated model](docs/wiki/Generated-Output.md#extending-the-generated-model).
+
+The two diagrams differ in how well their image export caches:
 
 - **ER diagram** — fully cached. Derived from your EF model alone, so restarting the AppHost over an
   unchanged schema renders nothing at all. This is the one that matters most, since it is also the one
   that can pull a browser image under `WithViewerFidelityExport()`.
-- **Architecture diagram** — re-rendered on each run, but to identical bytes. Its model is a picture of
-  a *running* system: the endpoint ports and the run-state tags settle during startup, so the model the
-  first export sees is not quite the one the last export sees. The stamp already ignores the ephemeral
-  ports; the remaining difference is the run states, and those genuinely change the picture, so they
-  are not normalised away. Measured across restarts the exported PNGs are byte-for-byte the same, so
-  git sees no change — the cost is a background render, not a dirty tree.
-
+- **Architecture diagram** — usually re-rendered on each run, to the same pixels. Its model is a picture
+  of a *running* system, and the run-state tags settle during startup, so the stamp rarely matches; a
+  re-render that comes out identical leaves the existing image file untouched. The cost is a
+  background render, not a changed file.
 Set `ContainerRuntimeCommand` to `podman` where that is the runtime Aspire itself is using.
 
 ## Upgrading from before 13.6
@@ -255,7 +247,7 @@ Set `ContainerRuntimeCommand` to `podman` where that is the runtime Aspire itsel
 13.6 changed two things, both breaking:
 
 - Generated output moved under one root: `./.aspirec4/likec4/` (was `./likec4/gen/`) and
-  `./.aspirec4/erd/` (was `./erd/gen/`). Replace your `.gitignore` entries with `**/.aspirec4/`.
+  `./.aspirec4/erd/` (was `./erd/gen/`). Remove your old `.gitignore` entries: AspireC4 now writes its own.
 - When more than one diagram is registered, they nest under a shared dashboard parent and the
   architecture diagram's resource is renamed from `aspirec4` to `aspirec4-likec4`. With only
   `AddAspireC4()`, nothing changes.
@@ -364,14 +356,14 @@ dotnet add package AspireC4.EntityFrameworkCore
 dotnet add package AspireC4.EntityFrameworkCore.ModelDump
 ```
 
-This writes `./.aspirec4/erd/schema.gen.d2`, starts a `d2lang/d2` sidecar running `d2 --watch`, and
+This writes `./.aspirec4/erd/schema.gen.json` and its viewer (or `schema.gen.d2` with the d2 renderer), starts a viewer sidecar, and
 adds an **ER Diagram** link to each contributing project in the dashboard and on its element in the
 architecture diagram.
 
 ### Dashboard layout
 
-Both diagrams write beneath a single `./.aspirec4/` root in the AppHost directory — one directory to
-ignore in source control regardless of how many are enabled.
+Both diagrams write beneath a single `./.aspirec4/` root in the AppHost directory, and each writes the
+`.gitignore` that keeps its generated files out of git.
 
 > [!NOTE]
 > The ER diagram's `./.aspirec4/erd/` default follows the architecture diagram's legacy switch:
@@ -404,7 +396,7 @@ aspirec4                 # parent row, added only when there is more than one di
 | `ShowNullability` | `true` | Render nullable columns with a trailing `?` |
 | `GroupBySchema` | `true` | Group tables into d2 containers by database schema |
 | `GroupByContext` | `true` | Group by `DbContext` when more than one is discovered |
-| `DomainTypeDisplay` | `DomainTypeFirst` | How a column shows its domain type — a value object or an enum — beside the database type: `DomainTypeFirst` (`AssetId (guid)`, `ActorType (int, enum)`), `DatabaseFirst`, `DomainTypeOnly`, `DatabaseOnly` |
+| `DomainTypeDisplay` | `DomainTypeFirst` | How a column shows its domain type — a value object, an enum or a union — beside the database type: `DomainTypeFirst` (`AssetId (guid)`, `ActorType (int, enum)`), `DatabaseFirst`, `DomainTypeOnly`, `DatabaseOnly` |
 | `ContainerImageTag` | `null` (`v0.9.0`) | Pin the [`d2lang/d2`](https://hub.docker.com/r/d2lang/d2/) image tag |
 | `UseViewerServer` | `true` | Serve the viewer so the dashboard can link to it; set `false` where there is no container runtime |
 | `ViewerServerImageTag` | `null` (`1.29-alpine`) | Pin the `nginx` image tag used to serve the viewer |
@@ -415,6 +407,7 @@ aspirec4                 # parent row, added only when there is more than one di
 | `ImageExportDirectory` | `null` (`./.aspirec4/images/`) | Where images are written; relative paths resolve against the AppHost directory. Shared with the architecture diagram |
 | `D2Command` | `null` | A local `d2` binary to export with; `null` runs the container. Set by `WithLocalD2CLI()` |
 | `ContainerRuntimeCommand` | `"docker"` | Runtime for the one-shot export container; `podman` where that is what Aspire uses |
+| `GenerateGitIgnoreFile` | `true` | Write a `.gitignore` naming the generated files. `WithoutGitIgnoreFileGeneration()` |
 | `ExportTimeoutSeconds` | `120` | How long to wait for one d2 invocation before abandoning it |
 | `UseViewerFidelityExport` | `false` | Render images through the viewer in a headless browser so they match its own export. Pulls a ~3.7 GB browser image; `Interactive` only |
 | `ViewerExportImage` | `null` | Override the browser image, including its tag |
@@ -592,13 +585,16 @@ match for the migrated schema.
   `[NotMapped]`, `[Index(IsUnique = true)]`.
 - EF naming conventions for primary keys (`Id` / `<Type>Id`) and foreign keys (`<Nav>Id` /
   `<PrincipalType>Id`).
-- A column's **domain type** — a value object or an enum — is shown beside its real database type,
-  controlled by `DomainTypeDisplay`: `AssetId (guid)` for a value object, `ActorType (int, enum)` for an
-  enum. A **scalar** value object (a struct wrapping a single `Value`, such as a strongly-typed
-  identifier) becomes a column, and its foreign keys carry the relationships between entities. A
-  **complex** value object — one marked `[ValueObject(EFMapping = ComplexType)]` — is flattened into its
-  owner's table. An **enum** is shown as itself and marked `enum`. The primitive a scalar value object
-  converts to is known only to its value converter, so the model keeps both.
+- A column's **domain type** — a value object, an enum or a union — is shown beside its real database
+  type, controlled by `DomainTypeDisplay`: `AssetId (guid)`, `ActorType (int, enum)`. **Scalar** value
+  objects are recognised from Purview's `[Scalar<T>]`, `[Scalar(typeof(T))]` and `[Scalar("Name")]`, from
+  `IScalarValueObject<TSelf, TValue>`, or from the shape of a struct with a public `Value` — struct or
+  class, nullable or not — and become one column of the wrapped type, through which foreign keys
+  resolve. **Complex** value objects — Purview's `[ValueObject]` (whose `EFMapping` defaults to
+  `ComplexType`), EF's `[ComplexType]`, or an `[Owned]` reference — are flattened into the owner's table;
+  one mapped to JSON is one `json` column, as is a collection of primitives or value objects. **Unions**
+  are marked `union`. The full table is in
+  [Value objects, enums and unions](docs/wiki/Entity-Framework-Diagrams.md#value-objects-enums-and-unions).
 
 **Also recovered from a descriptor** (analyzer-referenced projects):
 
@@ -612,13 +608,17 @@ match for the migrated schema.
 - Relationship cardinality and join tables, both **derived** rather than read from EF: a foreign key
   is unique when its columns are the key or carry a unique index, required when they are non-nullable,
   and a table is a join table when every key column is also a foreign key and there is more than one.
-- Relationships themselves are derived from navigation properties and the `<Nav>Id` convention. A
-  relationship configured only fluently — with no navigation, or a composite foreign key whose columns
-  do not match that convention — is not drawn.
+- Relationships themselves are derived from navigation properties, from **either end**: a reference
+  navigation on the dependent with the `<Nav>Id` convention, or only a collection on the principal, where
+  EF's naming finds the key — and when the dependent declares none, EF's shadow foreign key is shown. A
+  relationship configured only fluently — `HasOne`/`HasForeignKey` with no navigation, or a composite
+  foreign key whose columns do not match the convention — needs the model dump.
 
 **Not captured.** These need either runtime model-building or analysis beyond what is sensible
-statically, and are silently absent rather than guessed at: owned types, TPH/TPT/TPC inheritance
-mapping, delete behaviour, sequences, check constraints, and value conversions. Relationships that
+statically, and are silently absent rather than guessed at: fluently configured complex and owned types
+(`ComplexProperty`, `OwnsOne`, `OwnsMany`, `ToJson`), TPH/TPT/TPC inheritance mapping, delete behaviour,
+sequences, check constraints, and value conversions such as an enum's `HasConversion<string>()`. The
+model dump sees the first and the last. Relationships that
 cross a `DbContext` boundary are deliberately not drawn — EF models a relationship inside one context,
 so an edge across that boundary would be invented rather than observed.
 
@@ -757,16 +757,17 @@ Declare the integration and its Aspire dependencies in `aspire.config.json`:
     "language": "typescript/nodejs"
   },
   "sdk": {
-    "version": "13.5.3"
+    "version": "13.6.5"
   },
   "packages": {
-    "Aspire.Hosting.JavaScript": "13.5.3",
-    "AspireC4.Hosting": "13.5.3"
+    "Aspire.Hosting.JavaScript": "13.6.5",
+    "AspireC4.Hosting": "<version>"
   }
 }
 ```
 
-Use the AspireC4 package version appropriate for the application. The repository sample points `AspireC4.Hosting` at
+Replace `<version>` with the current `AspireC4.Hosting` release (the NuGet badge above), and keep the Aspire pins at
+13.6.5 or later. The repository sample points `AspireC4.Hosting` at
 `../../src/src/AspireC4/AspireC4.csproj` so it exercises the local source instead of a published package.
 
 ### Run the TypeScript sample
@@ -1002,7 +1003,7 @@ Tags, element kinds, and relationship kinds in `specification` blocks are merged
 The source generator now uses the current `Purview.SourceGeneratorFramework` incremental APIs. Existing applications
 should review the following changes when upgrading:
 
-- **Aspire AppHost dependency is explicit.** Aspire 13.5 AppHosts must reference `Aspire.Hosting.AppHost`; relying on the
+- **Aspire AppHost dependency is explicit.** Aspire AppHosts must reference `Aspire.Hosting.AppHost`; relying on the
   AppHost SDK alone produces `ASPIRE002`.
 - **Only one registry class is supported per assembly.** Merge multiple `[LikeC4Registry]` classes into one class.
 - **Registry declaration styles cannot be mixed per type.** For example, choose either a `Tags` nested class or
