@@ -1,0 +1,72 @@
+# The purview.dev catalogue record for this project (ADR 0013 in purview-dev/purview-dev).
+# The site reads this file from the default branch of this repository, so the record
+# changes in the same pull request as the thing it describes.
+#
+# `$schema` is an editor hint and nothing more: the enforcing validation is the site's
+# loader, which `just check-projects` runs there.
+$schema: https://raw.githubusercontent.com/purview-dev/purview-dev/main/src/src/lib/manifest/schema.ts
+
+id: aspirec4
+name: AspireC4
+shortDescription: Live LikeC4 architecture diagrams from the Aspire resource graph.
+description: >-
+  An Aspire extension that generates live LikeC4 architectural diagrams
+  from the Aspire resource graph, with a Roslyn source generator for
+  compile-time validation of tags, kinds, groups, and metadata.
+origin: >-
+  Aspire already holds a useful model of a distributed application, so manually maintaining a
+  separate architecture diagram was repetition that could be removed.
+useWhen: >-
+  You use .NET Aspire and want live LikeC4 diagrams derived from the resource graph, with
+  compile-time checks for architectural metadata.
+avoidWhen: >-
+  You do not use Aspire, need a manually curated architecture model, or require diagrams that
+  intentionally differ from the running application topology.
+repository: purview-dev/aspirec4
+category: aspire
+status: stable
+order: 55
+docs:
+  source: github-path
+  path: docs/wiki
+  rootPage: Getting-Started.md
+  exclude:
+    - _Sidebar.md
+    - Home.md
+    - index.md
+targetFrameworks:
+  - net8.0
+packages:
+  - id: AspireC4.Hosting
+    description: Aspire hosting extension for the AspireC4 plugin, generating a dynamic LikeC4 architecture diagram for your Aspire application.
+    primary: true
+useCases:
+  - audience: developer
+    title: A live architecture diagram with three lines of code
+    scenario: >-
+      You already describe your distributed application in Aspire and do not want to maintain a
+      separate architecture diagram that drifts from reality.
+    code: |
+      var builder = DistributedApplication.CreateBuilder(args);
+
+      builder.AddAspireC4();
+
+      builder.Build().Run();
+    language: csharp
+    outcome: >-
+      AspireC4 writes the generated LikeC4 model, starts the LikeC4 sidecar, and refreshes the
+      diagram whenever the Aspire application changes.
+    evidence: >-
+      The diagram is derived from the running resource graph, so it cannot silently fall out of date
+      the way a hand-drawn one can.
+    docsPage: dashboard-integration
+  - audience: architect
+    title: Validate architectural metadata at compile time
+    scenario: >-
+      You want tags, kinds, groups, and metadata in your architecture model checked before the
+      application even runs.
+    outcome: >-
+      A Roslyn source generator validates the architectural metadata while the AppHost compiles.
+    evidence: >-
+      Architectural metadata mistakes fail the build instead of surfacing in a diagram nobody reads.
+    docsPage: generated-output
