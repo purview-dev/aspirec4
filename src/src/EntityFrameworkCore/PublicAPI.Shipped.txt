@@ -1,0 +1,431 @@
+#nullable enable
+~override Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoadDiagnostics.Equals(object obj) -> bool
+~override Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoadDiagnostics.ToString() -> string
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Annotations.AspireC4EfProjectAnnotation
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Annotations.AspireC4EfProjectAnnotation.AspireC4EfProjectAnnotation() -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Annotations.AspireC4EfProjectAnnotation.AspireC4EfProjectAnnotation(Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfProjectOptions! options) -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Annotations.AspireC4EfProjectAnnotation.Label.get -> string?
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Annotations.AspireC4EfProjectAnnotation.Label.set -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Annotations.AspireC4EfProjectAnnotation.Options.get -> Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfProjectOptions!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.ApplicationModel.AspireC4EfResource
+Aspire.Hosting.AspireC4.EntityFrameworkCore.ApplicationModel.AspireC4EfResource.AppHostDirectory.get -> string!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.ApplicationModel.AspireC4EfResource.AppHostDirectory.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.ApplicationModel.AspireC4EfResource.AspireC4EfResource(string! name) -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.ApplicationModel.AspireC4EfResource.InnerResource.get -> Aspire.Hosting.ApplicationModel.IResource?
+Aspire.Hosting.AspireC4.EntityFrameworkCore.ApplicationModel.AspireC4EfResource.InnerResource.set -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.ApplicationModel.AspireC4EfResource.OutputDirectory.get -> string!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.ApplicationModel.AspireC4EfResource.OutputDirectory.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.ApplicationModel.D2LocalServerResource
+Aspire.Hosting.AspireC4.EntityFrameworkCore.ApplicationModel.D2LocalServerResource.D2LocalServerResource(string! name, string! command, string! workingDirectory) -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.ApplicationModel.D2ServerResource
+Aspire.Hosting.AspireC4.EntityFrameworkCore.ApplicationModel.D2ServerResource.D2ServerResource(string! name) -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.ApplicationModel.ErdViewerServerResource
+Aspire.Hosting.AspireC4.EntityFrameworkCore.ApplicationModel.ErdViewerServerResource.ErdViewerServerResource(string! name) -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.AspireC4EfDiagramOptions() -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.ContainerImageTag.get -> string?
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.ContainerImageTag.set -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.ContainerRuntimeCommand.get -> string!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.ContainerRuntimeCommand.set -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.D2Command.get -> string?
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.D2Command.set -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.DashboardLinkDisplayName.get -> string!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.DashboardLinkDisplayName.set -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.DiscoverAllProjects.get -> bool
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.DiscoverAllProjects.set -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.DomainTypeDisplay.get -> Aspire.Hosting.AspireC4.EntityFrameworkCore.DomainTypeDisplay
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.DomainTypeDisplay.set -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.ExcludedContexts.get -> System.Collections.Generic.IList<string!>!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.ExportImages.get -> bool
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.ExportImages.set -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.ExportTimeoutSeconds.get -> int
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.ExportTimeoutSeconds.set -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.FileName.get -> string!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.FileName.set -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.GenerateGitIgnoreFile.get -> bool
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.GenerateGitIgnoreFile.set -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.GroupByContext.get -> bool
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.GroupByContext.set -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.GroupBySchema.get -> bool
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.GroupBySchema.set -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.HideFromDashboard.get -> bool
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.HideFromDashboard.set -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.ImageExportDirectory.get -> string?
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.ImageExportDirectory.set -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.ImageFormats.get -> System.Collections.Generic.HashSet<Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdImageFormat>!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.ImageFormats.set -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.IncludedContexts.get -> System.Collections.Generic.IList<string!>!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.LayoutEngine.get -> Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.D2LayoutEngine
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.LayoutEngine.set -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.OutputDirectory.get -> string!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.OutputDirectory.set -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.Renderer.get -> Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdRenderer
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.Renderer.set -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.ShowNullability.get -> bool
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.ShowNullability.set -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.Title.get -> string?
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.Title.set -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.UseSubgraphs.get -> bool
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.UseSubgraphs.set -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.UseViewerFidelityExport.get -> bool
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.UseViewerFidelityExport.set -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.UseViewerServer.get -> bool
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.UseViewerServer.set -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.ViewerExportImage.get -> string?
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.ViewerExportImage.set -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.ViewerExportTimeoutSeconds.get -> int
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.ViewerExportTimeoutSeconds.set -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.ViewerServerImageTag.get -> string?
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.ViewerServerImageTag.set -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.WithDomainTypeDisplay(Aspire.Hosting.AspireC4.EntityFrameworkCore.DomainTypeDisplay display) -> Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.WithExcludedContexts(params string![]! contextNames) -> Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.WithImageExport(params Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdImageFormat[]! formats) -> Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.WithIncludedContexts(params string![]! contextNames) -> Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.WithoutGitIgnoreFileGeneration() -> Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.WithoutImageExport() -> Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.WithProjectOptInOnly() -> Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.WithViewerFidelityExport(bool use = true) -> Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfProjectOptions
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfProjectOptions.AspireC4EfProjectOptions() -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfProjectOptions.ExcludedContexts.get -> System.Collections.Generic.IList<string!>!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfProjectOptions.IncludedContexts.get -> System.Collections.Generic.IList<string!>!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfProjectOptions.Label.get -> string?
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfProjectOptions.Label.set -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfProjectOptions.WithExcludedContexts(params string![]! contextNames) -> Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfProjectOptions!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfProjectOptions.WithIncludedContexts(params string![]! contextNames) -> Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfProjectOptions!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.D2LayoutEngine
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.D2LayoutEngine.Dagre = 0 -> Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.D2LayoutEngine
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.D2LayoutEngine.Elk = 1 -> Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.D2LayoutEngine
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.D2LayoutEngine.Tala = 2 -> Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.D2LayoutEngine
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.D2ModelBuilder
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Generators.D2DSLGenerator
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Column
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Column.<Clone>$() -> Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Column!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Column.Constraints.get -> System.Collections.Generic.IReadOnlyList<Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Constraint>!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Column.Constraints.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Column.D2Column() -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Column.Equals(Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Column? other) -> bool
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Column.Name.get -> string!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Column.Name.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Column.Type.get -> string!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Column.Type.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Constraint
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Constraint.ForeignKey = 1 -> Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Constraint
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Constraint.PrimaryKey = 0 -> Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Constraint
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Constraint.Unique = 2 -> Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Constraint
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Edge
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Edge.<Clone>$() -> Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Edge!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Edge.D2Edge() -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Edge.Equals(Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Edge? other) -> bool
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Edge.Label.get -> string?
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Edge.Label.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Edge.SourceColumn.get -> string!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Edge.SourceColumn.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Edge.SourceTable.get -> string!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Edge.SourceTable.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Edge.TargetColumn.get -> string!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Edge.TargetColumn.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Edge.TargetTable.get -> string!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Edge.TargetTable.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Model
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Model.<Clone>$() -> Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Model!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Model.D2Model() -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Model.Edges.get -> System.Collections.Generic.IReadOnlyList<Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Edge!>!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Model.Edges.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Model.Equals(Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Model? other) -> bool
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Model.Tables.get -> System.Collections.Generic.IReadOnlyList<Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Table!>!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Model.Tables.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Table
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Table.<Clone>$() -> Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Table!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Table.Columns.get -> System.Collections.Generic.IReadOnlyList<Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Column!>!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Table.Columns.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Table.Container.get -> string?
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Table.Container.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Table.D2Table() -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Table.Equals(Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Table? other) -> bool
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Table.Id.get -> string!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Table.Id.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Table.Label.get -> string!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Table.Label.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Dbml.DbmlGenerator
+Aspire.Hosting.AspireC4.EntityFrameworkCore.DomainTypeDisplay
+Aspire.Hosting.AspireC4.EntityFrameworkCore.DomainTypeDisplay.DatabaseFirst = 1 -> Aspire.Hosting.AspireC4.EntityFrameworkCore.DomainTypeDisplay
+Aspire.Hosting.AspireC4.EntityFrameworkCore.DomainTypeDisplay.DatabaseOnly = 3 -> Aspire.Hosting.AspireC4.EntityFrameworkCore.DomainTypeDisplay
+Aspire.Hosting.AspireC4.EntityFrameworkCore.DomainTypeDisplay.DomainTypeFirst = 0 -> Aspire.Hosting.AspireC4.EntityFrameworkCore.DomainTypeDisplay
+Aspire.Hosting.AspireC4.EntityFrameworkCore.DomainTypeDisplay.DomainTypeOnly = 2 -> Aspire.Hosting.AspireC4.EntityFrameworkCore.DomainTypeDisplay
+Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoadDiagnostics
+Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoadDiagnostics.AssembliesScanned.get -> int
+Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoadDiagnostics.AssembliesScanned.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoadDiagnostics.Deconstruct(out string! ProjectPath, out string? OutputDirectory, out int AssembliesScanned, out int DescriptorsFound, out int MetadataContextsFound, out int DumpContextsFound, out Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModelDumpStatus DumpStatus) -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoadDiagnostics.DescriptorsFound.get -> int
+Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoadDiagnostics.DescriptorsFound.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoadDiagnostics.DumpContextsFound.get -> int
+Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoadDiagnostics.DumpContextsFound.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoadDiagnostics.DumpStatus.get -> Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModelDumpStatus
+Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoadDiagnostics.DumpStatus.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoadDiagnostics.EfModelLoadDiagnostics() -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoadDiagnostics.EfModelLoadDiagnostics(string! ProjectPath, string? OutputDirectory, int AssembliesScanned, int DescriptorsFound, int MetadataContextsFound = 0, int DumpContextsFound = 0, Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModelDumpStatus DumpStatus = Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModelDumpStatus.NotChecked) -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoadDiagnostics.Equals(Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoadDiagnostics other) -> bool
+Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoadDiagnostics.MetadataContextsFound.get -> int
+Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoadDiagnostics.MetadataContextsFound.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoadDiagnostics.OutputDirectory.get -> string?
+Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoadDiagnostics.OutputDirectory.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoadDiagnostics.ProjectPath.get -> string!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoadDiagnostics.ProjectPath.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoader
+Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelReader
+Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdFile
+Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdFile.<Clone>$() -> Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdFile!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdFile.Content.get -> string!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdFile.Content.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdFile.Deconstruct(out string! FileName, out string! Content) -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdFile.Equals(Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdFile? other) -> bool
+Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdFile.ErdFile(string! FileName, string! Content) -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdFile.FileName.get -> string!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdFile.FileName.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdImageFormat
+Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdImageFormat.Png = 1 -> Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdImageFormat
+Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdImageFormat.Svg = 0 -> Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdImageFormat
+Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdOutput
+Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdRenderer
+Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdRenderer.D2 = 3 -> Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdRenderer
+Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdRenderer.Dbml = 2 -> Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdRenderer
+Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdRenderer.Interactive = 0 -> Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdRenderer
+Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdRenderer.Mermaid = 1 -> Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdRenderer
+Aspire.Hosting.AspireC4.EntityFrameworkCore.InteractiveViewer
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Mermaid.MermaidGenerator
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn.<Clone>$() -> Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn.ClrTypeName.get -> string?
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn.ClrTypeName.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn.Comment.get -> string?
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn.Comment.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn.ComplexPropertyName.get -> string?
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn.ComplexPropertyName.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn.ComplexTypeName.get -> string?
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn.ComplexTypeName.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn.DomainTypeKind.get -> Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfDomainTypeKind?
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn.DomainTypeKind.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn.DomainTypeName.get -> string?
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn.DomainTypeName.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn.EfColumn() -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn.Equals(Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn? other) -> bool
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn.IsForeignKey.get -> bool
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn.IsForeignKey.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn.IsNullable.get -> bool
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn.IsNullable.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn.IsPrimaryKey.get -> bool
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn.IsPrimaryKey.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn.IsUnique.get -> bool
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn.IsUnique.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn.MaxLength.get -> int?
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn.MaxLength.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn.Name.get -> string!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn.Name.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn.StoreType.get -> string!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn.StoreType.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfContext
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfContext.<Clone>$() -> Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfContext!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfContext.DefaultSchema.get -> string?
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfContext.DefaultSchema.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfContext.EfContext() -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfContext.Equals(Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfContext? other) -> bool
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfContext.Fidelity.get -> Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModelFidelity
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfContext.Fidelity.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfContext.Name.get -> string!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfContext.Name.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfContext.Tables.get -> System.Collections.Generic.IReadOnlyList<Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfTable!>!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfContext.Tables.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfContext.TypeName.get -> string!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfContext.TypeName.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfDomainTypeKind
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfDomainTypeKind.ComplexValueObject = 1 -> Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfDomainTypeKind
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfDomainTypeKind.Enum = 2 -> Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfDomainTypeKind
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfDomainTypeKind.Union = 3 -> Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfDomainTypeKind
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfDomainTypeKind.ValueObject = 0 -> Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfDomainTypeKind
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfForeignKey
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfForeignKey.<Clone>$() -> Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfForeignKey!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfForeignKey.Columns.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfForeignKey.Columns.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfForeignKey.ConstraintName.get -> string?
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfForeignKey.ConstraintName.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfForeignKey.EfForeignKey() -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfForeignKey.Equals(Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfForeignKey? other) -> bool
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfForeignKey.IsRequired.get -> bool
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfForeignKey.IsRequired.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfForeignKey.IsUnique.get -> bool
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfForeignKey.IsUnique.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfForeignKey.NavigationName.get -> string?
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfForeignKey.NavigationName.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfForeignKey.PrincipalColumns.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfForeignKey.PrincipalColumns.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfForeignKey.PrincipalNavigationName.get -> string?
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfForeignKey.PrincipalNavigationName.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfForeignKey.PrincipalTable.get -> string!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfForeignKey.PrincipalTable.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfIndex
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfIndex.<Clone>$() -> Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfIndex!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfIndex.Columns.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfIndex.Columns.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfIndex.EfIndex() -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfIndex.Equals(Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfIndex? other) -> bool
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfIndex.IsUnique.get -> bool
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfIndex.IsUnique.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfIndex.Name.get -> string?
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfIndex.Name.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModel
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModel.<Clone>$() -> Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModel!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModel.Contexts.get -> System.Collections.Generic.IReadOnlyList<Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfContext!>!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModel.Contexts.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModel.EfModel() -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModel.Equals(Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModel? other) -> bool
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModel.SchemaVersion.get -> int
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModel.SchemaVersion.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModelDumpStatus
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModelDumpStatus.Empty = 5 -> Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModelDumpStatus
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModelDumpStatus.Loaded = 1 -> Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModelDumpStatus
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModelDumpStatus.Missing = 3 -> Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModelDumpStatus
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModelDumpStatus.NotChecked = 0 -> Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModelDumpStatus
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModelDumpStatus.ProjectUnresolved = 2 -> Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModelDumpStatus
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModelDumpStatus.Stale = 4 -> Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModelDumpStatus
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModelDumpStatus.Unreadable = 6 -> Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModelDumpStatus
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModelFidelity
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModelFidelity.Approximate = 1 -> Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModelFidelity
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModelFidelity.Full = 0 -> Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModelFidelity
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfTable
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfTable.<Clone>$() -> Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfTable!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfTable.ClrTypeName.get -> string!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfTable.ClrTypeName.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfTable.Columns.get -> System.Collections.Generic.IReadOnlyList<Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn!>!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfTable.Columns.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfTable.EfTable() -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfTable.Equals(Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfTable? other) -> bool
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfTable.ForeignKeys.get -> System.Collections.Generic.IReadOnlyList<Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfForeignKey!>!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfTable.ForeignKeys.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfTable.Indexes.get -> System.Collections.Generic.IReadOnlyList<Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfIndex!>!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfTable.Indexes.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfTable.IsJoinEntity.get -> bool
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfTable.IsJoinEntity.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfTable.Name.get -> string!
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfTable.Name.init -> void
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfTable.Schema.get -> string?
+Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfTable.Schema.init -> void
+Aspire.Hosting.AspireC4EfResourceBuilderExtensions
+const Aspire.Hosting.AspireC4.EntityFrameworkCore.ApplicationModel.AspireC4EfResource.HttpEndpointName = "http" -> string!
+const Aspire.Hosting.AspireC4.EntityFrameworkCore.ApplicationModel.D2LocalServerResource.DefaultCommand = "d2" -> string!
+const Aspire.Hosting.AspireC4.EntityFrameworkCore.ApplicationModel.D2ServerResource.DefaultImage = "d2lang/d2" -> string!
+const Aspire.Hosting.AspireC4.EntityFrameworkCore.ApplicationModel.D2ServerResource.DefaultPort = 5174 -> int
+const Aspire.Hosting.AspireC4.EntityFrameworkCore.ApplicationModel.D2ServerResource.DefaultRegistry = "docker.io" -> string!
+const Aspire.Hosting.AspireC4.EntityFrameworkCore.ApplicationModel.D2ServerResource.DefaultTag = "v0.9.0" -> string!
+const Aspire.Hosting.AspireC4.EntityFrameworkCore.ApplicationModel.D2ServerResource.WorkspacePath = "/data" -> string!
+const Aspire.Hosting.AspireC4.EntityFrameworkCore.ApplicationModel.ErdViewerServerResource.DefaultImage = "nginx" -> string!
+const Aspire.Hosting.AspireC4.EntityFrameworkCore.ApplicationModel.ErdViewerServerResource.DefaultPort = 80 -> int
+const Aspire.Hosting.AspireC4.EntityFrameworkCore.ApplicationModel.ErdViewerServerResource.DefaultRegistry = "docker.io" -> string!
+const Aspire.Hosting.AspireC4.EntityFrameworkCore.ApplicationModel.ErdViewerServerResource.DefaultTag = "1.29-alpine" -> string!
+const Aspire.Hosting.AspireC4.EntityFrameworkCore.ApplicationModel.ErdViewerServerResource.WebRoot = "/usr/share/nginx/html" -> string!
+const Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.SectionName = "AspireC4:EntityFramework" -> string!
+const Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelReader.AttributeName = "AspireC4EfModelAttribute" -> string!
+EntityFrameworkCoreAssembly
+override Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Column.Equals(object? obj) -> bool
+override Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Column.GetHashCode() -> int
+override Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Column.ToString() -> string!
+override Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Edge.Equals(object? obj) -> bool
+override Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Edge.GetHashCode() -> int
+override Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Edge.ToString() -> string!
+override Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Model.Equals(object? obj) -> bool
+override Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Model.GetHashCode() -> int
+override Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Model.ToString() -> string!
+override Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Table.Equals(object? obj) -> bool
+override Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Table.GetHashCode() -> int
+override Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Table.ToString() -> string!
+override Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoadDiagnostics.GetHashCode() -> int
+override Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdFile.Equals(object? obj) -> bool
+override Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdFile.GetHashCode() -> int
+override Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdFile.ToString() -> string!
+override Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn.Equals(object? obj) -> bool
+override Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn.GetHashCode() -> int
+override Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn.ToString() -> string!
+override Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfContext.Equals(object? obj) -> bool
+override Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfContext.GetHashCode() -> int
+override Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfContext.ToString() -> string!
+override Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfForeignKey.Equals(object? obj) -> bool
+override Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfForeignKey.GetHashCode() -> int
+override Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfForeignKey.ToString() -> string!
+override Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfIndex.Equals(object? obj) -> bool
+override Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfIndex.GetHashCode() -> int
+override Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfIndex.ToString() -> string!
+override Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModel.Equals(object? obj) -> bool
+override Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModel.GetHashCode() -> int
+override Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModel.ToString() -> string!
+override Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfTable.Equals(object? obj) -> bool
+override Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfTable.GetHashCode() -> int
+override Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfTable.ToString() -> string!
+Purview.Telemetry.LoggerGenerationMode
+Purview.Telemetry.LoggerGenerationMode.Auto = 0 -> Purview.Telemetry.LoggerGenerationMode
+Purview.Telemetry.LoggerGenerationMode.V1 = 1 -> Purview.Telemetry.LoggerGenerationMode
+Purview.Telemetry.LoggerGenerationMode.V2 = 2 -> Purview.Telemetry.LoggerGenerationMode
+Purview.Telemetry.LogPrefixType
+Purview.Telemetry.LogPrefixType.Class = 2 -> Purview.Telemetry.LogPrefixType
+Purview.Telemetry.LogPrefixType.Custom = 3 -> Purview.Telemetry.LogPrefixType
+Purview.Telemetry.LogPrefixType.Default = 0 -> Purview.Telemetry.LogPrefixType
+Purview.Telemetry.LogPrefixType.Interface = 1 -> Purview.Telemetry.LogPrefixType
+Purview.Telemetry.LogPrefixType.TrimmedClassName = 4 -> Purview.Telemetry.LogPrefixType
+Purview.Telemetry.MeterNameGenerationType
+Purview.Telemetry.MeterNameGenerationType.DotNet = 1 -> Purview.Telemetry.MeterNameGenerationType
+Purview.Telemetry.MeterNameGenerationType.OpenTelemetry = 0 -> Purview.Telemetry.MeterNameGenerationType
+Purview.Telemetry.NamingConvention
+Purview.Telemetry.NamingConvention.Legacy = 0 -> Purview.Telemetry.NamingConvention
+Purview.Telemetry.NamingConvention.OpenTelemetry = 1 -> Purview.Telemetry.NamingConvention
+Purview.Telemetry.Targets
+Purview.Telemetry.Targets.Activities = 1 -> Purview.Telemetry.Targets
+Purview.Telemetry.Targets.All = Purview.Telemetry.Targets.Activities | Purview.Telemetry.Targets.Metrics -> Purview.Telemetry.Targets
+Purview.Telemetry.Targets.Logging = 2 -> Purview.Telemetry.Targets
+Purview.Telemetry.Targets.Metrics = 4 -> Purview.Telemetry.Targets
+Purview.Telemetry.Targets.None = 0 -> Purview.Telemetry.Targets
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.D2ModelBuilder.Build(Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModel! model, Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions! options) -> Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Model!
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Generators.D2DSLGenerator.Generate(Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Model! model, Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions! options) -> string!
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Column.operator !=(Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Column? left, Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Column? right) -> bool
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Column.operator ==(Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Column? left, Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Column? right) -> bool
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Edge.operator !=(Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Edge? left, Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Edge? right) -> bool
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Edge.operator ==(Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Edge? left, Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Edge? right) -> bool
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Model.operator !=(Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Model? left, Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Model? right) -> bool
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Model.operator ==(Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Model? left, Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Model? right) -> bool
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Table.operator !=(Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Table? left, Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Table? right) -> bool
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Table.operator ==(Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Table? left, Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Table? right) -> bool
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.Dbml.DbmlGenerator.Generate(Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModel! model, Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions! options) -> string!
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoadDiagnostics.operator !=(Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoadDiagnostics left, Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoadDiagnostics right) -> bool
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoadDiagnostics.operator ==(Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoadDiagnostics left, Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoadDiagnostics right) -> bool
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoader.FindOutputDirectory(string! projectPath) -> string?
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoader.LoadFromProject(string! projectPath, out Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoadDiagnostics diagnostics) -> Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModel!
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoader.LoadFromProject(string! projectPath) -> Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModel!
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoader.Merge(System.Collections.Generic.IEnumerable<Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModel!>! models) -> Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModel!
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelLoader.Parse(string? descriptor) -> Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModel!
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.EfModelReader.TryRead(string! assemblyPath, out string? descriptor) -> bool
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdFile.operator !=(Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdFile? left, Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdFile? right) -> bool
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdFile.operator ==(Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdFile? left, Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdFile? right) -> bool
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdOutput.Create(Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModel! model, Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions! options) -> System.Collections.Generic.IReadOnlyList<Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdFile!>!
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdOutput.Serialise(Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModel! model) -> string!
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.InteractiveViewer.Asset(string! name, string! modelFileName, string? title, Aspire.Hosting.AspireC4.EntityFrameworkCore.DomainTypeDisplay domainTypeDisplay) -> string!
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.InteractiveViewer.AssetNames.get -> System.Collections.Generic.IReadOnlyList<string!>!
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.InteractiveViewer.MermaidAsset(string! name, string! diagramFileName, string? title) -> string!
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.InteractiveViewer.MermaidAssetNames.get -> System.Collections.Generic.IReadOnlyList<string!>!
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.InteractiveViewer.WriteVendorAssetsAsync(string! directory, Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdRenderer renderer, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<int>!
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.Mermaid.MermaidGenerator.Generate(Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModel! model, Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions! options) -> string!
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn.operator !=(Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn? left, Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn? right) -> bool
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn.operator ==(Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn? left, Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfColumn? right) -> bool
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfContext.operator !=(Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfContext? left, Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfContext? right) -> bool
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfContext.operator ==(Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfContext? left, Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfContext? right) -> bool
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfForeignKey.operator !=(Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfForeignKey? left, Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfForeignKey? right) -> bool
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfForeignKey.operator ==(Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfForeignKey? left, Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfForeignKey? right) -> bool
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfIndex.operator !=(Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfIndex? left, Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfIndex? right) -> bool
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfIndex.operator ==(Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfIndex? left, Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfIndex? right) -> bool
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModel.operator !=(Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModel? left, Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModel? right) -> bool
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModel.operator ==(Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModel? left, Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModel? right) -> bool
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfTable.operator !=(Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfTable? left, Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfTable? right) -> bool
+static Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfTable.operator ==(Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfTable? left, Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfTable? right) -> bool
+static Aspire.Hosting.AspireC4EfResourceBuilderExtensions.WithEntityFrameworkDiagram(this Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.AspireC4.ApplicationModel.AspireC4Resource!>! builder, int? port = null, System.Action<Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions!>? configure = null) -> Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.AspireC4.ApplicationModel.AspireC4Resource!>!
+static Aspire.Hosting.AspireC4EfResourceBuilderExtensions.WithEntityFrameworkModel<T>(this Aspire.Hosting.ApplicationModel.IResourceBuilder<T>! builder, string? label = null) -> Aspire.Hosting.ApplicationModel.IResourceBuilder<T>!
+static Aspire.Hosting.AspireC4EfResourceBuilderExtensions.WithEntityFrameworkModel<T>(this Aspire.Hosting.ApplicationModel.IResourceBuilder<T>! builder, System.Action<Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfProjectOptions!>! configure) -> Aspire.Hosting.ApplicationModel.IResourceBuilder<T>!
+static Aspire.Hosting.AspireC4EfResourceBuilderExtensions.WithLocalD2CLI(this Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.AspireC4.ApplicationModel.AspireC4Resource!>! builder, string? command = null) -> Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.AspireC4.ApplicationModel.AspireC4Resource!>!
+static readonly Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Model.Empty -> Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models.D2Model!
+static readonly Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModel.Empty -> Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfModel!

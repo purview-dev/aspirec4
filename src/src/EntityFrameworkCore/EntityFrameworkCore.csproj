@@ -17,6 +17,16 @@
 		<RepositoryType>git</RepositoryType>
 		<PackageTags>aspire;dotnet;aspnetcore;d2;d2lang;entityframework;efcore;erd;diagram;visualisation;visualization;</PackageTags>
 		<IncludeSymbols>true</IncludeSymbols>
+		<!-- Inherits AspireC4.Hosting and its prerelease Purview.Containers.Environment dependency. -->
+		<NoWarn>$(NoWarn);NU5104</NoWarn>
+		<!--
+			RS0027 (PublicApiAnalyzers) wants the overload carrying an optional parameter to also have
+			the most parameters. WithEntityFrameworkModel(string? label = null) is the compact form
+			and WithEntityFrameworkModel(Action<AspireC4EfProjectOptions>) the full one; both are
+			[AspireExport]ed and are the shipped preview shape. Widening the compact overload would
+			change the generated TypeScript surface, so the baseline records the shape instead.
+		-->
+		<NoWarn>$(NoWarn);RS0027</NoWarn>
 		<EnableAspireIntegrationAnalyzers>true</EnableAspireIntegrationAnalyzers>
 	</PropertyGroup>
 
@@ -46,6 +56,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Aspire.Hosting" />
+		<PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" PrivateAssets="all" />
 		<!-- Reflection-only metadata reads for the analyzer-less discovery path. -->
 		<PackageReference Include="System.Reflection.MetadataLoadContext" />
 	</ItemGroup>

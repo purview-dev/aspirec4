@@ -17,7 +17,7 @@
       "rollForward": false
     },
     "purview.build": {
-      "version": "0.9.1",
+      "version": "0.9.2",
       "commands": [
         "purview-build"
       ],

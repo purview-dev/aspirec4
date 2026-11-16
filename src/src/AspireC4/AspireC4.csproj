@@ -18,6 +18,23 @@
 		<PackageTags>aspire;dotnet;aspnetcore;c4;likec4;architecture;diagram;visualisation;visualization;</PackageTags>
 		<IncludeSymbols>true</IncludeSymbols>
 		<!--
+			NU5104 rejects a stable package that depends on a prerelease one. The only prerelease in
+			the graph is Purview.Containers.Environment, which has no stable release yet (latest is
+			1.0.0-prerelease.13) and is used solely for the image-export bind-sharing probe. The
+			dependency is deliberate and resolved by NuGet, so suppress the specific warning rather
+			than force a fake stable dependency; remove this when Purview.Containers ships 1.0.0.
+		-->
+		<NoWarn>$(NoWarn);NU5104</NoWarn>
+		<!--
+			RS0026 (PublicApiAnalyzers) rejects a member group with more than one overload carrying
+			optional parameters. WithLink(string, string? = null) and WithLink(Uri, string? = null)
+			are the shipped preview shape and are exported to TypeScript as distinct fluent methods;
+			removing either, or splitting the optional parameter, is a public API change that would
+			also change the Aspire-generated TypeScript surface. The 13.6.5 baseline records the shape
+			instead, so it cannot change unnoticed.
+		-->
+		<NoWarn>$(NoWarn);RS0026</NoWarn>
+		<!--
 			Opting into the Aspire integration analysers - hoping it'll help me to
 			figure out some issues with the TypeScript exports.
 		-->
@@ -37,6 +54,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Aspire.Hosting" />
+		<PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" PrivateAssets="all" />
 		<PackageReference Include="Purview.Containers.Environment" />
 	</ItemGroup>
 

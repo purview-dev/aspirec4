@@ -669,9 +669,13 @@ sketch
 
 BenchmarkDotNet.Artifacts/
 
-# AspireC4 generated diagram output needs no entry here: AspireC4 writes a .gitignore beside what it
-# generates, naming only its own files and leaving the exported images visible. This repository relies
-# on that rather than restating it, so a regression in it shows up as untracked files.
+# AspireC4 generated diagram output normally needs no entry here: AspireC4 writes a .gitignore beside
+# what it generates. Consumers therefore add nothing, and the behaviour is covered by the unit and
+# integration tests (GeneratedOutputTests). This repository ignores the sample AppHost's generated root
+# wholesale, because the sample is run with `dotnet run` by contributors and CI and its diagrams,
+# viewer assets and exported images are all reproducible output; they must never be committed by
+# accident. Screenshots for the docs live in docs/images/screenshots/ instead.
+src/src/TestAppHost/.aspirec4/
 
 # Agent skills are installed into the universal .agents/skills/ folder, which is a local install:
 # gitignored, and reproducible from the committed skills-lock.json with `just skills-install`. The

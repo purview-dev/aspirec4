@@ -29,13 +29,12 @@
 		<IncludeBuildOutput>false</IncludeBuildOutput>
 		<SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
 		<!--
-			Do not ship the analyzer PDB. This assembly is produced by the
-			Purview.SourceGeneratorFramework merge pass, and a merged PDB does not carry the Roslyn
-			compiler-flags record, so pack validation rejects it ("no compiler-flags record in its
-			PDB"). The record cannot be restored here and the check cannot be switched off from
-			purview-build.json, because an empty RequiredCompilerFlags array yields no configuration
-			keys and the tool keeps its non-empty default. The sibling SourceGenerators analyzer
-			ships no PDB either, so this matches what AspireC4.Hosting already does.
+			Do not ship the analyzer PDB. The assembly is produced by the
+			Purview.SourceGeneratorFramework merge pass, which does not preserve the Reproducible
+			debug directory entry or the compiler-flags record in its PDB, so pack validation rejects
+			a package that carries them. Shipping no PDB matches the registry/DSL generator packed in
+			AspireC4.Hosting, which is the same shape, and keeps the package analyzers-only. Remove
+			this once the merge pass preserves both.
 		-->
 		<PurviewPackAnalyzerPdb>false</PurviewPackAnalyzerPdb>
 	</PropertyGroup>
