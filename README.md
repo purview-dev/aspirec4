@@ -5,6 +5,8 @@
 
 **AspireC4.Hosting** is an [Aspire](https://learn.microsoft.com/en-us/dotnet/aspire/) extension library that generates live [LikeC4](https://likec4.dev) diagrams from the Aspire resource graph.
 
+**Documentation:** [AspireC4 documentation](https://purview.dev/docs/aspirec4/)
+
 ## Packages
 
 | Package | Install into | Purpose |
