@@ -2,6 +2,12 @@
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
 		<!--
+			The target invokes `dotnet <tool>.dll`, so the native apphost is dead weight in the
+			package and is not reproducible (it carries no Reproducible debug directory entry, which
+			fails pack validation). Pack the managed dll only.
+		-->
+		<UseAppHost>false</UseAppHost>
+		<!--
 			Single-target: the tool ships once under tools/ and runs as `dotnet <tool>.dll`, so it needs
 			one runtime. net10.0 keeps the build machine requirement at .NET 10 or later.
 

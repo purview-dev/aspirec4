@@ -1,0 +1,441 @@
+#nullable enable
+Aspire.Hosting.AspireC4.ApplicationModel.AspireC4DiagramGroupResource
+Aspire.Hosting.AspireC4.ApplicationModel.AspireC4DiagramGroupResource.AspireC4DiagramGroupResource(string! name) -> void
+Aspire.Hosting.AspireC4.ApplicationModel.AspireC4Resource
+Aspire.Hosting.AspireC4.ApplicationModel.LikeC4LocalServerResource
+Aspire.Hosting.AspireC4.ApplicationModel.LikeC4ServerResource
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.AdditionalDSLFiles.get -> System.Collections.Generic.List<string!>!
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.AdditionalDSLFiles.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.AdditionalDSLFolders.get -> System.Collections.Generic.List<string!>!
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.AdditionalDSLFolders.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.AspireC4DiagramOptions() -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.AutoIconsEnabled.get -> bool
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.AutoIconsEnabled.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.AutoIncludeAspireMetadata.get -> Aspire.Hosting.AspireMetadataInclusion
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.AutoIncludeAspireMetadata.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.CheckLatestImageVersion.get -> bool
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.CheckLatestImageVersion.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.ConfigFileMetadata.get -> System.Collections.Generic.Dictionary<string!, string!>!
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.ConfigFileMetadata.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.ContainerImageTag.get -> string?
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.ContainerImageTag.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.ContainerRuntimeCommand.get -> string!
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.ContainerRuntimeCommand.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.DashboardLinkDisplayName.get -> string!
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.DashboardLinkDisplayName.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.DefaultViewId.get -> string?
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.DefaultViewId.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.DisableHMR.get -> bool
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.DisableHMR.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.ElementKindSpecs.get -> System.Collections.Generic.List<Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindSpec!>!
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.ElementKindSpecs.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.ExcludedResourceTypes.get -> System.Collections.Generic.HashSet<System.Type!>!
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.ExcludedResourceTypes.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.ExportImages.get -> bool
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.ExportImages.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.ExtensionsDirectory.get -> string?
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.ExtensionsDirectory.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.ExternalProcessTimeoutSeconds.get -> int
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.ExternalProcessTimeoutSeconds.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.FileName.get -> string!
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.FileName.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.FormatGeneratedFile.get -> bool
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.FormatGeneratedFile.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.GenerateConfigFile.get -> bool
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.GenerateConfigFile.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.GeneratedViewId.get -> string?
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.GeneratedViewId.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.GenerateGitIgnoreFile.get -> bool
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.GenerateGitIgnoreFile.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.HideFromDashboard.get -> bool
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.HideFromDashboard.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.HMRPort.get -> int?
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.HMRPort.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.IconResolvers.get -> System.Collections.Generic.List<System.Func<Aspire.Hosting.AspireC4.LikeC4.Icons.IconResolverContext!, string?>!>!
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.ImageAliases.get -> System.Collections.Generic.Dictionary<string!, string!>!
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.ImageAliases.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.ImageExportDirectory.get -> string?
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.ImageExportDirectory.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.ImageExportTimeoutSeconds.get -> int
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.ImageExportTimeoutSeconds.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.ImageFormats.get -> System.Collections.Generic.HashSet<Aspire.Hosting.AspireC4.LikeC4.Runtime.LikeC4ImageFormat>!
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.ImageFormats.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.IncludeAspireC4InternalResource.get -> bool
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.IncludeAspireC4InternalResource.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.IncludeAspireDashboardLinks.get -> bool
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.IncludeAspireDashboardLinks.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.IncludeAspireTokenInDashboardLinks.get -> bool
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.IncludeAspireTokenInDashboardLinks.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.IncludeDefaultStateStyles.get -> bool
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.IncludeDefaultStateStyles.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.NormaliseMetadataBehaviour.get -> Aspire.Hosting.NormaliseMetadataBehaviour
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.NormaliseMetadataBehaviour.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.OutputDirectory.get -> string!
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.OutputDirectory.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.ProjectDirectory.get -> string?
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.ProjectDirectory.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.RelationshipKindSpecs.get -> System.Collections.Generic.List<Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4RelationshipKindSpec!>!
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.RelationshipKindSpecs.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.RelationshipKindSyntax.get -> Aspire.Hosting.LikeC4RelationshipKindSyntax
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.RelationshipKindSyntax.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.StateTagMap.get -> System.Collections.Generic.Dictionary<string!, string?>!
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.StateTagMap.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.Title.get -> string?
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.Title.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.UseDotIfAvailable.get -> bool
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.UseDotIfAvailable.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.UseLegacyLayout.get -> bool
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.UseLegacyLayout.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.ViewDescription.get -> string?
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.ViewDescription.set -> void
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.ViewTitle.get -> string!
+Aspire.Hosting.AspireC4.AspireC4DiagramOptions.ViewTitle.set -> void
+Aspire.Hosting.AspireC4.KnownTypeAttribute
+Aspire.Hosting.AspireC4.KnownTypeAttribute.KnownTypeAttribute(Aspire.Hosting.AspireC4.LikeC4RegistryType type) -> void
+Aspire.Hosting.AspireC4.KnownTypeAttribute.Strict.get -> Aspire.Hosting.AspireC4.LikeC4Severity
+Aspire.Hosting.AspireC4.KnownTypeAttribute.Strict.init -> void
+Aspire.Hosting.AspireC4.KnownTypeAttribute.Type.get -> Aspire.Hosting.AspireC4.LikeC4RegistryType
+Aspire.Hosting.AspireC4.LikeC4.Annotations.ExcludeFromLikeC4Annotation
+Aspire.Hosting.AspireC4.LikeC4.Annotations.ExcludeFromLikeC4Annotation.ExcludeFromLikeC4Annotation() -> void
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4ExistingElementAnnotation
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4ExistingElementAnnotation.ElementId.get -> string!
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4ExistingElementAnnotation.LikeC4ExistingElementAnnotation(string! elementId) -> void
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4GroupAnnotation
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4GroupAnnotation.GroupName.get -> string!
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4GroupAnnotation.LikeC4GroupAnnotation(string! groupName) -> void
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation.AutoIconEnabled.get -> bool?
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation.Description.get -> string?
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation.Icon.get -> string?
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation.Kind.get -> string?
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation.Label.get -> string!
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation.LikeC4NodeDetailsAnnotation(string! label) -> void
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation.Links.get -> System.Collections.Generic.IReadOnlyList<Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Link!>!
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation.Metadata.get -> System.Collections.Generic.IReadOnlyList<Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Metadata!>!
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation.Summary.get -> string?
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation.Tags.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation.Technology.get -> string?
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation.WithAutoIcon(bool? enabled = null) -> Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation!
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation.WithDescription(string? description) -> Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation!
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation.WithIcon(string? icon) -> Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation!
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation.WithKind(string? kind) -> Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation!
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation.WithLabel(string! label) -> Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation!
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation.WithLink(string! url, string? title = null) -> Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation!
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation.WithLink(System.Uri! uri, string? title = null) -> Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation!
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation.WithMetadata(params (string! key, string! value)[]! metadata) -> Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation!
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation.WithMetadata(string! key, string! value) -> Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation!
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation.WithSummary(string? summary) -> Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation!
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation.WithTag(string! tag) -> Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation!
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation.WithTechnology(string? technology) -> Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation!
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4RelationshipDetailsAnnotation
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4RelationshipDetailsAnnotation.Description.get -> string?
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4RelationshipDetailsAnnotation.Kind.get -> string?
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4RelationshipDetailsAnnotation.Label.get -> string?
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4RelationshipDetailsAnnotation.LikeC4RelationshipDetailsAnnotation(string! targetName) -> void
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4RelationshipDetailsAnnotation.Links.get -> System.Collections.Generic.IReadOnlyList<Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Link!>!
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4RelationshipDetailsAnnotation.Metadata.get -> System.Collections.Generic.IReadOnlyList<Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Metadata!>!
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4RelationshipDetailsAnnotation.NavigateTo.get -> string?
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4RelationshipDetailsAnnotation.Tags.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4RelationshipDetailsAnnotation.TargetName.get -> string!
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4RelationshipDetailsAnnotation.Technology.get -> string?
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4RelationshipDetailsAnnotation.WithDescription(string? description) -> Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4RelationshipDetailsAnnotation!
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4RelationshipDetailsAnnotation.WithKind(string? kind) -> Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4RelationshipDetailsAnnotation!
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4RelationshipDetailsAnnotation.WithLabel(string! label) -> Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4RelationshipDetailsAnnotation!
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4RelationshipDetailsAnnotation.WithLink(string! url, string? title = null) -> Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4RelationshipDetailsAnnotation!
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4RelationshipDetailsAnnotation.WithLink(System.Uri! uri, string? title = null) -> Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4RelationshipDetailsAnnotation!
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4RelationshipDetailsAnnotation.WithMetadata(params (string! key, string! value)[]! metadata) -> Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4RelationshipDetailsAnnotation!
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4RelationshipDetailsAnnotation.WithMetadata(string! key, string! value) -> Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4RelationshipDetailsAnnotation!
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4RelationshipDetailsAnnotation.WithNavigateTo(string! viewId) -> Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4RelationshipDetailsAnnotation!
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4RelationshipDetailsAnnotation.WithTag(string! tag) -> Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4RelationshipDetailsAnnotation!
+Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4RelationshipDetailsAnnotation.WithTechnology(string? technology) -> Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4RelationshipDetailsAnnotation!
+Aspire.Hosting.AspireC4.LikeC4.Generators.LikeC4ConfigGenerator
+Aspire.Hosting.AspireC4.LikeC4.Generators.LikeC4DSLGenerator
+Aspire.Hosting.AspireC4.LikeC4.Icons.IconResolverContext
+Aspire.Hosting.AspireC4.LikeC4.Icons.IconResolverContext.HiddenOriginal.get -> Aspire.Hosting.ApplicationModel.IResource?
+Aspire.Hosting.AspireC4.LikeC4.Icons.IconResolverContext.HiddenOriginal.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Icons.IconResolverContext.IconResolverContext() -> void
+Aspire.Hosting.AspireC4.LikeC4.Icons.IconResolverContext.Resource.get -> Aspire.Hosting.ApplicationModel.IResource!
+Aspire.Hosting.AspireC4.LikeC4.Icons.IconResolverContext.Resource.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.<Clone>$() -> Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element!
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.Description.get -> string?
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.Description.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.Equals(Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element? other) -> bool
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.ExtendsExistingElement.get -> bool
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.ExtendsExistingElement.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.Group.get -> string?
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.Group.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.Icon.get -> string?
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.Icon.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.Kind.get -> string!
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.Kind.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.Label.get -> string!
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.Label.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.LikeC4Element() -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.Links.get -> System.Collections.Generic.IReadOnlyList<Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Link!>!
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.Links.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.Metadata.get -> System.Collections.Generic.IReadOnlyList<Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Metadata!>!
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.Metadata.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.Name.get -> string!
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.Name.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.ParentName.get -> string?
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.ParentName.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.State.get -> string?
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.State.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.Summary.get -> string?
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.Summary.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.Tags.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.Tags.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.Technology.get -> string?
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.Technology.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKind
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindSpec
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindSpec.LikeC4ElementKindSpec(string! name) -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindSpec.Name.get -> string!
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindSpec.Notation.get -> string?
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindSpec.Notation.set -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindSpec.Style.get -> Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindStyle?
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindSpec.Style.set -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindSpec.Technology.get -> string?
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindSpec.Technology.set -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindSpec.WithNotation(string! notation) -> Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindSpec!
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindSpec.WithStyle(Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindStyle! style) -> Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindSpec!
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindSpec.WithTechnology(string! technology) -> Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindSpec!
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindStyle
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindStyle.<Clone>$() -> Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindStyle!
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindStyle.Border.get -> string?
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindStyle.Border.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindStyle.Color.get -> string?
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindStyle.Color.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindStyle.Deconstruct(out string? Shape, out string? Color, out string? Icon, out string? Border, out int? Opacity) -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindStyle.Equals(Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindStyle? other) -> bool
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindStyle.Icon.get -> string?
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindStyle.Icon.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindStyle.LikeC4ElementKindStyle(string? Shape, string? Color, string? Icon, string? Border, int? Opacity) -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindStyle.Opacity.get -> int?
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindStyle.Opacity.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindStyle.Shape.get -> string?
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindStyle.Shape.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Link
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Link.<Clone>$() -> Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Link!
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Link.Deconstruct(out string! Uri, out string? Title) -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Link.Equals(Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Link? other) -> bool
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Link.LikeC4Link(string! Uri, string? Title = null) -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Link.Title.get -> string?
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Link.Title.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Link.Uri.get -> string!
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Link.Uri.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Metadata
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Metadata.<Clone>$() -> Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Metadata!
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Metadata.Deconstruct(out string! Key, out string! Value) -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Metadata.Equals(Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Metadata? other) -> bool
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Metadata.Key.get -> string!
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Metadata.Key.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Metadata.LikeC4Metadata(string! Key, string! Value) -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Metadata.Value.get -> string!
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Metadata.Value.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Model
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Model.<Clone>$() -> Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Model!
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Model.Elements.get -> System.Collections.Generic.IReadOnlyList<Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element!>!
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Model.Elements.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Model.Equals(Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Model? other) -> bool
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Model.LikeC4Model() -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Model.Relationships.get -> System.Collections.Generic.IReadOnlyList<Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship!>!
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Model.Relationships.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship.<Clone>$() -> Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship!
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship.Description.get -> string?
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship.Description.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship.Equals(Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship? other) -> bool
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship.Kind.get -> string?
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship.Kind.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship.Label.get -> string?
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship.Label.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship.LikeC4Relationship() -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship.Links.get -> System.Collections.Generic.IReadOnlyList<Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Link!>!
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship.Links.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship.Metadata.get -> System.Collections.Generic.IReadOnlyList<Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Metadata!>!
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship.Metadata.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship.NavigateTo.get -> string?
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship.NavigateTo.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship.SourceName.get -> string!
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship.SourceName.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship.Tags.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship.Tags.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship.TargetName.get -> string!
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship.TargetName.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship.Technology.get -> string?
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship.Technology.init -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4RelationshipKindSpec
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4RelationshipKindSpec.LikeC4RelationshipKindSpec(string! name, string? technology = null) -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4RelationshipKindSpec.Name.get -> string!
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4RelationshipKindSpec.Technology.get -> string?
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4RelationshipKindSpec.Technology.set -> void
+Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4RelationshipKindSpec.WithTechnology(string! technology) -> Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4RelationshipKindSpec!
+Aspire.Hosting.AspireC4.LikeC4.Runtime.LikeC4ImageFormat
+Aspire.Hosting.AspireC4.LikeC4.Runtime.LikeC4ImageFormat.Jpg = 1 -> Aspire.Hosting.AspireC4.LikeC4.Runtime.LikeC4ImageFormat
+Aspire.Hosting.AspireC4.LikeC4.Runtime.LikeC4ImageFormat.Png = 0 -> Aspire.Hosting.AspireC4.LikeC4.Runtime.LikeC4ImageFormat
+Aspire.Hosting.AspireC4.LikeC4RegistryAttribute
+Aspire.Hosting.AspireC4.LikeC4RegistryAttribute.LikeC4RegistryAttribute() -> void
+Aspire.Hosting.AspireC4.LikeC4RegistryAttribute.Strict.get -> Aspire.Hosting.AspireC4.LikeC4Severity
+Aspire.Hosting.AspireC4.LikeC4RegistryAttribute.Strict.init -> void
+Aspire.Hosting.AspireC4.LikeC4RegistryType
+Aspire.Hosting.AspireC4.LikeC4RegistryType.ElementKind = 1 -> Aspire.Hosting.AspireC4.LikeC4RegistryType
+Aspire.Hosting.AspireC4.LikeC4RegistryType.Group = 3 -> Aspire.Hosting.AspireC4.LikeC4RegistryType
+Aspire.Hosting.AspireC4.LikeC4RegistryType.MetadataKey = 4 -> Aspire.Hosting.AspireC4.LikeC4RegistryType
+Aspire.Hosting.AspireC4.LikeC4RegistryType.RelationshipKind = 2 -> Aspire.Hosting.AspireC4.LikeC4RegistryType
+Aspire.Hosting.AspireC4.LikeC4RegistryType.Tag = 0 -> Aspire.Hosting.AspireC4.LikeC4RegistryType
+Aspire.Hosting.AspireC4.LikeC4Severity
+Aspire.Hosting.AspireC4.LikeC4Severity.Error = 4 -> Aspire.Hosting.AspireC4.LikeC4Severity
+Aspire.Hosting.AspireC4.LikeC4Severity.Inherit = 0 -> Aspire.Hosting.AspireC4.LikeC4Severity
+Aspire.Hosting.AspireC4.LikeC4Severity.Off = 1 -> Aspire.Hosting.AspireC4.LikeC4Severity
+Aspire.Hosting.AspireC4.LikeC4Severity.Suggestion = 2 -> Aspire.Hosting.AspireC4.LikeC4Severity
+Aspire.Hosting.AspireC4.LikeC4Severity.Warning = 3 -> Aspire.Hosting.AspireC4.LikeC4Severity
+Aspire.Hosting.AspireC4.SeverityAttribute
+Aspire.Hosting.AspireC4.SeverityAttribute.Severity.get -> Aspire.Hosting.AspireC4.LikeC4Severity
+Aspire.Hosting.AspireC4.SeverityAttribute.SeverityAttribute(Aspire.Hosting.AspireC4.LikeC4Severity severity) -> void
+Aspire.Hosting.AspireC4DiagramOptionsExtensions
+Aspire.Hosting.AspireC4DistributedApplicationBuilderExtensions
+Aspire.Hosting.AspireC4ResourceBuilderEnvExtensions
+Aspire.Hosting.AspireC4ResourceBuilderExtensions
+Aspire.Hosting.AspireC4ResourceExtensions
+Aspire.Hosting.AspireMetadataInclusion
+Aspire.Hosting.AspireMetadataInclusion.All = Aspire.Hosting.AspireMetadataInclusion.Metadata | Aspire.Hosting.AspireMetadataInclusion.Links -> Aspire.Hosting.AspireMetadataInclusion
+Aspire.Hosting.AspireMetadataInclusion.Links = 2 -> Aspire.Hosting.AspireMetadataInclusion
+Aspire.Hosting.AspireMetadataInclusion.Metadata = 1 -> Aspire.Hosting.AspireMetadataInclusion
+Aspire.Hosting.AspireMetadataInclusion.None = 0 -> Aspire.Hosting.AspireMetadataInclusion
+Aspire.Hosting.LikeC4RelationshipKindSyntax
+Aspire.Hosting.LikeC4RelationshipKindSyntax.Bracket = 1 -> Aspire.Hosting.LikeC4RelationshipKindSyntax
+Aspire.Hosting.LikeC4RelationshipKindSyntax.Dot = 0 -> Aspire.Hosting.LikeC4RelationshipKindSyntax
+Aspire.Hosting.LocalCLIRuntime
+Aspire.Hosting.LocalCLIRuntime.Auto = 0 -> Aspire.Hosting.LocalCLIRuntime
+Aspire.Hosting.LocalCLIRuntime.Bun = 4 -> Aspire.Hosting.LocalCLIRuntime
+Aspire.Hosting.LocalCLIRuntime.Deno = 5 -> Aspire.Hosting.LocalCLIRuntime
+Aspire.Hosting.LocalCLIRuntime.Npx = 1 -> Aspire.Hosting.LocalCLIRuntime
+Aspire.Hosting.LocalCLIRuntime.Pnpm = 2 -> Aspire.Hosting.LocalCLIRuntime
+Aspire.Hosting.LocalCLIRuntime.Yarn = 3 -> Aspire.Hosting.LocalCLIRuntime
+Aspire.Hosting.NormaliseMetadataBehaviour
+Aspire.Hosting.NormaliseMetadataBehaviour.Normalise = 0 -> Aspire.Hosting.NormaliseMetadataBehaviour
+Aspire.Hosting.NormaliseMetadataBehaviour.NormaliseLowercase = 1 -> Aspire.Hosting.NormaliseMetadataBehaviour
+Aspire.Hosting.NormaliseMetadataBehaviour.Throw = 2 -> Aspire.Hosting.NormaliseMetadataBehaviour
+AspireC4Assembly
+const Aspire.Hosting.AspireC4.ApplicationModel.AspireC4Resource.DefaultHMRPort = 24678 -> int
+const Aspire.Hosting.AspireC4.ApplicationModel.AspireC4Resource.DefaultPort = 5173 -> int
+const Aspire.Hosting.AspireC4.ApplicationModel.AspireC4Resource.HMREndpointName = "http-hmr-channel" -> string!
+const Aspire.Hosting.AspireC4.ApplicationModel.AspireC4Resource.HttpEndpointName = "http" -> string!
+const Aspire.Hosting.AspireC4.ApplicationModel.LikeC4ServerResource.DefaultImage = "likec4/likec4" -> string!
+const Aspire.Hosting.AspireC4.ApplicationModel.LikeC4ServerResource.DefaultRegistry = "ghcr.io" -> string!
+const Aspire.Hosting.AspireC4.ApplicationModel.LikeC4ServerResource.DefaultTag = "latest" -> string!
+const Aspire.Hosting.AspireC4.AspireC4DiagramOptions.DefaultExtensionsDirectory = "./likec4-extensions" -> string!
+const Aspire.Hosting.AspireC4.AspireC4DiagramOptions.SectionName = "AspireC4" -> string!
+const Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKind.Component = "component" -> string!
+const Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKind.Container = "container" -> string!
+const Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKind.Database = "database" -> string!
+const Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKind.Executable = "executable" -> string!
+const Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKind.System = "system" -> string!
+override Aspire.Hosting.AspireC4.ApplicationModel.AspireC4Resource.Name.get -> string!
+override Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.Equals(object? obj) -> bool
+override Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.GetHashCode() -> int
+override Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.ToString() -> string!
+override Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindStyle.Equals(object? obj) -> bool
+override Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindStyle.GetHashCode() -> int
+override Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindStyle.ToString() -> string!
+override Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Link.Equals(object? obj) -> bool
+override Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Link.GetHashCode() -> int
+override Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Link.ToString() -> string!
+override Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Metadata.Equals(object? obj) -> bool
+override Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Metadata.GetHashCode() -> int
+override Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Metadata.ToString() -> string!
+override Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Model.Equals(object? obj) -> bool
+override Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Model.GetHashCode() -> int
+override Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Model.ToString() -> string!
+override Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship.Equals(object? obj) -> bool
+override Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship.GetHashCode() -> int
+override Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship.ToString() -> string!
+Purview.Telemetry.LoggerGenerationMode
+Purview.Telemetry.LoggerGenerationMode.Auto = 0 -> Purview.Telemetry.LoggerGenerationMode
+Purview.Telemetry.LoggerGenerationMode.V1 = 1 -> Purview.Telemetry.LoggerGenerationMode
+Purview.Telemetry.LoggerGenerationMode.V2 = 2 -> Purview.Telemetry.LoggerGenerationMode
+Purview.Telemetry.LogPrefixType
+Purview.Telemetry.LogPrefixType.Class = 2 -> Purview.Telemetry.LogPrefixType
+Purview.Telemetry.LogPrefixType.Custom = 3 -> Purview.Telemetry.LogPrefixType
+Purview.Telemetry.LogPrefixType.Default = 0 -> Purview.Telemetry.LogPrefixType
+Purview.Telemetry.LogPrefixType.Interface = 1 -> Purview.Telemetry.LogPrefixType
+Purview.Telemetry.LogPrefixType.TrimmedClassName = 4 -> Purview.Telemetry.LogPrefixType
+Purview.Telemetry.MeterNameGenerationType
+Purview.Telemetry.MeterNameGenerationType.DotNet = 1 -> Purview.Telemetry.MeterNameGenerationType
+Purview.Telemetry.MeterNameGenerationType.OpenTelemetry = 0 -> Purview.Telemetry.MeterNameGenerationType
+Purview.Telemetry.NamingConvention
+Purview.Telemetry.NamingConvention.Legacy = 0 -> Purview.Telemetry.NamingConvention
+Purview.Telemetry.NamingConvention.OpenTelemetry = 1 -> Purview.Telemetry.NamingConvention
+Purview.Telemetry.Targets
+Purview.Telemetry.Targets.Activities = 1 -> Purview.Telemetry.Targets
+Purview.Telemetry.Targets.All = Purview.Telemetry.Targets.Activities | Purview.Telemetry.Targets.Metrics -> Purview.Telemetry.Targets
+Purview.Telemetry.Targets.Logging = 2 -> Purview.Telemetry.Targets
+Purview.Telemetry.Targets.Metrics = 4 -> Purview.Telemetry.Targets
+Purview.Telemetry.Targets.None = 0 -> Purview.Telemetry.Targets
+static Aspire.Hosting.AspireC4.LikeC4.Generators.LikeC4ConfigGenerator.Generate(string! name, string? title, System.Collections.Generic.IEnumerable<string!>! includePaths, System.Collections.Generic.IReadOnlyDictionary<string!, string!>! imageAliases, System.Collections.Generic.IReadOnlyDictionary<string!, string!>! configFileMetadata) -> string!
+static Aspire.Hosting.AspireC4.LikeC4.Generators.LikeC4DSLGenerator.Generate(Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Model! model, Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options) -> string!
+static Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.operator !=(Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element? left, Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element? right) -> bool
+static Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element.operator ==(Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element? left, Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Element? right) -> bool
+static Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindStyle.operator !=(Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindStyle? left, Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindStyle? right) -> bool
+static Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindStyle.operator ==(Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindStyle? left, Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindStyle? right) -> bool
+static Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Link.operator !=(Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Link? left, Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Link? right) -> bool
+static Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Link.operator ==(Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Link? left, Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Link? right) -> bool
+static Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Metadata.operator !=(Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Metadata? left, Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Metadata? right) -> bool
+static Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Metadata.operator ==(Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Metadata? left, Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Metadata? right) -> bool
+static Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Model.operator !=(Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Model? left, Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Model? right) -> bool
+static Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Model.operator ==(Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Model? left, Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Model? right) -> bool
+static Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship.operator !=(Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship? left, Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship? right) -> bool
+static Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship.operator ==(Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship? left, Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Relationship? right) -> bool
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithAdditionalDSLFile(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options, string! sourcePath) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithAdditionalDSLFolder(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options, string! folderPath) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithAspireDashboardLinks(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options, bool include = true) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithAspireTokenInDashboardLinks(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options, bool include = true) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithAutoIcons(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options, bool enabled = true) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithAutoIncludeAspireMetadata(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options, Aspire.Hosting.AspireMetadataInclusion inclusion) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithCheckLatestImageVersion(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options, bool check = true) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithContainerImageTag(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options, string? tag) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithDefaultStateStyles(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options, bool include = true) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithDefaultViewId(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options, string? viewId) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithElementKindSpec(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options, Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4ElementKindSpec! spec) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithExcludedResourceType<T>(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithExtensionsFolder(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options, string! folderPath) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithFileName(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options, string! fileName) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithFormatGeneratedFile(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options, bool format = true) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithGeneratedViewId(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options, string? viewId) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithHideFromDashboard(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options, string! displayName = "Architecture Diagram") -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithHMRDisabled(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options, bool disabled = true) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithIconResolver(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options, System.Func<Aspire.Hosting.AspireC4.LikeC4.Icons.IconResolverContext!, string?>! resolver) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithImageAliasFolder(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options, string! aliasKey, string! folderPath) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithImageExport(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options, params Aspire.Hosting.AspireC4.LikeC4.Runtime.LikeC4ImageFormat[]! formats) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithImageExportDirectory(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options, string! directory) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithIncludeAspireC4InternalResource(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options, bool include) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithLegacyLayout(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithLikeC4ProjectFolder(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options, string! folderPath) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithNormaliseMetadataBehaviour(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options, Aspire.Hosting.NormaliseMetadataBehaviour behaviour) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithoutConfigFileGeneration(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithoutExcludedResourceType<T>(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithoutExtensionsFolder(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithoutGitIgnoreFileGeneration(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithoutImageExport(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithOutputDirectory(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options, string! outputDirectory) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithRelationshipKindSpec(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options, Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4RelationshipKindSpec! spec) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithRelationshipKindSpec(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options, string! name, string? technology = null) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithRelationshipKindSyntax(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options, Aspire.Hosting.LikeC4RelationshipKindSyntax syntax) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithStateTag(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options, string! state, string? tag) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithTitle(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options, string? title) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithUseDotIfAvailable(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options, bool useDotIfAvailable) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithViewDescription(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options, string? description) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DiagramOptionsExtensions.WithViewTitle(this Aspire.Hosting.AspireC4.AspireC4DiagramOptions! options, string! title) -> Aspire.Hosting.AspireC4.AspireC4DiagramOptions!
+static Aspire.Hosting.AspireC4DistributedApplicationBuilderExtensions.AddAspireC4(this Aspire.Hosting.IDistributedApplicationBuilder! builder, string? name = null, int? port = null, System.Action<Aspire.Hosting.AspireC4.AspireC4DiagramOptions!>? configure = null) -> Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.AspireC4.ApplicationModel.AspireC4Resource!>!
+static Aspire.Hosting.AspireC4ResourceBuilderEnvExtensions.WithLikeC4Reference<T>(this Aspire.Hosting.ApplicationModel.IResourceBuilder<T>! builder, Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.IResourceWithConnectionString!>! source, System.Action<Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4RelationshipDetailsAnnotation!>? configure = null, string? connectionName = null, bool optional = false, bool skipAspireReference = false) -> Aspire.Hosting.ApplicationModel.IResourceBuilder<T>!
+static Aspire.Hosting.AspireC4ResourceBuilderExtensions.ExcludeFromLikeC4<T>(this Aspire.Hosting.ApplicationModel.IResourceBuilder<T>! builder) -> Aspire.Hosting.ApplicationModel.IResourceBuilder<T>!
+static Aspire.Hosting.AspireC4ResourceBuilderExtensions.WithLikeC4Details<T>(this Aspire.Hosting.ApplicationModel.IResourceBuilder<T>! builder, System.Action<Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation!>? configure = null) -> Aspire.Hosting.ApplicationModel.IResourceBuilder<T>!
+static Aspire.Hosting.AspireC4ResourceBuilderExtensions.WithLikeC4Element<T>(this Aspire.Hosting.ApplicationModel.IResourceBuilder<T>! builder, string! elementId) -> Aspire.Hosting.ApplicationModel.IResourceBuilder<T>!
+static Aspire.Hosting.AspireC4ResourceBuilderExtensions.WithLikeC4Group<T>(this Aspire.Hosting.ApplicationModel.IResourceBuilder<T>! builder, string! groupName) -> Aspire.Hosting.ApplicationModel.IResourceBuilder<T>!
+static Aspire.Hosting.AspireC4ResourceBuilderExtensions.WithLikeC4Reference<T, TRef>(this Aspire.Hosting.ApplicationModel.IResourceBuilder<T>! builder, Aspire.Hosting.ApplicationModel.IResourceBuilder<TRef>! target, System.Action<Aspire.Hosting.AspireC4.LikeC4.Annotations.LikeC4RelationshipDetailsAnnotation!>? configure = null) -> Aspire.Hosting.ApplicationModel.IResourceBuilder<T>!
+static Aspire.Hosting.AspireC4ResourceExtensions.ConfigureServer(this Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.AspireC4.ApplicationModel.AspireC4Resource!>! builder, System.Action<Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.IResource!>!>! configure) -> Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.AspireC4.ApplicationModel.AspireC4Resource!>!
+static Aspire.Hosting.AspireC4ResourceExtensions.WithLocalCLI(this Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.AspireC4.ApplicationModel.AspireC4Resource!>! builder, Aspire.Hosting.LocalCLIRuntime runtime = Aspire.Hosting.LocalCLIRuntime.Auto) -> Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.AspireC4.ApplicationModel.AspireC4Resource!>!
+static readonly Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Model.Empty -> Aspire.Hosting.AspireC4.LikeC4.Models.LikeC4Model!

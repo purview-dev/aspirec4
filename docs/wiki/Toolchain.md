@@ -70,11 +70,11 @@ match, because they build this repository from inside the container.
 
 | Feature | Why not |
 | --- | --- |
-| Runtime Async (`runtime-async=on`) | it changes how every `await` compiles, so the `net11.0` asset would behave differently from the `net10.0` one built from the same source. Purview.BuildSdk 2.0.1 makes it opt-in (`PurviewRuntimeAsync=true`) and this repository does not opt in. |
+| Runtime Async (`runtime-async=on`) | it changes how every `await` compiles, so the `net11.0` asset would behave differently from the `net10.0` one built from the same source. Purview.BuildSdk 2.1.0 makes it opt-in (`PurviewRuntimeAsync=true`) and this repository does not opt in. |
 | .NET 11-only library APIs | `Process` run-and-capture, the new `Stream` types, `FullJoin`, async validation, and Zstandard compression only exist in the .NET 11 reference assemblies. The shared source also has to compile for the `net10.0` leg, and the diagram work does not need them. |
 | `net11.0`-only asset | the packages ship `net11.0` **in addition to** `net10.0`, never instead of it. Dropping `net10.0` would raise the floor above the Aspire AppHost. |
 | Union types | no surface needs one today; see below. |
-| NuGet package validation baseline | the custom pack validation in `.config/purview-build.json` already asserts package contents. An API-compatibility baseline would need a published-baseline version pinned, which the release flow does not guarantee at build time. |
+| NuGet *package* validation baseline (`EnablePackageValidation`/ApiCompat) | it compares against a previously published package and needs that baseline version pinned at build time, which the release flow does not guarantee. The two shipped libraries carry a `Microsoft.CodeAnalysis.PublicApiAnalyzers` baseline instead (`PublicAPI.Shipped.txt` / `PublicAPI.Unshipped.txt`): the same API-compatibility contract, enforced at build time with no feed access. The custom pack validation in `.config/purview-build.json` still asserts package contents. |
 | `IsTrimmable` / `IsAotCompatible` | these libraries host Aspire resources and reflection-based metadata reads; they are not intended for trimming or AOT publishing, so the analyzers would produce noise rather than guidance. |
 
 ## Package versions

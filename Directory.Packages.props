@@ -4,8 +4,8 @@
 		<RoslynCompilerVersion>5.9.0</RoslynCompilerVersion>
 		<RoslynAnalyzersVersion>5.9.0</RoslynAnalyzersVersion>
 		<TUnitVersion>1.83.0</TUnitVersion>
-		<PurviewSourceGenVersion>2.0.0</PurviewSourceGenVersion>
-		<PurviewTelemetryVersion>6.0.0</PurviewTelemetryVersion>
+		<PurviewSourceGenVersion>2.1.0</PurviewSourceGenVersion>
+		<PurviewTelemetryVersion>6.0.1</PurviewTelemetryVersion>
 		<AspireVersion>13.6.5</AspireVersion>
 		<PurviewContainersVersion>1.0.0-prerelease.13</PurviewContainersVersion>
 	</PropertyGroup>
@@ -21,6 +21,12 @@
 		<PackageVersion Include="Microsoft.SourceLink.GitHub" Version="11.0.100" />
 		<PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="$(RoslynCompilerVersion)" />
 		<PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="$(RoslynAnalyzersVersion)" />
+		<!--
+			Public-API baseline for the two shipped runtime packages. 13.6.5 is the first stable
+			release, so its surface is the compatibility contract: an accidental removal or signature
+			change now fails the build instead of reaching consumers.
+		-->
+		<PackageVersion Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="5.6.0" />
 		<PackageVersion Include="Purview.SourceGeneratorFramework" Version="$(PurviewSourceGenVersion)" />
 		<PackageVersion Include="Purview.SourceGeneratorFramework.Testing.TUnit" Version="$(PurviewSourceGenVersion)" />
 		<PackageVersion Include="Purview.Telemetry.SourceGenerator" Version="$(PurviewTelemetryVersion)" />
@@ -48,6 +54,6 @@
 		<PackageVersion Include="TUnit.Aspire" Version="$(TUnitVersion)" />
 		<PackageVersion Include="TUnit.Core" Version="$(TUnitVersion)" />
 		<PackageVersion Include="TUnit.Mocks" Version="$(TUnitVersion)" />
-		<PackageVersion Include="Purview.Skills.Testing" Version="2.0.1" />
+		<PackageVersion Include="Purview.Skills.Testing" Version="2.1.0" />
 	</ItemGroup>
 </Project>

@@ -24,7 +24,7 @@ just pipeline-local-release  # Same but to a local NuGet feed (use forward slash
 
 ## CI release workflow
 
-A push to `main` triggers `.github/workflows/release.yml`, which delegates to the `purview-dev/build` reusable `purview-release.yml` with `release-mode: NuGet`. It:
+A push to `main` triggers `.github/workflows/release.yml`, which calls the `purview-dev/build/actions/purview-release` composite action with `release-mode: NuGet`. It uses the action rather than the reusable `purview-release.yml` because nuget.org Trusted Publishing matches the OIDC `job_workflow_ref` claim against the caller's own workflow file. It:
 
 1. Evaluates release eligibility with the shared tool (`purview-build release-explain --format=json`). When `v<version>` already exists the job finishes green and nothing is published; a policy violation fails the job, naming the `REL0nn` rule that rejected it.
 2. Builds the solution and runs the tests selected by `Build:TestFilter` in `purview-build.json`.
@@ -71,6 +71,24 @@ dotnet build src/src/SourceGenerators/SourceGenerators.csproj -c Release
 ```
 
 The build must produce no `RS2000`–`RS2008` diagnostics.
+
+## Public API baseline
+
+`AspireC4.Hosting` and `AspireC4.Hosting.EntityFrameworkCore` carry a
+`Microsoft.CodeAnalysis.PublicApiAnalyzers` baseline beside their project files. 13.6.5 is the first
+stable release, so its surface is the compatibility contract: removing or changing a listed symbol fails
+the build with `RS0017`, and adding an unlisted public symbol fails it with `RS0016`.
+
+1. A new public symbol is added to `PublicAPI.Unshipped.txt` as part of the change that introduces it.
+   The analyzer expects the exact format it reports; the simplest way to get it is to build once, then
+   move the `RS0016` text from the compiler output into the file.
+2. When the release is cut, move every row from `PublicAPI.Unshipped.txt` into `PublicAPI.Shipped.txt`
+   and leave the unshipped file with just its `#nullable enable` header.
+3. A deliberate removal is recorded by prefixing the shipped row with `*REMOVED*` rather than deleting
+   it, so the break is visible in review.
+
+`RS0026`/`RS0027` are suppressed in the two projects for their shipped overload shapes, which are also
+part of the generated TypeScript surface; the baseline still records those signatures.
 
 ## Pack validation
 
