@@ -1,0 +1,46 @@
+<!--
+	AspireC4.IntegrationTests on the Aspire 13 line. The libraries declare Aspire 13.6.5 as their floor,
+	so this runs the same suite, end to end, against TestAppHost.Aspire13 instead of the Aspire 17
+	TestAppHost. It has no sources of its own: add tests to AspireC4.IntegrationTests, never here.
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<DefineConstants>$(DefineConstants);ASPIRE13</DefineConstants>
+		<!-- One AppHost start per TFM, sequentially, as in the Aspire 17 suite. -->
+		<TestTfmsInParallel>false</TestTfmsInParallel>
+		<UseAspireAppHostVersion>true</UseAspireAppHostVersion>
+		<AspireAppHostVersion>$(AspireVersion)</AspireAppHostVersion>
+		<!-- Transitive pinning reaches the AppHost's Containers.Aspire too; keep it on the 13 build. -->
+		<PurviewContainersAspireVersion>1.0.0-prerelease.13</PurviewContainersAspireVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Compile
+			Include="..\AspireC4.IntegrationTests\**\*.cs"
+			Exclude="..\AspireC4.IntegrationTests\bin\**;..\AspireC4.IntegrationTests\obj\**;..\AspireC4.IntegrationTests\LikeC4\ModelBuilderDotnetProjectResourceTests.cs"
+			Link="%(RecursiveDir)%(Filename)%(Extension)"
+		/>
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Aspire.Hosting.Testing" />
+		<PackageReference Include="TUnit.Aspire" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\src\TestAppHost.Aspire13\TestAppHost.Aspire13.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Content
+			Include="..\..\..\assets\likec4-extensions\**\*"
+			Link="Resources\likec4\extensions\%(RecursiveDir)%(Filename)%(Extension)"
+			CopyToOutputDirectory="PreserveNewest"
+		/>
+		<Content
+			Include="..\..\..\assets\images\**\*"
+			Link="Resources\likec4\images\%(RecursiveDir)%(Filename)%(Extension)"
+			CopyToOutputDirectory="PreserveNewest"
+		/>
+	</ItemGroup>
+</Project>

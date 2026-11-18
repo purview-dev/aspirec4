@@ -61,7 +61,7 @@ match, because they build this repository from inside the container.
 | C# 15, `LangVersion 15.0` | `src/Directory.Build.props` | same compiler behaviour on both legs; new language features available |
 | C# 15 updated memory-safety rules | Purview.BuildSdk's default tier (`MemorySafetyRules=2`) on the `net11.0` leg, not overridden | the `net11.0` assembly carries the updated rules. The `safe` modifier is still preview in C# 15.0, so a type System.Text.Json serializes must not use `init`-only properties: for those the generator emits `safe extern` accessors and the build fails with `CS8652` (see `LikeC4IconManifest`) |
 | Closed hierarchies | `EfModelDumpRead` in `src/src/EntityFrameworkCore/` | the set of dump outcomes is complete, so a switch over it is exhaustive and a new outcome fails the build |
-| MSBuild build server | `DOTNET_CLI_USE_MSBUILD_SERVER=1` in the `Justfile` | warm evaluation for repeated `just build` / `just test` runs |
+| MSBuild build server | left to the SDK default; the shared `.build/just/env.just` deliberately does not force it on | one long-lived server keeps the NuGet SDK resolver settings from its first build, so a build under a different `nuget.config` fails with `MSB4242` |
 | Multithreaded MSBuild | SDK-bootstrapped `Directory.Build.rsp` with `-mt` | runs a build's projects concurrently in one process |
 | `dotnet test` improvements | `global.json` selects Microsoft.Testing.Platform | `just test` shows in-flight tests and per-assembly counts for both TFMs |
 | JIT improvements | none needed | bounds-check elimination, devirtualisation and `SequenceEqual` folding apply to these assemblies when they run on the .NET 11 runtime |
@@ -87,7 +87,10 @@ matches the lowest target framework", not "newest version published".
 
 Two floors are consumer-facing and are recorded in [Requirements](Requirements.md):
 
-- **`Aspire.Hosting`** (`AspireVersion`) is the Aspire minimum every consuming AppHost inherits.
+- **`Aspire.Hosting`** (`AspireVersion`, 13.6.5) is the Aspire minimum every consuming AppHost inherits.
+  The repository tests both supported lines on every run: `TestAppHost` and `AspireC4.IntegrationTests`
+  run on `AspireAppHostVersion` (17.0.0); `TestAppHost.Aspire13` and `AspireC4.Aspire13.IntegrationTests`
+  compile the same sources on the floor, as do the unit tests.
 - **`Microsoft.CodeAnalysis.*`** (`RoslynCompilerVersion`, `5.9.0`) is the compiler both shipped source
   generators are built against, and so the compiler a consumer must build with: the .NET 11 SDK. It is
   not a target-framework choice — the generators are `netstandard2.0` — and lowering it would mean an
@@ -190,7 +193,7 @@ pattern; without them it falls back to `Value` and boxes. The same polyfill rule
 | Stability | the sample AppHost now resolves `Aspire.Hosting.AppHost` from `global.json` instead of a stale SDK-embedded 13.6.3, which carried a high-severity advisory (`NU1903`) | `TestAppHost.csproj` |
 | Runtime | a .NET 11 host gets a `net11.0` assembly built against the .NET 11 reference assemblies; a .NET 10 host keeps the LTS assembly | `lib/net10.0/`, `lib/net11.0/` |
 | Testing | the suite runs twice, once per TFM, on Microsoft.Testing.Platform, including both integration runs | `just test` |
-| Build | warm MSBuild server, SDK-bootstrapped `-mt` multithreaded builds, SDK-owned TFM sets | `Directory.Build.rsp`, `Justfile` |
+| Build | SDK-bootstrapped `-mt` multithreaded builds, SDK-owned TFM sets | `Directory.Build.rsp`, `.build/just/` |
 | Debug | a missing or stale model dump is now named in the ER diagram log instead of being indistinguishable from "no model" | `ErdLog.ProjectProducedNoModel` |
 | Packaging | both framework assets ship and are asserted by pack validation; package versions stay on the `10.0.x` band | `.config/purview-build.json`, `Directory.Packages.props` |
 

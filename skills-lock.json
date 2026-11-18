@@ -1,6 +1,42 @@
 {
   "version": 1,
   "skills": {
+    "add-catalogue-project": {
+      "source": "purview-dev/purview-dev",
+      "sourceType": "github",
+      "skillPath": "skills/add-catalogue-project/SKILL.md",
+      "computedHash": "015f5c8a22346676710b774a1b4110e9172c2b6817e7de0113682004fafe9610"
+    },
+    "add-project-intake": {
+      "source": "purview-dev/purview-dev",
+      "sourceType": "github",
+      "skillPath": "skills/add-project-intake/SKILL.md",
+      "computedHash": "86a3326465defe4b1f15f228009137a99735e981c3de99eff52211975ce22368"
+    },
+    "audit-catalogue-projects": {
+      "source": "purview-dev/purview-dev",
+      "sourceType": "github",
+      "skillPath": "skills/audit-catalogue-projects/SKILL.md",
+      "computedHash": "a6e763e87018419d3688f00d72e84f062284dba8cc037a673d15e4ca308a82fb"
+    },
+    "docs-aggregation-rules": {
+      "source": "purview-dev/purview-dev",
+      "sourceType": "github",
+      "skillPath": "skills/docs-aggregation-rules/SKILL.md",
+      "computedHash": "569fdb2ea736d5e5727cd8a1341495355511b317874f6e0c6c86f7f0780a44ad"
+    },
+    "github-repo-metadata": {
+      "source": "purview-dev/purview-dev",
+      "sourceType": "github",
+      "skillPath": "skills/github-repo-metadata/SKILL.md",
+      "computedHash": "f9123757d3dba91141e5384fa28161d151f5121b3aa9846f30142a74804f4945"
+    },
+    "project-manifest-reference": {
+      "source": "purview-dev/purview-dev",
+      "sourceType": "github",
+      "skillPath": "skills/project-manifest-reference/SKILL.md",
+      "computedHash": "f0b43eddb34866e6869047c1641fa90bc099475cfddab888cab3feba74d3dd0c"
+    },
     "purview-architecture": {
       "source": "purview-dev/telemetry-sourcegenerator",
       "sourceType": "github",
@@ -14,52 +50,70 @@
       "computedHash": "04c5dd8e8e091917c1b5ac609596fb0a1b8e212717d1909b33a77f4c9755dea8"
     },
     "purview-buildsdk-adoption": {
-      "source": "purview-dev/telemetry-sourcegenerator",
+      "source": "purview-dev/build-sdk",
       "sourceType": "github",
-      "skillPath": ".agents/skills/purview-buildsdk-adoption/SKILL.md",
-      "computedHash": "0edb1df7a5e8a73eb13bfc96e539290e047085227164741188d7c1f3b5f1a623"
+      "skillPath": "skills/purview-buildsdk-adoption/SKILL.md",
+      "computedHash": "41e63a4e8bc212e21224dac2628ab835d24784a31a4e70ad8a517e7f8801128e"
     },
     "purview-buildsdk-configuration": {
-      "source": "purview-dev/telemetry-sourcegenerator",
+      "source": "purview-dev/build-sdk",
       "sourceType": "github",
-      "skillPath": ".agents/skills/purview-buildsdk-configuration/SKILL.md",
-      "computedHash": "256437b866983d54f931564e80254581c7d4b749a1ac74b2ae86742cc159604b"
+      "skillPath": "skills/purview-buildsdk-configuration/SKILL.md",
+      "computedHash": "2a44c84025cc6342f928b2e91b4157bbd340657a1f0b1de80b133f1f106e0e53"
+    },
+    "purview-buildsdk-docs-sync": {
+      "source": "purview-dev/build-sdk",
+      "sourceType": "github",
+      "skillPath": "skills/purview-buildsdk-docs-sync/SKILL.md",
+      "computedHash": "24d5e86ee5f3877b519c0f85be21c20ad47c051156debe72a42e6f025e3c345d"
+    },
+    "purview-buildsdk-justfile": {
+      "source": "purview-dev/build-sdk",
+      "sourceType": "github",
+      "skillPath": "skills/purview-buildsdk-justfile/SKILL.md",
+      "computedHash": "fc0ae370f56320723ed3dd4fc0d3851cb876de250035583ac35ecbc4f2374e26"
+    },
+    "purview-buildsdk-msbuild-properties": {
+      "source": "purview-dev/build-sdk",
+      "sourceType": "github",
+      "skillPath": "skills/purview-buildsdk-msbuild-properties/SKILL.md",
+      "computedHash": "e1dde3293f2a003b4e8f6d2ea418405684add2f7cfa6ec2f53bb3415d8f326ed"
     },
     "purview-buildsdk-project-detection": {
-      "source": "purview-dev/telemetry-sourcegenerator",
+      "source": "purview-dev/build-sdk",
       "sourceType": "github",
-      "skillPath": ".agents/skills/purview-buildsdk-project-detection/SKILL.md",
-      "computedHash": "d2d3f4f705813cee1ce3cfb72fcdf167525877d003696138c189354d02205022"
+      "skillPath": "skills/purview-buildsdk-project-detection/SKILL.md",
+      "computedHash": "15a8581770e22b49e867e82cf02d606d15949e00d221bace997fa87f8e7e7d76"
     },
     "purview-buildsdk-project-layout": {
-      "source": "purview-dev/telemetry-sourcegenerator",
+      "source": "purview-dev/build-sdk",
       "sourceType": "github",
-      "skillPath": ".agents/skills/purview-buildsdk-project-layout/SKILL.md",
-      "computedHash": "101f09c92cf97e93387b926c48adab9598a0cf0a64a4932d41085ab0a0078cfa"
+      "skillPath": "skills/purview-buildsdk-project-layout/SKILL.md",
+      "computedHash": "392e9be03d076322090cabfa4062afa2755dd25ee9a98e3896d05773628ddb92"
     },
     "purview-buildsdk-repository-review": {
-      "source": "purview-dev/telemetry-sourcegenerator",
+      "source": "purview-dev/build-sdk",
       "sourceType": "github",
-      "skillPath": ".agents/skills/purview-buildsdk-repository-review/SKILL.md",
-      "computedHash": "2bbde3c3033fad06fa87910a47aa63f6e6510776f86fc5b96a670616ff8f3f6a"
+      "skillPath": "skills/purview-buildsdk-repository-review/SKILL.md",
+      "computedHash": "cc41baaf97b63639352894b726e3f92b6f2cd757862f8af008c81972aa989b2d"
     },
     "purview-buildsdk-settings-docs-sync": {
       "source": "purview-dev/build-sdk",
       "sourceType": "github",
-      "skillPath": ".agents/skills/purview-buildsdk-settings-docs-sync/SKILL.md",
-      "computedHash": "5a9dc206530899f18ae2472d196ff9c0477ca5723e276d94a49659dc313728d5"
+      "skillPath": "skills/purview-buildsdk-settings-docs-sync/SKILL.md",
+      "computedHash": "76d5dd5b32a0937af024afe92132e221b8947f7cd11a29176bb606f772e2ed5a"
     },
     "purview-buildsdk-skill-installation": {
-      "source": "purview-dev/telemetry-sourcegenerator",
+      "source": "purview-dev/build-sdk",
       "sourceType": "github",
-      "skillPath": ".agents/skills/purview-buildsdk-skill-installation/SKILL.md",
-      "computedHash": "247d936615f53fd4bef7b1c45d9eca29bfafec85285903230b933cce4aaeaa38"
+      "skillPath": "skills/purview-buildsdk-skill-installation/SKILL.md",
+      "computedHash": "9b824ac73ed6e068dc1f4dfa714ff44129cb4c816e9dfa3b8f08ad0eed4d8179"
     },
     "purview-buildsdk-skill-tests": {
-      "source": "purview-dev/telemetry-sourcegenerator",
+      "source": "purview-dev/build-sdk",
       "sourceType": "github",
-      "skillPath": ".agents/skills/purview-buildsdk-skill-tests/SKILL.md",
-      "computedHash": "807b64466de0a871e5f8e678e7686c48a06d8bb9d42a03448f604a35d40d3935"
+      "skillPath": "skills/purview-buildsdk-skill-tests/SKILL.md",
+      "computedHash": "2f6c1a04975389723cc85093f9e15fc56248afa70f9c003b74bd53875cbb1f1f"
     },
     "purview-buildsdk-skills-justfile": {
       "source": "purview-dev/telemetry-sourcegenerator",
@@ -67,11 +121,17 @@
       "skillPath": ".agents/skills/purview-buildsdk-skills-justfile/SKILL.md",
       "computedHash": "cbb93f6f3508326630c47570b56c33a702da086293c17f9a18aca68340b79894"
     },
-    "purview-buildsdk-testing": {
-      "source": "purview-dev/telemetry-sourcegenerator",
+    "purview-buildsdk-skills-layout": {
+      "source": "purview-dev/build-sdk",
       "sourceType": "github",
-      "skillPath": ".agents/skills/purview-buildsdk-testing/SKILL.md",
-      "computedHash": "d6a2ac1167faf68e8c27493de81c2e5b0d8183e523de4411aca5f5b9249c8a9c"
+      "skillPath": "skills/purview-buildsdk-skills-layout/SKILL.md",
+      "computedHash": "1046f7229df832897c6cf80b87c2f6745ea52e89e4e08083a92e6582bb86e742"
+    },
+    "purview-buildsdk-testing": {
+      "source": "purview-dev/build-sdk",
+      "sourceType": "github",
+      "skillPath": "skills/purview-buildsdk-testing/SKILL.md",
+      "computedHash": "920a5d4e7ff8c429f4d883044574248f30f2e1df1af2a18d84530b40d1851ddb"
     },
     "purview-component-compatibility": {
       "source": "purview-dev/telemetry-sourcegenerator",
@@ -83,13 +143,13 @@
       "source": "purview-dev/containers",
       "sourceType": "github",
       "skillPath": "skills/purview-containers-capabilities/SKILL.md",
-      "computedHash": "1ac9459ec62748f2ea78a7adcee54565d481cabd1de2ee147aacf7723713dc27"
+      "computedHash": "fb791fa32bfab48f7f3dfce50de149e9480d8365bc33a1a7881536e491b65868"
     },
     "purview-containers-consumer-requirements": {
       "source": "purview-dev/containers",
       "sourceType": "github",
       "skillPath": "skills/purview-containers-consumer-requirements/SKILL.md",
-      "computedHash": "6525cb729866a82da1a26b93a75d14822cdb6713ed52887a9ff7c6741ff8c91e"
+      "computedHash": "5e20a716559cec457807846793739d39d5f81bbe9c62b1fa3b8272eeb3632e06"
     },
     "purview-containers-lifecycle": {
       "source": "purview-dev/containers",
@@ -101,13 +161,13 @@
       "source": "purview-dev/containers",
       "sourceType": "github",
       "skillPath": "skills/purview-containers-quickstart/SKILL.md",
-      "computedHash": "4992ca077a05f2d595c67d6a2b79f90ede2b31b82bd240fcccaf4a4ff170efa1"
+      "computedHash": "410c6a147ad70d76b985dff2e1d7f31aaf6a0cb6bd43c5f39efe9988d8dfd379"
     },
     "purview-containers-testing": {
       "source": "purview-dev/containers",
       "sourceType": "github",
       "skillPath": "skills/purview-containers-testing/SKILL.md",
-      "computedHash": "b9deda75f9051a9faff5a636b839da9c1ca5d2d67ad9f01c2d92bfb626cf2246"
+      "computedHash": "d4d9baa2bc7d8202583ffe44771e70b74d6fd9b2dd1a6ad8d2799db939fe1cb9"
     },
     "purview-engineering-principles": {
       "source": "purview-dev/telemetry-sourcegenerator",
@@ -126,6 +186,24 @@
       "sourceType": "github",
       "skillPath": ".agents/skills/purview-persistence/SKILL.md",
       "computedHash": "ebf1a8ed780ed79a6c976762dead934a331dc3ae4b4871809e878a0196a5b4a1"
+    },
+    "purview-site-assessment": {
+      "source": "purview-dev/purview-dev",
+      "sourceType": "github",
+      "skillPath": "skills/purview-site-assessment/SKILL.md",
+      "computedHash": "5a119c0bbb680e2183f9bfa9dde0cdb35b14d38a8a1419ef21e4fe981366a11b"
+    },
+    "purview-site-docs": {
+      "source": "purview-dev/purview-dev",
+      "sourceType": "github",
+      "skillPath": "skills/purview-site-docs/SKILL.md",
+      "computedHash": "aad7582179f21d19780c1053069942b1285ae39f744ea1fae590840c6eb8a94e"
+    },
+    "purview-site-integration": {
+      "source": "purview-dev/purview-dev",
+      "sourceType": "github",
+      "skillPath": "skills/purview-site-integration/SKILL.md",
+      "computedHash": "5c9f6b7fb88efdddbc55d68d817199d227a3d5d01c99df94c3d462a1e7c5a2f8"
     },
     "purview-sourcegenerator-attribute-data-models": {
       "source": "purview-dev/telemetry-sourcegenerator",
@@ -216,6 +294,18 @@
       "sourceType": "github",
       "skillPath": ".agents/skills/purview-testing-conventions/SKILL.md",
       "computedHash": "388b0a79b565ed45a8513d77e8ed6e3d4491f96b43328cb09933cec7811c10f6"
+    },
+    "site-validation-loop": {
+      "source": "purview-dev/purview-dev",
+      "sourceType": "github",
+      "skillPath": "skills/site-validation-loop/SKILL.md",
+      "computedHash": "9d62878fcd457bad46f00d4dc55625ab379551ef1ea3103de90ddc911af8b223"
+    },
+    "use-case-authoring": {
+      "source": "purview-dev/purview-dev",
+      "sourceType": "github",
+      "skillPath": "skills/use-case-authoring/SKILL.md",
+      "computedHash": "078f2b4df03c103b6bbae9edd94d1872483bc1dd0a6a46614d1764650607d80b"
     }
   }
 }

@@ -33,7 +33,8 @@ architecture diagram and owns the dashboard integration. Everything else hangs o
   the EF Core provider). Both are opt-in by package reference alone.
 
 The same split applies to dependencies: the ER diagram needs the projects that own your `DbContext`
-types to be registered with `AddProject<Projects.X>(...)`.
+types to be registered as .NET project resources, with `AddProject<Projects.X>(...)` or, on Aspire 17,
+`AddDotnetProject(name, path)`.
 
 ## Requirements
 
@@ -41,8 +42,9 @@ types to be registered with `AddProject<Projects.X>(...)`.
   ship both assets. The SDK requirement comes from the bundled source generators, which run inside the
   compiler and are built against Roslyn 5.9. An older SDK reports `CS9057` and skips them, which
   drops the `ASPIREC4xxx` validation and the `[LikeC4Registry]` types.
-- **Aspire 13.6.5 or later**. Aspire AppHost projects must reference both the AppHost SDK and
-  `Aspire.Hosting.AppHost`.
+- **Aspire 13.6.5 or later**, on the 13 line (an `Aspire.AppHost.Sdk` AppHost) or 17 and later (a
+  `Microsoft.NET.Sdk` AppHost referencing `Aspire.Hosting.AppHost`). One package serves both; see
+  [Requirements](docs/wiki/Requirements.md#aspire).
 - **Docker** is used by default to run the LikeC4 sidecar container.
 - Optional: a local Node.js CLI runtime (`npx`, `pnpm`, `yarn`, `bun`, or `deno`) if you call `.WithLocalCLI()`.
 
@@ -57,19 +59,33 @@ Add AspireC4 to the AppHost project:
 
 ```bash
 dotnet add package AspireC4.Hosting
-dotnet add package Aspire.Hosting.AppHost
 ```
 
-An AppHost project should contain the equivalent of:
+The same package works on both supported Aspire lines, so the AppHost keeps whichever shape it already
+has. On **Aspire 17 and later** it is a `Microsoft.NET.Sdk` project (Aspire 17 obsoletes
+`Aspire.AppHost.Sdk`):
 
 ```xml
-<Project Sdk="Aspire.AppHost.Sdk/13.6.5">
+<Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.AppHost" />
     <PackageReference Include="AspireC4.Hosting" />
   </ItemGroup>
 </Project>
 ```
+
+On the **Aspire 13 line** (13.6.5 or later) it stays an `Aspire.AppHost.Sdk` project:
+
+```xml
+<Project Sdk="Aspire.AppHost.Sdk/13.6.5">
+  <ItemGroup>
+    <PackageReference Include="AspireC4.Hosting" />
+  </ItemGroup>
+</Project>
+```
+
+.NET projects are drawn the same way whether they are added with `AddProject<Projects.X>()` or
+Aspire 17's `AddDotnetProject(name, path)`, so moving an AppHost from 13 to 17 needs no AspireC4 change.
 
 ## Quick start
 
@@ -759,17 +775,17 @@ Declare the integration and its Aspire dependencies in `aspire.config.json`:
     "language": "typescript/nodejs"
   },
   "sdk": {
-    "version": "13.6.5"
+    "version": "17.0.0"
   },
   "packages": {
-    "Aspire.Hosting.JavaScript": "13.6.5",
+    "Aspire.Hosting.JavaScript": "17.0.0",
     "AspireC4.Hosting": "<version>"
   }
 }
 ```
 
 Replace `<version>` with the current `AspireC4.Hosting` release (the NuGet badge above), and keep the Aspire pins at
-13.6.5 or later. The repository sample points `AspireC4.Hosting` at
+13.6.5 or later; the sample uses 17.0.0. The repository sample points `AspireC4.Hosting` at
 `../../src/src/AspireC4/AspireC4.csproj` so it exercises the local source instead of a published package.
 
 ### Run the TypeScript sample

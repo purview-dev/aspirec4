@@ -48,11 +48,13 @@ SDK's set needs no manifest edit.
 | `src/src/SourceGenerators/` | Roslyn `netstandard2.0` incremental source generator (registry + DSL strict validation) |
 | `src/src/EntityFrameworkCore/` | AppHost-side EF Core → d2 ER diagram library (`AspireC4.Hosting.EntityFrameworkCore`): descriptor and metadata readers, d2 model builder, d2 DSL generator, sidecar resources, lifecycle hook |
 | `src/src/EntityFrameworkCore.Analyzers/` | Roslyn `netstandard2.0` generator packed as the analyzer-only `AspireC4.EntityFrameworkCore` package, referenced by *service* projects |
-| `src/src/TestAppHost/` | C# sample AppHost used by integration tests and manual runs |
+| `src/src/TestAppHost/` | C# sample AppHost (Aspire 17) used by integration tests and manual runs |
+| `src/src/TestAppHost.Aspire13/` | The same AppHost on Aspire 13.6.5, compiled from `TestAppHost`'s sources with `ASPIRE13` |
 | `src/src/TestAppHost.SimpleData/` | Sample EF Core model: one `DbContext`, convention-only configuration |
 | `src/src/TestAppHost.ComplexData/` | Sample EF Core model: three `DbContext` types, schemas, composite keys, self-references, attribute + fluent configuration |
 | `src/tests/AspireC4.UnitTests/` | Unit tests (model builder, DSL generator, options, lifecycle — no Docker) |
 | `src/tests/AspireC4.IntegrationTests/` | Aspire lifecycle tests (requires Docker, pulls `ghcr.io/likec4/likec4`) |
+| `src/tests/AspireC4.Aspire13.IntegrationTests/` | The same suite against `TestAppHost.Aspire13`; no sources of its own |
 | `src/tests/SourceGenerators.UnitTests/` | Source-generator tests (TUnit + `Purview.SourceGeneratorFramework.Testing.TUnit`) |
 | `src/tests/EntityFrameworkCore.UnitTests/` | d2 model builder, d2 DSL generator and descriptor loader tests (no Docker) |
 | `src/tests/EntityFrameworkCore.Analyzers.UnitTests/` | EF model generator tests, plus the generator→assembly→AppHost round-trip test |
@@ -94,7 +96,19 @@ change that updates `Requirements.md` in the same commit:
 
 - `AspireVersion` — the `Aspire.Hosting` version the libraries declare, and so the **Aspire minimum**
   (13.6.5 today). Repeated in the AppHost snippets listed under "Keeping this page true" in
-  `Requirements.md`.
+  `Requirements.md`. Both Aspire lines are supported and tested end to end on every `just test`:
+  - **17:** `TestAppHost` and `AspireC4.IntegrationTests` set `UseAspireAppHostVersion=true`, which pins
+    `Aspire.Hosting` to `AspireAppHostVersion` (17.0.0) instead of the floor.
+  - **13:** `TestAppHost.Aspire13` (`Aspire.AppHost.Sdk/13.6.5`) and `AspireC4.Aspire13.IntegrationTests`
+    have **no sources of their own**: they compile `TestAppHost`'s and `AspireC4.IntegrationTests`'s
+    with `ASPIRE13` defined, and override `AspireAppHostVersion` and `PurviewContainersAspireVersion`
+    back to the 13 builds. Add sample code and tests to the 17 projects; use `#if ASPIRE13` only where
+    an API differs (`SampleDataWiring.cs` is the one place today).
+  - `AppHostRunLock` lets one sample AppHost run at a time across test processes: two at once
+    overloaded Docker and failed both suites.
+
+  Keep the libraries off any API the floor lacks or a later line removed; check with
+  `dnx dotnet-inspect -y -- diff --package Aspire.Hosting@<floor>..<latest> --breaking`.
 - `RoslynCompilerVersion` — the compiler both shipped generators are built against (5.9.0), which is why
   consumers must **build with the .NET 11 SDK** even when the AppHost targets `net10.0`. An older
   compiler reports `CS9057` and skips the generator silently.
@@ -129,7 +143,7 @@ The repository uses `Purview.BuildSdk` (pinned in `global.json` under `msbuild-s
 `src/Directory.Build.props` / `src/Directory.Build.targets`. The SDK classifies projects, adds references,
 sets testing/telemetry defaults, and bootstraps `.editorconfig`, `global.json` and `Directory.Build.rsp`.
 It never touches agent skills during a build: they change only when someone runs `just skills-update`
-(see `Justfile.skills.just`). Use the `purview-buildsdk-project-layout` and
+(see `.build/just/skills.just`). Use the `purview-buildsdk-project-layout` and
 `purview-buildsdk-project-detection` skills when reasoning about its behaviour.
 
 Package versions track the **lowest** target framework, not the SDK: runtime and Microsoft packages stay in
@@ -151,14 +165,14 @@ just init        # dotnet tool restore, dotnet restore, bun install, lefthook in
 ### Build, test, lint
 
 ```sh
-just build            # Build src/AspireC4.slnx. NOTE: default configuration is Debug (see Justfile config_default)
-just build Release    # Build in Release
+just build            # Build src/AspireC4.slnx. Default configuration is Debug (build_configuration)
+just build_configuration=Release build   # Build in Release
 just test             # Run all tests (unit + integration) via the solution
 just test-unit        # Unit tests only
-just test-integration # Integration tests only (Docker required)
+just test-integration # Integration tests only, on both Aspire lines (Docker required)
 just lint-check       # CSharpier check (formatting). NOTE: recipe is lint-check, not "lintcheck"
 just lint-fix         # CSharpier auto-fix. NOTE: recipe is lint-fix, not "lintfix"
-just pack             # Pack NuGet artifacts into artifacts/nuget/
+just pack             # Pack NuGet artifacts into artifacts/nuget/ (artifacts_folder)
 ```
 
 ### Pipelines (Purview.Build)

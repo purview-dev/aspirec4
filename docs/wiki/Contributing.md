@@ -21,7 +21,7 @@ just init         # JS dependencies (Bun), NuGet packages, local tools, and Git 
 ## Getting started
 
 ```sh
-just build        # Build the solution (Debug by default; pass Release to build Release)
+just build        # Build the solution (Debug by default; `just build_configuration=Release build` for Release)
 just test         # Run all tests (unit + integration)
 just lint-check   # Check formatting
 ```
@@ -49,15 +49,15 @@ Two distinct brands exist in this repository. Use them consistently:
 
 | Recipe | Description |
 |---|---|
-| `just restore` | Restore NuGet packages and local .NET tools |
-| `just build [Debug\|Release]` | Build the solution (default: `Debug`) |
+| `just restore` | Restore NuGet packages (`just ensure-tools` restores the local .NET tools) |
+| `just build` | Build the solution with `build_configuration` (default: `Debug`; override with `just build_configuration=Release build`) |
 | `just clean` | Clean build outputs |
 | `just test` | **Run all tests** (unit + integration) |
 | `just test-unit` | Run unit tests only |
 | `just test-integration` | Run integration tests only |
 | `just lint-check` | Check formatting with CSharpier |
 | `just lint-fix` | Auto-fix formatting with CSharpier |
-| `just pack` | Build and pack NuGet artifacts into `artifacts/nuget/` |
+| `just pack` | Pack NuGet artifacts into `artifacts/nuget/` |
 
 ### TypeScript
 

@@ -533,10 +533,12 @@ static class ModelBuilder
 
 	static bool IsValidMetadataKeyChar(char c) => char.IsLetterOrDigit(c) || c == '_' || c == '-';
 
+	// The .NET project case covers both the legacy ProjectResource and Aspire 17's DotnetProjectResource
+	// (AddDotnetProject). It must precede ExecutableResource: DotnetProjectResource derives from it.
 	static string InferKind(IResource resource) =>
 		resource switch
 		{
-			ProjectResource => LikeC4ElementKind.Component,
+			_ when DotnetProjects.IsDotnetProject(resource) => LikeC4ElementKind.Component,
 			ContainerResource => LikeC4ElementKind.Container,
 			// IResourceWithConnectionString before ExecutableResource to catch DB-like resources
 			IResourceWithConnectionString => LikeC4ElementKind.Database,
@@ -547,7 +549,7 @@ static class ModelBuilder
 	static string? InferTechnology(IResource resource) =>
 		resource switch
 		{
-			ProjectResource => ".NET",
+			_ when DotnetProjects.IsDotnetProject(resource) => ".NET",
 			ContainerResource container => container
 				.Annotations.OfType<ContainerImageAnnotation>()
 				.LastOrDefault()

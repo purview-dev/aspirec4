@@ -67,7 +67,7 @@ startup, which is the easiest way to capture a screenshot of your own applicatio
 ## Requirements
 
 - **Build with the .NET 11 SDK.** The AppHost can still target `net10.0` or `net11.0`.
-- **Aspire 13.6.5 or later**, with `Aspire.Hosting.AppHost` referenced by the AppHost project.
+- **Aspire 13.6.5 or later**, on the 13 line or 17 and later; one package serves both.
 - **Docker** (default LikeC4 server), or a local Node.js CLI runtime if you use `.WithLocalCLI()`.
 
 [Requirements](Requirements.md) has the full list, the target frameworks each package ships, and why

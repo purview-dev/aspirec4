@@ -26,7 +26,7 @@ sealed partial class AspireC4LifecycleHook
 		// in the Aspire dashboard on those rows. The URL is populated once the server starts;
 		// until then, the command is disabled. URL injection into snapshots is handled by
 		// InjectDiagramUrlWhenLikeC4RunsAsync, which uses the correct public URL from the server's snapshot.
-		foreach (var projectResource in appModel.Resources.OfType<ProjectResource>())
+		foreach (var projectResource in DotnetProjects.In(appModel))
 		{
 			// ResourceCommandAnnotation: re-evaluated on every state update via UpdateCommands.
 			// The executeCommand callback returns a Markdown link that the dashboard renders
@@ -102,7 +102,7 @@ sealed partial class AspireC4LifecycleHook
 				_diagramUrl = url;
 
 				var capturedUrl = url;
-				foreach (var resource in appModel.Resources.OfType<ProjectResource>())
+				foreach (var resource in DotnetProjects.In(appModel))
 				{
 					await resourceNotificationService.PublishUpdateAsync(resource, s =>
 						// Avoid duplicates on repeated Running notifications.

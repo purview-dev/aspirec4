@@ -12,7 +12,7 @@ features adopted and avoided) is a separate concern, recorded in
 | --- | --- | --- | --- |
 | .NET SDK | **.NET 11 SDK** (`11.0.100` or later) | every machine and IDE that **builds** a project referencing `AspireC4.Hosting` or `AspireC4.EntityFrameworkCore` | the bundled source generators are compiled against Roslyn 5.9 — see [the compiler floor](#the-compiler-floor-net-11-sdk) |
 | Runtime / target framework | **.NET 10** (`net10.0`) or **.NET 11** (`net11.0`) | the AppHost | the libraries ship a `net10.0` and a `net11.0` asset |
-| Aspire | **13.6.5** | the AppHost: `Aspire.AppHost.Sdk` **and** a `PackageReference` to `Aspire.Hosting.AppHost` | `AspireC4.Hosting` depends on `Aspire.Hosting` 13.6.5, so NuGet will not resolve an older Aspire |
+| Aspire | **13.6.5**, on the 13 line or 17 and later | the AppHost | `AspireC4.Hosting` depends on `Aspire.Hosting` 13.6.5, so NuGet will not resolve an older Aspire; both lines are tested |
 | Container runtime | Docker or Podman | the default LikeC4 sidecar, the ER viewer sidecar and image export | optional — see [Without a container runtime](#without-a-container-runtime) |
 | Node CLI runtime | `npx`, `pnpm`, `yarn`, `bun` or `deno` on `PATH` | only `.WithLocalCLI()` | runs the LikeC4 server without Docker |
 | Runtime on the build machine | .NET 10 or later — the .NET 11 SDK's runtime is enough | only the optional `AspireC4.EntityFrameworkCore.ModelDump` tool | it rolls forward to the latest major; see [The model dump tool](#the-model-dump-tool) |
@@ -69,21 +69,57 @@ are built from the same source.
 ## Aspire
 
 The minimum is **Aspire 13.6.5**, because that is the `Aspire.Hosting` version `AspireC4.Hosting` declares
-and NuGet resolves a dependency graph to the highest minimum in it. An AppHost on an older Aspire is pulled
-up to 13.6.5 by the package, so match the AppHost SDK to it:
+and NuGet resolves a dependency graph to the highest minimum in it. Two Aspire lines are supported:
+
+| Line | AppHost project | .NET project resources |
+| --- | --- | --- |
+| **13** (13.6.5 or later) | `<Project Sdk="Aspire.AppHost.Sdk/13.6.5">` | `AddProject<Projects.X>()` |
+| **17** and later | `Microsoft.NET.Sdk` referencing `Aspire.Hosting.AppHost` | `AddDotnetProject(name, path)`, or the now-obsolete `AddProject<>` |
+
+The packages are compiled against the 13 floor and use nothing Aspire 17 removed, so the same package
+serves both. An AppHost on 17 lifts `Aspire.Hosting` to its own version; nothing needs pinning. Every
+test run covers both lines end to end: the same integration suite runs against a 17 sample AppHost and
+a 13.6.5 one.
+
+A 13-line AppHost:
 
 ```xml
 <Project Sdk="Aspire.AppHost.Sdk/13.6.5">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Aspire.Hosting.AppHost" />
     <PackageReference Include="AspireC4.Hosting" />
   </ItemGroup>
 </Project>
 ```
 
-The explicit `Aspire.Hosting.AppHost` reference is required; relying on the AppHost SDK alone produces
-`ASPIRE002`. A TypeScript AppHost states the same version as `sdk.version` and in its `Aspire.Hosting.*`
-pins in `aspire.config.json` — see [TypeScript AppHosts](Typescript-AppHost.md).
+Aspire 17 obsoletes `Aspire.AppHost.Sdk` (`ASPIRE012`). A 17 AppHost is a plain `Microsoft.NET.Sdk`
+project that references `Aspire.Hosting.AppHost`, plus `Aspire.Hosting.Dotnet` when it adds .NET projects:
+
+```xml
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.AppHost" />
+    <PackageReference Include="Aspire.Hosting.Dotnet" />
+    <PackageReference Include="AspireC4.Hosting" />
+  </ItemGroup>
+</Project>
+```
+
+AspireC4 draws both kinds of .NET project resource the same way: the legacy `AddProject<Projects.X>()`
+(`ProjectResource`) and Aspire 17's `AddDotnetProject(name, path)` (`DotnetProjectResource`, currently
+experimental under `ASPIREDOTNETPROJECT001`). Both appear as components with the .NET icon, carry the
+dashboard's diagram link, and are scanned for the ER diagram, so a 13 AppHost needs no AspireC4 change
+when it moves to 17.
+
+A TypeScript AppHost states the same version as `sdk.version` and in its `Aspire.Hosting.*` pins in
+`aspire.config.json` — see [TypeScript AppHosts](Typescript-AppHost.md).
 
 ## Without a container runtime
 
@@ -117,7 +153,9 @@ missing dump.
 This page owns the facts above; other pages may summarise them but must link here rather than restate
 the detail. When a requirement changes, update this page first, then the summaries that repeat a number:
 
-- `Aspire.Hosting` floor — `AspireVersion` in `Directory.Packages.props`; the AppHost snippets in
+- `Aspire.Hosting` floor — `AspireVersion` in `Directory.Packages.props` (`AspireAppHostVersion` beside
+  it is the line the repository's own AppHost and integration tests run on, not a consumer floor); the
+  AppHost snippets in
   [Getting Started](Getting-Started.md), `README.md`, `src/src/AspireC4/README.md` and the
   `purview-aspirec4-quickstart` skill.
 - Compiler floor — `RoslynCompilerVersion` in `Directory.Packages.props`.

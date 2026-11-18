@@ -14,8 +14,8 @@ the Aspire dashboard.
 - **A `net10.0` or `net11.0` AppHost.** This package ships both assets; an AppHost targeting
   `net10.0` (the Aspire AppHost framework) resolves the `net10.0` one. .NET 8 and .NET 9 are not
   supported.
-- **Aspire 13.6.5 or later.** The AppHost must reference both the AppHost SDK and
-  `Aspire.Hosting.AppHost`.
+- **Aspire 13.6.5 or later**, on the 13 line (an `Aspire.AppHost.Sdk` AppHost) or 17 and later (a
+  `Microsoft.NET.Sdk` AppHost referencing `Aspire.Hosting.AppHost`). One package serves both.
 - **Docker** (or Podman) for the default LikeC4 sidecar container.
 - Optional: a local Node.js CLI runtime (`npx`, `pnpm`, `yarn`, `bun` or `deno`) if you call
   `.WithLocalCLI()` instead.
@@ -40,7 +40,7 @@ dotnet add package AspireC4.Hosting
 ```
 
 ```xml
-<Project Sdk="Aspire.AppHost.Sdk/13.6.5">
+<Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.AppHost" />
     <PackageReference Include="AspireC4.Hosting" />
