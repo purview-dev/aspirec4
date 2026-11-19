@@ -1,0 +1,18 @@
+<!--
+	Runs the TypeScript, Go and Python sample AppHosts (samples/*-app-host) through the Aspire CLI and
+	asserts each draws the shared SampleAppHostContract, the same contract the C# integration suites
+	assert against TestAppHost. It is what gates CI on every AppHost implementation.
+
+	Single-target: the AppHosts run in their own processes, so the test host's runtime makes no
+	difference, and running each one twice would only double the time.
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- One sample AppHost at a time across test processes, shared with the C# integration suites. -->
+		<Compile Include="..\AspireC4.IntegrationTests\Fixtures\AppHostRunLock.cs" Link="Fixtures\AppHostRunLock.cs" />
+	</ItemGroup>
+</Project>

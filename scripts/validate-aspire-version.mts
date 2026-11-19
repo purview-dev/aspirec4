@@ -1,29 +1,36 @@
 #!/usr/bin/env bun
 /**
- * Keeps the Aspire version the TypeScript sample asks for in step with the one the repository
- * builds against.
+ * Keeps the Aspire version the polyglot samples ask for in step with the one the repository's own
+ * AppHost builds against.
  *
- * `global.json` is the single source of truth for the Aspire AppHost SDK version. The TypeScript
- * sample repeats that version in `samples/typescript-app-host/aspire.config.json`, both as
- * `sdk.version` and as the pins for the official `Aspire.Hosting.*` packages, because the Aspire
- * CLI reads `aspire.config.json` rather than `global.json`. Nothing else keeps the two files in
- * step, so a version bump that misses the sample silently runs it against an older Aspire SDK.
+ * `AspireAppHostVersion` in `Directory.Packages.props` is the single source of truth: it is the Aspire
+ * line the C# sample AppHost and the integration tests run on. The TypeScript, Go and Python samples
+ * repeat that version in their `aspire.config.json`, both as `sdk.version` and as the pins for the
+ * official `Aspire.Hosting.*` packages, because the Aspire CLI reads `aspire.config.json` rather than
+ * MSBuild. Nothing else keeps them in step, so a version bump that misses a sample silently runs it
+ * against an older Aspire.
  *
  * Usage:
- *   bun scripts/validate-aspire-version.mts          check; exits 1 when the sample has drifted
- *   bun scripts/validate-aspire-version.mts --fix    rewrite the sample to match global.json
+ *   bun scripts/validate-aspire-version.mts          check; exits 1 when a sample has drifted
+ *   bun scripts/validate-aspire-version.mts --fix    rewrite the samples to match
  *   bun scripts/validate-aspire-version.mts --help   print this help
  */
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-export const GLOBAL_JSON = "global.json";
-export const SAMPLE_CONFIG = "samples/typescript-app-host/aspire.config.json";
-export const ASPIRE_SDK = "Aspire.AppHost.Sdk";
+export const VERSION_SOURCE = "Directory.Packages.props";
+export const VERSION_PROPERTY = "AspireAppHostVersion";
+
+/** Every polyglot sample whose `aspire.config.json` repeats the Aspire version. */
+export const SAMPLE_CONFIGS = [
+	"samples/typescript-app-host/aspire.config.json",
+	"samples/go-app-host/aspire.config.json",
+	"samples/python-app-host/aspire.config.json",
+] as const;
 
 /**
- * The official Aspire hosting packages the sample pins. `AspireC4.Hosting` is deliberately not
- * matched: the sample points it at the local project, and a version string there would be wrong.
+ * The official Aspire hosting packages the samples pin. `AspireC4.Hosting` is deliberately not
+ * matched: the samples point it at the local project, and a version string there would be wrong.
  */
 const ASPIRE_HOSTING_PACKAGE = /^Aspire\.Hosting(?:\.|$)/;
 
@@ -37,6 +44,8 @@ export interface AspireVersionMismatch {
 export interface AspireVersionFixResult {
 	changed: boolean;
 	version: string;
+	/** The sample configs that were rewritten. */
+	files: string[];
 }
 
 interface VersionEntry {
@@ -56,36 +65,42 @@ function parseJson(file: string, text: string): unknown {
 	}
 }
 
-async function readJson(file: string): Promise<unknown> {
-	return parseJson(file, await readFile(file, "utf8"));
-}
+/**
+ * Reads `AspireAppHostVersion` from the text of `Directory.Packages.props`. XML comments are removed
+ * first, because the file's own comments mention the property by name.
+ */
+export function getAspireAppHostVersion(propsText: string): string {
+	const withoutComments = propsText.replace(/<!--[\s\S]*?-->/g, "");
+	const match = withoutComments.match(
+		new RegExp(`<${VERSION_PROPERTY}(?:\\s[^>]*)?>\\s*([^<\\s]+)\\s*</${VERSION_PROPERTY}>`),
+	);
+	const version = match?.[1];
 
-/** Reads the Aspire AppHost SDK version from a parsed `global.json`. */
-export function getAspireSdkVersion(globalJson: unknown): string {
-	const sdks = isRecord(globalJson) ? globalJson["msbuild-sdks"] : undefined;
-	const version = isRecord(sdks) ? sdks[ASPIRE_SDK] : undefined;
-
-	if (typeof version !== "string" || version.length === 0) {
-		throw new Error(`${GLOBAL_JSON} must declare msbuild-sdks["${ASPIRE_SDK}"]`);
+	if (version === undefined || version.length === 0) {
+		throw new Error(`${VERSION_SOURCE} must declare <${VERSION_PROPERTY}>`);
 	}
 
 	return version;
 }
 
-/** A project path, not a package version. `AspireC4.Hosting` in the sample is one. */
+async function readExpectedVersion(root: string): Promise<string> {
+	return getAspireAppHostVersion(await readFile(join(root, VERSION_SOURCE), "utf8"));
+}
+
+/** A project path, not a package version. `AspireC4.Hosting` in the samples is one. */
 function isProjectPath(value: string): boolean {
 	return value.includes("/") || value.includes("\\") || value.endsWith(".csproj");
 }
 
-/** Every `aspire.config.json` field that repeats the Aspire SDK version. */
-export function getSampleAspireVersions(sampleConfig: unknown): VersionEntry[] {
+/** Every `aspire.config.json` field that repeats the Aspire version. */
+export function getSampleAspireVersions(sampleConfig: unknown, file: string = SAMPLE_CONFIGS[0]): VersionEntry[] {
 	if (!isRecord(sampleConfig)) {
-		throw new Error(`${SAMPLE_CONFIG} must contain a JSON object`);
+		throw new Error(`${file} must contain a JSON object`);
 	}
 
 	const sdk = sampleConfig["sdk"];
 	if (!isRecord(sdk) || typeof sdk["version"] !== "string") {
-		throw new Error(`${SAMPLE_CONFIG} must declare sdk.version`);
+		throw new Error(`${file} must declare sdk.version`);
 	}
 
 	const entries: VersionEntry[] = [{ path: "sdk.version", version: sdk["version"] }];
@@ -102,33 +117,43 @@ export function getSampleAspireVersions(sampleConfig: unknown): VersionEntry[] {
 	return entries;
 }
 
-/** Reports every field in the sample that does not match `global.json`. */
-export async function findAspireVersionMismatches(root: string): Promise<AspireVersionMismatch[]> {
-	const expected = getAspireSdkVersion(await readJson(join(root, GLOBAL_JSON)));
-	const sample = await readJson(join(root, SAMPLE_CONFIG));
+/** Reports every field, in every sample, that does not match `AspireAppHostVersion`. */
+export async function findAspireVersionMismatches(
+	root: string,
+	files: readonly string[] = SAMPLE_CONFIGS,
+): Promise<AspireVersionMismatch[]> {
+	const expected = await readExpectedVersion(root);
+	const mismatches: AspireVersionMismatch[] = [];
 
-	return getSampleAspireVersions(sample)
-		.filter(entry => entry.version !== expected)
-		.map(entry => ({
-			file: SAMPLE_CONFIG,
-			path: entry.path,
-			expected,
-			actual: entry.version,
-		}));
+	for (const file of files) {
+		const sample = parseJson(file, await readFile(join(root, file), "utf8"));
+
+		for (const entry of getSampleAspireVersions(sample, file)) {
+			if (entry.version !== expected) {
+				mismatches.push({ file, path: entry.path, expected, actual: entry.version });
+			}
+		}
+	}
+
+	return mismatches;
 }
 
 /**
  * Rewrites every version field in a parsed sample config to `version`. Returns true when anything
  * changed, so a caller can avoid writing an unchanged file.
  */
-export function applyAspireVersionFix(sampleConfig: unknown, version: string): boolean {
+export function applyAspireVersionFix(
+	sampleConfig: unknown,
+	version: string,
+	file: string = SAMPLE_CONFIGS[0],
+): boolean {
 	if (!isRecord(sampleConfig)) {
-		throw new Error(`${SAMPLE_CONFIG} must contain a JSON object`);
+		throw new Error(`${file} must contain a JSON object`);
 	}
 
 	const sdk = sampleConfig["sdk"];
 	if (!isRecord(sdk)) {
-		throw new Error(`${SAMPLE_CONFIG} must declare sdk.version`);
+		throw new Error(`${file} must declare sdk.version`);
 	}
 
 	let changed = false;
@@ -171,19 +196,26 @@ export function formatJson(value: unknown, source: string): string {
 		: json.replaceAll("\n", lineEnding) + trailingNewline;
 }
 
-/** Applies the fix to the sample config on disk and reports what was written. */
-export async function fixAspireVersion(root: string): Promise<AspireVersionFixResult> {
-	const version = getAspireSdkVersion(await readJson(join(root, GLOBAL_JSON)));
-	const file = join(root, SAMPLE_CONFIG);
-	const source = await readFile(file, "utf8");
-	const config = parseJson(SAMPLE_CONFIG, source);
-	const changed = applyAspireVersionFix(config, version);
+/** Applies the fix to every sample config on disk and reports what was written. */
+export async function fixAspireVersion(
+	root: string,
+	files: readonly string[] = SAMPLE_CONFIGS,
+): Promise<AspireVersionFixResult> {
+	const version = await readExpectedVersion(root);
+	const written: string[] = [];
 
-	if (changed) {
-		await writeFile(file, formatJson(config, source), "utf8");
+	for (const file of files) {
+		const path = join(root, file);
+		const source = await readFile(path, "utf8");
+		const config = parseJson(file, source);
+
+		if (applyAspireVersionFix(config, version, file)) {
+			await writeFile(path, formatJson(config, source), "utf8");
+			written.push(file);
+		}
 	}
 
-	return { changed, version };
+	return { changed: written.length > 0, version, files: written };
 }
 
 function printHelp(): void {
@@ -191,11 +223,13 @@ function printHelp(): void {
 		`Usage:
   bun scripts/validate-aspire-version.mts [--fix]
 
-Compares the Aspire SDK version in ${GLOBAL_JSON} (msbuild-sdks["${ASPIRE_SDK}"]) with the
-version in ${SAMPLE_CONFIG} (sdk.version and the Aspire.Hosting.* package pins).
+Compares ${VERSION_PROPERTY} in ${VERSION_SOURCE} with the Aspire version in each sample's
+aspire.config.json (sdk.version and the Aspire.Hosting.* package pins):
+
+${SAMPLE_CONFIGS.map(file => `  ${file}`).join("\n")}
 
 Options:
-  --fix, -f   Rewrite the sample to match ${GLOBAL_JSON}
+  --fix, -f   Rewrite the samples to match ${VERSION_PROPERTY}
   --help, -h  Print this help text`,
 	);
 }
@@ -212,26 +246,28 @@ async function main(args: string[]): Promise<number> {
 	if (fix) {
 		const result = await fixAspireVersion(root);
 		if (result.changed) {
-			console.log(`Updated ${SAMPLE_CONFIG} to Aspire ${result.version}.`);
+			for (const file of result.files) {
+				console.log(`Updated ${file} to Aspire ${result.version}.`);
+			}
 		} else {
-			console.log(`Aspire ${result.version} is already in sync (${SAMPLE_CONFIG}).`);
+			console.log(`Aspire ${result.version} is already in sync in every sample.`);
 		}
 		return 0;
 	}
 
 	const mismatches = await findAspireVersionMismatches(root);
 	if (mismatches.length === 0) {
-		const version = getAspireSdkVersion(await readJson(join(root, GLOBAL_JSON)));
-		console.log(`Aspire ${version} is in sync with ${SAMPLE_CONFIG}.`);
+		const version = await readExpectedVersion(root);
+		console.log(`Aspire ${version} is in sync with the TypeScript, Go and Python samples.`);
 		return 0;
 	}
 
 	for (const mismatch of mismatches) {
 		console.error(
-			`${mismatch.file} ${mismatch.path}: expected ${mismatch.expected} (from ${GLOBAL_JSON}), found ${mismatch.actual}`,
+			`${mismatch.file} ${mismatch.path}: expected ${mismatch.expected} (${VERSION_PROPERTY} in ${VERSION_SOURCE}), found ${mismatch.actual}`,
 		);
 	}
-	console.error("Run `bun scripts/validate-aspire-version.mts --fix` to update the sample.");
+	console.error("Run `just samples-validate-fix` to update the samples.");
 	return 1;
 }
 

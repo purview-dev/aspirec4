@@ -35,19 +35,33 @@ builder.AddAspireC4().WithLocalCLI(LocalCLIRuntime.Bun);
 - Yarn's `dlx` does not install optional peer dependencies (`react`, `react-dom`) by default, so AspireC4 passes them explicitly as `--package` arguments.
 - HMR is enabled with `--hmr-port` when not disabled; `DisableHMR` still applies.
 
-## ConfigureServer
+## Describing the server: WithServerLikeC4Details
 
-Use `ConfigureServer` to apply annotations directly to the inner server resource (e.g. `WithLikeC4Details`):
+The LikeC4 server is drawn as AspireC4's own node when `WithIncludeAspireC4InternalResource(true)` is
+set. Give it a label, summary, icon, links or metadata with `WithServerLikeC4Details`:
 
 ```csharp
 builder.AddAspireC4()
-    .ConfigureServer(server => server.WithLikeC4Details(options => options.WithLabel("Architecture diagram")));
+    .WithServerLikeC4Details(options => options.WithLabel("Architecture diagram"));
+```
+
+It works in either order with `.WithLocalCLI()`: when the CLI resource replaces the container, the
+details move with it. It is also the form to use from a Go or Python AppHost (see
+[AppHost languages](../apphosts/README.md#what-differs-between-them)).
+
+## ConfigureServer
+
+Use `ConfigureServer` for anything else on the inner server resource, such as custom annotations:
+
+```csharp
+builder.AddAspireC4()
+    .ConfigureServer(server => server.WithAnnotation(new MyAnnotation()));
 ```
 
 > [!TIP]
-> Call `ConfigureServer` **after** `.WithLocalCLI()` if you want to configure the CLI resource. Calling it first configures the Docker container that is subsequently replaced.
+> Call `ConfigureServer` **after** `.WithLocalCLI()` if you want to configure the CLI resource. Calling it first configures the Docker container that is subsequently replaced. `ConfigureServer` is not usable from a Go or Python AppHost.
 
 ## Next pages
 
-- [Getting Started](Getting-Started.md)
-- [Configuration](Configuration.md)
+- [Getting Started](../Getting-Started.md)
+- [Configuration](README.md)

@@ -15,29 +15,13 @@ AspireC4 turns your distributed application into a living architecture diagram. 
 The pages are layered: each one owns its topic, and a page that only needs to mention a topic links to
 its owner instead of restating it.
 
-**Using AspireC4**
-
-- [Requirements](Requirements.md) — the SDK, runtime, Aspire and container requirements, and why
-- [Getting Started](Getting-Started.md) — install and first run
-
-**Reference**
-
-- [Configuration](Configuration.md)
-- [Customizing Resources](Customizing-Resources.md)
-- [Entity Framework Core ER Diagrams](Entity-Framework-Diagrams.md)
-- [TypeScript AppHosts](Typescript-AppHost.md)
-- [Generated Output](Generated-Output.md)
-- [Dashboard Integration](Dashboard-Integration.md)
-- [Local CLI Runtimes](Local-CLI.md)
-- [Source Generator Validation](Source-Generator.md)
-- [Advanced Configuration](Advanced-Configuration.md)
-- [Migration Guide](Migration.md)
-
-**Working on AspireC4**
-
-- [Toolchain and support matrix](Toolchain.md) — how this repository is built
-- [Contributing](Contributing.md)
-- [Release Flow](Release-Flow.md)
+| Section | Pages |
+| --- | --- |
+| **Using AspireC4** | [Requirements](Requirements.md) — the SDK, runtime, Aspire and container requirements, and why · [Getting Started](Getting-Started.md) — install and first run · [Migration Guide](Migration.md) — breaking changes and how to upgrade |
+| **AppHost languages** | [Overview](apphosts/README.md) — C#, TypeScript, Go and Python AppHosts: one API, and what differs · [TypeScript](apphosts/TypeScript.md) · [Go](apphosts/Go.md) · [Python](apphosts/Python.md) |
+| **Diagrams** | [Generated Output](Generated-Output.md) — what is written where, and extending the model · [Dashboard Integration](Dashboard-Integration.md) · [Entity Framework Core ER Diagrams](Entity-Framework-Diagrams.md) |
+| **Configuration** | [Options](configuration/README.md) · [Customizing Resources](configuration/Customizing-Resources.md) · [Local CLI Runtimes](configuration/Local-CLI.md) · [Source Generator Validation](configuration/Source-Generator.md) · [Advanced Configuration](configuration/Advanced.md) |
+| **Working on AspireC4** | [Contributing](contributing/README.md) · [Toolchain and support matrix](contributing/Toolchain.md) — how this repository is built · [Release Flow](contributing/Release-Flow.md) |
 
 ## Screenshots
 
@@ -61,13 +45,13 @@ startup, which is the easiest way to capture a screenshot of your own applicatio
 - **Automatic icons.** Icons are inferred from resource type and name using a bundled manifest, with custom `IconResolvers` evaluated first, and optional GraphViz `dot` assistance.
 - **Compile-time validation.** A Roslyn source generator validates `.WithTag()`, `.WithKind()`, `.WithLikeC4Group()`, and `.WithMetadata()` values against a `[LikeC4Registry]` class and/or LikeC4 `specification` blocks, with severity controls from suggestions to errors.
 - **Image export.** Every view is written out as PNG (architecture) or SVG/PNG (ER) whenever the model changes, so a diagram can be attached to a pull request without running the server.
-- **TypeScript AppHost support.** The same features are available to TypeScript AppHosts through the Aspire-generated fluent API.
+- **C#, TypeScript, Go and Python AppHosts.** The same features, under the same method names, through the API Aspire generates for each language; every sample AppHost is checked against one shared contract on every pull request. See [AppHost languages](apphosts/README.md).
 - **Dashboard integration.** The diagram URL is surfaced in the Aspire dashboard, with optional per-resource dashboard links, and support for hiding the sidecar in favour of links on project resources.
 
 ## Requirements
 
 - **Build with the .NET 11 SDK.** The AppHost can still target `net10.0` or `net11.0`.
-- **Aspire 13.6.5 or later**, with `Aspire.Hosting.AppHost` referenced by the AppHost project.
+- **Aspire 13.6.5 or later**, on the 13 line or 17 and later; one package serves both.
 - **Docker** (default LikeC4 server), or a local Node.js CLI runtime if you use `.WithLocalCLI()`.
 
 [Requirements](Requirements.md) has the full list, the target frameworks each package ships, and why

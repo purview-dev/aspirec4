@@ -1,7 +1,7 @@
 pre-commit:
   jobs:
     - name: aspire version check
-      run: just ts-validate
+      run: just samples-validate
 
     - name: csharpier format check
       run: just lint-check

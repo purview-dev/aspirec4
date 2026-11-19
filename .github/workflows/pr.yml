@@ -16,3 +16,10 @@ jobs:
       run-pack: true
       validate-pack: true
     secrets: inherit
+
+  # The TypeScript, Go and Python sample AppHosts, which the shared pipeline cannot run.
+  apphosts:
+    name: AppHosts
+    uses: ./.github/workflows/apphosts.yml
+    permissions:
+      contents: read

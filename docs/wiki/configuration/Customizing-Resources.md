@@ -37,22 +37,30 @@ builder.AddProject<Projects.Api>("api")
 | `WithLink(string \| Uri, string? title)` | Adds a hyperlink (absolute, or relative to the `.c4` file). |
 | `WithMetadata(string key, string value)` | Adds a metadata key/value pair. |
 
-## Relationships — `WithLikeC4Reference`
+## Relationships — `WithLikeC4Reference` and `WithLikeC4ConnectionReference`
 
-Customizes how the relationship from a resource to a target appears in the diagram. There are two overloads:
+Customizes how the relationship from a resource to a target appears in the diagram:
 
 ```csharp
-// Target is any resource builder.
+// Draws the relationship only. Target is any resource builder.
 builder.AddNodeApp("app", ...)
     .WithLikeC4Reference(redis, opts => opts.WithLabel("Caches sessions").WithTechnology("Redis Protocol").WithKind("RESP"));
 
-// Target is a resource that exposes a connection string — also calls Aspire's WithReference.
+// Draws the relationship AND calls Aspire's WithReference, so the connection string reaches the consumer.
+// Target is a resource that exposes a connection string.
 builder.AddProject<Projects.Api>("api")
-    .WithLikeC4Reference(db, opts => opts.WithLabel("Persists data"), connectionName: "postgres");
+    .WithLikeC4ConnectionReference(db, opts => opts.WithLabel("Persists data"));
 ```
 
-> [!NOTE]
-> The connection-string overload (`IResourceWithConnectionString`) additionally wires up Aspire's `WithReference`, so the connection string is available to the consumer. Pass `skipAspireReference: true` to opt out.
+The names are the same in every AppHost language (`withLikeC4ConnectionReference`,
+`WithLikeC4ConnectionReference`, `with_like_c4_connection_reference`). Pass `connectionName` to name the
+connection, or `skipAspireReference: true` to only describe a reference that already exists.
+
+> [!WARNING]
+> `WithLikeC4Reference` also has a connection-string overload, kept for compatibility, but C# only
+> chooses it when you pass one of its connection arguments. `WithLikeC4Reference(db, opts => ...)` binds
+> to the relationship-only overload and does **not** call `WithReference`. Use
+> `WithLikeC4ConnectionReference` when you want the connection.
 
 ### Available relationship options
 
@@ -97,12 +105,28 @@ builder.AddAspireC4(options => options
 
 A resource is excluded when its runtime type is the same as, or a subclass of, any type in the set.
 
+Types can also be named by their full type name, which is the form a TypeScript, Go or Python AppHost
+uses (their bindings cannot pass a C# type argument), and works for a type from a package the AppHost
+does not reference. Aspire's Azure provisioning environment is excluded this way by default: it is
+infrastructure, and its fallback `system` kind collides with the `system` element kind most LikeC4
+projects declare.
+
+```csharp
+builder.AddAspireC4(options => options
+    .WithExcludedResourceType("Acme.Hosting.InternalResource")
+    .WithoutExcludedResourceType("Aspire.Hosting.Azure.AzureEnvironmentResource"));
+```
+
+```typescript
+opts.withExcludedResourceType("Acme.Hosting.InternalResource");
+```
+
 ## Aspire metadata injection
 
 When `AutoIncludeAspireMetadata` is `All` (the default), each element automatically receives `aspire-name`/`aspire-type` metadata and links to its allocated HTTP/HTTPS endpoints. Endpoint URLs come from resource snapshots so they use the correct public ports.
 
 ## Next pages
 
-- [Generated Output](Generated-Output.md)
-- [Advanced Configuration](Advanced-Configuration.md)
+- [Generated Output](../Generated-Output.md)
+- [Advanced Configuration](Advanced.md)
 - [Source Generator Validation](Source-Generator.md)

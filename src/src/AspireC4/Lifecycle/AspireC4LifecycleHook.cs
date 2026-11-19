@@ -129,6 +129,7 @@ sealed partial class AspireC4LifecycleHook(
 				_ = WatchResourceStatesAsync(
 					evt.Model,
 					options.Value.ExcludedResourceTypes.Count > 0 ? options.Value.ExcludedResourceTypes : null,
+					options.Value.ExcludedResourceTypeNames.Count > 0 ? options.Value.ExcludedResourceTypeNames : null,
 					ct
 				);
 

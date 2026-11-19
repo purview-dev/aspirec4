@@ -5,7 +5,7 @@ This guide walks through installing AspireC4 and generating your first live arch
 ## Prerequisites
 
 - **The .NET 11 SDK** to build the AppHost, which can target `net10.0` or `net11.0`. An older SDK skips AspireC4's source generator.
-- **Aspire 13.6.5 or later**. Aspire AppHost projects must reference both the AppHost SDK and `Aspire.Hosting.AppHost`.
+- **Aspire 13.6.5 or later**, on the 13 line (an `Aspire.AppHost.Sdk` AppHost) or 17 and later (a `Microsoft.NET.Sdk` AppHost referencing `Aspire.Hosting.AppHost`). One package serves both; see [Requirements](Requirements.md#aspire).
 - **Docker** is used by default to run the LikeC4 sidecar container.
 - Optional: a local Node.js CLI runtime (`npx`, `pnpm`, `yarn`, `bun`, or `deno`) if you call `.WithLocalCLI()`.
 
@@ -23,7 +23,7 @@ dotnet add package Aspire.Hosting.AppHost
 An AppHost project should contain the equivalent of:
 
 ```xml
-<Project Sdk="Aspire.AppHost.Sdk/13.6.5">
+<Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.AppHost" />
     <PackageReference Include="AspireC4.Hosting" />
@@ -48,7 +48,7 @@ builder.Build().Run();
 
 That is all it takes. On startup AspireC4:
 
-1. Writes the generated model to `./.aspirec4/likec4/model.gen.c4` (relative to the AppHost working directory).
+1. Writes the generated model to `./.aspirec4/likec4/model.gen.c4` (relative to the AppHost's directory).
 2. Starts the official `ghcr.io/likec4/likec4` container as a sidecar resource named `aspirec4`.
 3. Refreshes the diagram whenever the Aspire application changes — for example when a resource transitions to `Running` or `Exited`.
 
@@ -73,7 +73,7 @@ builder.AddAspireC4(options =>
 );
 ```
 
-See [Configuration](Configuration.md) for the full options reference and [Customizing Resources](Customizing-Resources.md) for per-resource details.
+See [Configuration](configuration/README.md) for the full options reference and [Customizing Resources](configuration/Customizing-Resources.md) for per-resource details.
 
 ## Add an ER diagram too (optional)
 
@@ -113,17 +113,17 @@ When Docker is not available, or you prefer a local Node.js-based workflow:
 builder.AddAspireC4().WithLocalCLI();
 ```
 
-The first runtime available on the system `PATH` is selected automatically (npx → pnpm → yarn → bun → deno). See [Local CLI Runtimes](Local-CLI.md).
+The first runtime available on the system `PATH` is selected automatically (npx → pnpm → yarn → bun → deno). See [Local CLI Runtimes](configuration/Local-CLI.md).
 
 ## Run the TypeScript sample
 
-AspireC4 supports both C# and TypeScript AppHosts. See [TypeScript AppHosts](Typescript-AppHost.md) for the TypeScript API and a runnable sample.
+AspireC4 works from C#, TypeScript, Go and Python AppHosts, with the same API names in each. See [AppHost languages](apphosts/README.md) for how they compare, and the [TypeScript](apphosts/TypeScript.md), [Go](apphosts/Go.md) and [Python](apphosts/Python.md) pages for each API and a runnable sample.
 
 ## Next pages
 
-- [Configuration](Configuration.md)
-- [Customizing Resources](Customizing-Resources.md)
+- [Configuration](configuration/README.md)
+- [Customizing Resources](configuration/Customizing-Resources.md)
 - [Entity Framework Core ER Diagrams](Entity-Framework-Diagrams.md)
 - [Generated Output](Generated-Output.md)
 - [Dashboard Integration](Dashboard-Integration.md)
-- [Source Generator Validation](Source-Generator.md)
+- [Source Generator Validation](configuration/Source-Generator.md)

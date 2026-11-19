@@ -24,7 +24,7 @@ sealed partial class AspireC4LifecycleHook
 			opts.FormatGeneratedFile,
 			opts.DisableHMR
 		);
-		var (outputDir, serveDir) = LikeC4ProjectLayout.Resolve(Environment.CurrentDirectory, opts);
+		var (outputDir, serveDir) = LikeC4ProjectLayout.Resolve(workspaceOptions.Value.ResolveBaseDirectory(), opts);
 
 		// Collect all host-side directory paths that must be visible inside the container. The served
 		// directory is listed separately: with a hand-authored project it is an ancestor of the output

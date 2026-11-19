@@ -1,0 +1,77 @@
+<!--
+	The Aspire 13 twin of TestAppHost. The libraries declare the Aspire 13.6.5 floor, so this AppHost
+	proves they still work on that line end to end; AspireC4.Aspire13.IntegrationTests runs the same
+	integration suite against it.
+
+	It has no sources of its own: it compiles TestAppHost's with ASPIRE13 defined, which switches the
+	one line-specific call (AddProject<> instead of Aspire 17's AddDotnetProject). Change the sample
+	there, never here.
+
+	The SDK is pinned in the attribute, overriding the 17.0.0 in global.json, because Aspire 13's
+	AppHost shape is the Aspire.AppHost.Sdk project; Aspire 17 obsoletes it (ASPIRE012).
+-->
+<Project Sdk="Aspire.AppHost.Sdk/13.6.5">
+	<PropertyGroup>
+		<!-- No OutputType: Purview.BuildSdk detects the Aspire.AppHost.Sdk AppHost and makes it an Exe. -->
+		<TargetFramework>net10.0</TargetFramework>
+		<AspireUseCliBundle>true</AspireUseCliBundle>
+		<NoWarn>$(NoWarn);CA2234;</NoWarn>
+		<DefineConstants>$(DefineConstants);ASPIRE13</DefineConstants>
+
+		<!-- Pin the whole Aspire graph, and the Containers.Aspire built for it, to the 13 line. -->
+		<UseAspireAppHostVersion>true</UseAspireAppHostVersion>
+		<AspireAppHostVersion>$(AspireVersion)</AspireAppHostVersion>
+		<PurviewContainersAspireVersion>1.0.0-prerelease.13</PurviewContainersAspireVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Compile
+			Include="..\TestAppHost\**\*.cs"
+			Exclude="..\TestAppHost\bin\**;..\TestAppHost\obj\**"
+			Link="%(RecursiveDir)%(Filename)%(Extension)"
+		/>
+		<!-- The shared sources are written for TestAppHost's root namespace, which the SDK imports there. -->
+		<Using Include="Aspire.Hosting.AspireC4.TestAppHost" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!--
+			Aspire.AppHost.Sdk 13 references Aspire.Hosting.AppHost implicitly, at its own version, and
+			NuGet rejects a central PackageVersion for an implicit reference (NU1009).
+		-->
+		<PackageVersion Remove="Aspire.Hosting.AppHost" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Aspire.Hosting.Azure.PostgreSQL" />
+		<PackageReference Include="Aspire.Hosting.Azure.Redis" />
+		<PackageReference Include="Aspire.Hosting.JavaScript" />
+		<PackageReference Include="Purview.Containers.Aspire" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Content
+			Include="..\..\..\assets\likec4-extensions\**\*"
+			Link="likec4\extensions\%(RecursiveDir)%(Filename)%(Extension)"
+			CopyToOutputDirectory="PreserveNewest"
+		/>
+		<Content
+			Include="..\..\..\assets\images\**\*"
+			Link="likec4\images\%(RecursiveDir)%(Filename)%(Extension)"
+			CopyToOutputDirectory="PreserveNewest"
+		/>
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\AspireC4\AspireC4.csproj" IsAspireProjectResource="false" />
+		<ProjectReference Include="..\EntityFrameworkCore\EntityFrameworkCore.csproj" IsAspireProjectResource="false" />
+		<!-- An Aspire project resource on this line: generates Projects.TestAppHost_DataService. -->
+		<ProjectReference Include="..\TestAppHost.DataService\TestAppHost.DataService.csproj" />
+		<ProjectReference
+			Include="..\SourceGenerators\SourceGenerators.csproj"
+			OutputItemType="Analyzer"
+			ReferenceOutputAssembly="false"
+			IsAspireProjectResource="false"
+		/>
+	</ItemGroup>
+</Project>

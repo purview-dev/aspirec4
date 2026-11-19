@@ -1,157 +1,66 @@
+# Recipes for AspireC4. Run `just` for the list.
+#
+# The shared recipes come from .build/just/, copied verbatim from the purview-buildsdk-justfile
+# skill. Change them there, not here; this file holds what belongs to this repository.
+
 set quiet
 
-import "Justfile.skills.just"
+# Let a definition here override a module's default variable or no-op hook.
+set allow-duplicate-variables
+set allow-duplicate-recipes
 
-export TESTINGPLATFORM_EXITCODE_IGNORE := "8"
-export DOTNET_CLI_TELEMETRY_OPTOUT := "1"
-export DOTNET_SKIP_FIRST_TIME_EXPERIENCE := "1"
-export DOTNET_NOLOGO := "1"
-export DO_NOT_TRACK := "1"
-# The .NET 11 CLI keeps the MSBuild server on by default; stating it keeps local and CI builds on
-# the same path rather than depending on a machine-wide setting.
-export DOTNET_CLI_USE_MSBUILD_SERVER := "1"
+import ".build/just/index.just"
 
-_root := "./"
-_solution := "src/AspireC4.slnx"
+solution_file := "src/AspireC4.slnx"
+artifacts_folder := "./artifacts/nuget"
+
 _typescriptAppHost := "samples/typescript-app-host/"
+_goAppHost := "samples/go-app-host/"
+_pythonAppHost := "samples/python-app-host/"
 
-config_default := "Debug"
-default_test_filter := "/*/*/*/*"
-
-pipeline_tool := "dotnet purview-build"
-
-current_version := `bun -p "require('./package.json').version"`
-
-# List available recipes
 [private]
 default:
     just --list
 
-# Restore the repository's .NET local tools (.config/dotnet-tools.json)
-[private]
-ensure-pipeline-tool:
-    dotnet tool restore
-
-# Run the PR pipeline (restore, build, lint, tests)
-[group('Pipeline')]
-pipeline-pr *args: ensure-pipeline-tool
-    echo "Running PR pipeline..."
-    {{ pipeline_tool }} {{ args }}
-
-# Run the build pipeline (restore, build, lint)
-[group('Pipeline')]
-pipeline-build *args: ensure-pipeline-tool
-    echo "Running build pipeline..."
-    {{ pipeline_tool }} --Build:RunTests=false --Release:Mode=None {{ args }}
-
-# Run the release pipeline (restore, build, lint, tests, pack, publish, GitHub release)
-[group('Pipeline')]
-pipeline-release *args: ensure-pipeline-tool
-    echo "Running release pipeline..."
-    {{ pipeline_tool }} --Release:Mode=NuGet {{ args }}
-
-# Run the release pipeline (restore, build, lint, tests, pack, local nuget publish)
-# Note: `just` runs recipes through the shell, which strips backslashes from unquoted arguments.
-# Use the LOCAL_NUGET_FEED_PATH environment variable or forward slashes, e.g.
-# just pipeline-local-release --PublishLocalNuGet:LocalFeedPath=p:/_sync-projects/.local-nuget/
-[group('Pipeline')]
-pipeline-local-release *args: ensure-pipeline-tool
-    echo "Running local release pipeline..."
-    {{ pipeline_tool }} --Release:Mode=LocalNuGet {{ args }}
-
-# Run the pipeline with tests enabled
-[group('Pipeline')]
-pipeline-tests *args: ensure-pipeline-tool
-    echo "Running tests pipeline..."
-    {{ pipeline_tool }} --Build:RunTests=true --Release:Mode=None {{ args }}
-
-# Run the pipeline through pack + validate (restore, build, lint, tests, pack, validate pack contents) without publishing/releasing
-[group('Pipeline')]
-pipeline-pack-validate *args: ensure-pipeline-tool
-    echo "Running pack + validate pipeline..."
-    {{ pipeline_tool }} --Build:RunPack=true --Build:ValidatePack=true --Release:Mode=None {{ args }}
-
-# Initialise the repo: restore packages, install tools, and wire up git hooks.
-# Safe to run multiple times.
+# Initialise the repo: restore tools and packages, install JS dependencies, wire up git hooks (safe to re-run)
 [group('Utilities')]
-init: restore
+init: ensure-tools restore
     bun install
     lefthook install
 
-# Open the solution in the default IDE (e.g., Visual Studio or VS Code)
-[group('Utilities')]
-vs:
-    open {{ _solution }}
-
-# Clean up the repository by removing build artifacts, bin/obj folders etc, and shutting down the build server
-[group('Utilities')]
-scrub:
-    find . -type d \( -name bin -o -name obj \) -exec rm -rf {} +
-    just clean
-    just restore --force-evaluate
-    dotnet build-server shutdown
-
-# Run all tests (unit + integration + e2e )
-test-all: test test-integration test-e2e
-
-# ── .NET ──────────────────────────────────────────────────────────────────────
-# Restore NuGet packages and local tools
-[group('.NET')]
-restore *args:
-    dotnet tool restore
-    dotnet restore {{ _solution }} {{ args }}
-
-# Build the entire solution
-[group('.NET')]
-build configuration=config_default *args:
-    dotnet build {{ _solution }} --no-restore --configuration {{ configuration }} {{ args }}
-
-# Cleans the solution
-[group('.NET')]
-clean configuration=config_default *args:
-    dotnet clean {{ _solution }} --configuration {{ configuration }} {{ args }}
-
-# Run all tests (unit + integration). The TypeScript suite runs too, through
+# ── Tests ─────────────────────────────────────────────────────────────────────
+# `test` itself comes from .build/just/dotnet.just. The TypeScript suite runs with it, through
 # Repository.UnitTests/TypeScriptTests, so the shared pipeline executes it in the same pass.
-[group('.NET')]
-test filter=default_test_filter *args:
-    dotnet test {{ _solution }} -c {{ config_default }} --treenode-filter "{{ filter }}" {{ args }}
 
 # Run unit tests only
-[group('.NET')]
+[group('Build and Test')]
 test-unit *args:
     just test "/*/*/*/*[Category=Unit]" {{ args }}
 
-# Run integration tests only
-[group('.NET')]
-test-integration configuration=config_default *args:
+# Run integration tests only: the C# AppHost on both Aspire lines, then the polyglot AppHosts (Docker required)
+[group('Build and Test')]
+test-integration configuration=build_configuration *args:
     dotnet test --project src/tests/AspireC4.IntegrationTests --configuration {{ configuration }} {{ args }}
+    dotnet test --project src/tests/AspireC4.Aspire13.IntegrationTests --configuration {{ configuration }} {{ args }}
+    just test-apphosts {{ configuration }} {{ args }}
 
-# Run C# linting (CSharpier check)
-[group('.NET')]
-lint-check:
-    dotnet csharpier check {{ _root }}
+# Run the TypeScript, Go and Python sample AppHosts against the shared sample contract. Tests whose
+# toolchain is missing skip; set ASPIREC4_REQUIRE_APPHOSTS=true to make that a failure, as CI does.
+[doc('Run the TypeScript, Go and Python AppHosts against the shared sample contract')]
+[group('Build and Test')]
+test-apphosts configuration=build_configuration *args:
+    dotnet test --project src/tests/AspireC4.AppHosts.IntegrationTests --configuration {{ configuration }} {{ args }}
 
-# Run C# linting and auto-fix (CSharpier format)
-[group('.NET')]
-lint-fix:
-    dotnet csharpier format {{ _root }}
+# Run all tests: unit, integration and every e2e runtime
+[group('Build and Test')]
+test-all: test test-integration test-e2e
 
-# Build and produce NuGet packages into artifacts/nuget (version read from package.json)
-[group('.NET')]
-pack configuration=config_default *args: (build configuration)
-    dotnet pack {{ _solution }} --configuration {{ configuration }} --output artifacts/nuget {{ args }}
+# ── TypeScript AppHost ────────────────────────────────────────────────────────
 
-# Display the current version of the project
-[group('.NET')]
-version:
-    echo "Current version: {{ GREEN }}{{ current_version }}{{ NORMAL }}"
-
-# ── TypeScript AppHost --------------------------------------------------------
-
-# Restore dependencies for the TypeScript AppHost sample
+# Restore the TypeScript AppHost sample: its Bun dependencies, then its generated bindings
 [group('Typescript')]
 ts-restore:
+    cd {{ _typescriptAppHost }} && bun install
     aspire restore --apphost {{ _typescriptAppHost }}
 
 # Run the TypeScript AppHost sample with Aspire
@@ -159,38 +68,95 @@ ts-restore:
 ts-run:
     aspire run --apphost {{ _typescriptAppHost }}
 
+# Check the TypeScript AppHost's formatting with oxfmt
 [group('Typescript')]
 ts-lint:
     cd {{ _typescriptAppHost }} && bun run lint
-
-# Verify the Aspire SDK version in global.json matches the TypeScript sample
-[group('Typescript')]
-ts-validate:
-    bun scripts/validate-aspire-version.mts
-
-# Rewrite the TypeScript sample's Aspire version to match global.json
-[group('Typescript')]
-ts-validate-fix:
-    bun scripts/validate-aspire-version.mts --fix
 
 # Run the TypeScript test suite directly
 [group('Typescript')]
 ts-test:
     bun test
 
-# ── Icon manifest ─────────────────────────────────────────────────────────────
+# ── Go and Python AppHosts ────────────────────────────────────────────────────
+
+# Generate the Go AppHost sample's bindings (.aspire/modules)
+[group('Go')]
+go-restore:
+    aspire restore --apphost {{ _goAppHost }}
+
+# Run the Go AppHost sample with Aspire
+[group('Go')]
+go-run:
+    aspire run --apphost {{ _goAppHost }}
+
+# Check the Go AppHost's formatting and vet it (run go-restore first)
+[group('Go')]
+go-lint:
+    test -z "$(gofmt -l {{ _goAppHost }}apphost.go)" || { gofmt -d {{ _goAppHost }}apphost.go; exit 1; }
+    cd {{ _goAppHost }} && go vet ./...
+
+# Python AppHosts are experimental in Aspire 17. The sample enables them in its own aspire.config.json,
+# which the CLI reads from the working directory, so these recipes run from inside the sample.
+
+# Generate the Python AppHost sample's bindings and virtual environment
+[group('Python')]
+py-restore:
+    cd {{ _pythonAppHost }} && aspire restore
+
+# Run the Python AppHost sample with Aspire
+[group('Python')]
+py-run:
+    cd {{ _pythonAppHost }} && aspire run
+
+# Check the Python AppHost's formatting and lint it with ruff (through uvx)
+[group('Python')]
+py-lint:
+    cd {{ _pythonAppHost }} && uvx ruff format --check apphost.py && uvx ruff check apphost.py
+
+# ── Polyglot samples ──────────────────────────────────────────────────────────
+
+# Verify every polyglot sample pins the Aspire version the C# AppHost runs on (AspireAppHostVersion)
+[group('Samples')]
+samples-validate:
+    bun scripts/validate-aspire-version.mts
+
+# Rewrite every polyglot sample's Aspire version to match AspireAppHostVersion
+[group('Samples')]
+samples-validate-fix:
+    bun scripts/validate-aspire-version.mts --fix
+
+# ── LikeC4 diagrams ───────────────────────────────────────────────────────────
 
 # Regenerate the LikeC4 icon manifest from the upstream GitHub repository
-[group('.NET')]
+[group('Diagrams')]
 refresh-icons:
     bun scripts/generate-icon-manifest.mts
-
-# ── LikeC4 diagram viewer ─────────────────────────────────────────────────────
 
 # View all LikeC4 diagrams in this repository
 [group('Diagrams')]
 diagrams:
     just _run-likec4 .
+
+[private]
+_run-likec4 path=justfile_dir():
+    just _try-docker {{ path }} || just _try-bun {{ path }}
+
+[private]
+_try-docker path=justfile_dir():
+    echo "Using Docker..."
+    docker run --rm \
+        -v "{{ justfile_directory() }}:/data" \
+        --init -t \
+        -p 5173:5173 -p 24678:24678 \
+        -e CHOKIDAR_USEPOLLING=1 \
+        -e CHOKIDAR_INTERVAL=200 \
+        ghcr.io/likec4/likec4 serve {{ path }}
+
+[private]
+_try-bun path=justfile_dir():
+    echo "Docker not available, falling back to Bun..."
+    sh -c 'set -- --use-hash-history; if command -v dot >/dev/null 2>&1; then set -- "$@" --use-dot-bin; fi; bunx likec4 serve "{{ path }}" "$@"'
 
 # ── Container runtime tests ───────────────────────────────────────────────────
 
@@ -199,49 +165,45 @@ _e2e_dockerfile_cli := "tests/Docker/Dockerfile.e2e-cli"
 
 # Run integration tests against the host Docker runtime (Docker Desktop or Rancher Desktop).
 # Runs natively on the host so bind-mount paths are real host paths that Docker can resolve.
+[doc('Run integration tests against the host Docker runtime')]
 [group('Container Tests')]
-test-e2e-docker configuration=config_default:
+test-e2e-docker configuration=build_configuration:
     dotnet test \
         --project src/tests/AspireC4.IntegrationTests \
         --configuration {{ configuration }}
 
 # Build and run integration tests with npx as the LikeC4 server (WithLocalCLI Npx)
 [group('Container Tests')]
-test-e2e-npm configuration=config_default: (_e2e-cli-image "aspirec4-e2e-npm" "npm")
+test-e2e-npm configuration=build_configuration: (_e2e-cli-image "aspirec4-e2e-npm" "npm")
     just _e2e-cli-run aspirec4-e2e-npm {{ configuration }}
 
 # Build and run integration tests with pnpm dlx as the LikeC4 server (WithLocalCLI Pnpm)
 [group('Container Tests')]
-test-e2e-pnpm configuration=config_default: (_e2e-cli-image "aspirec4-e2e-pnpm" "pnpm")
+test-e2e-pnpm configuration=build_configuration: (_e2e-cli-image "aspirec4-e2e-pnpm" "pnpm")
     just _e2e-cli-run aspirec4-e2e-pnpm {{ configuration }}
 
 # Build and run integration tests with yarn dlx as the LikeC4 server (WithLocalCLI Yarn)
 [group('Container Tests')]
-test-e2e-yarn configuration=config_default: (_e2e-cli-image "aspirec4-e2e-yarn" "yarn")
+test-e2e-yarn configuration=build_configuration: (_e2e-cli-image "aspirec4-e2e-yarn" "yarn")
     just _e2e-cli-run aspirec4-e2e-yarn {{ configuration }}
 
 # Build and run integration tests with bunx as the LikeC4 server (WithLocalCLI Bun)
 [group('Container Tests')]
-test-e2e-bun configuration=config_default: (_e2e-cli-image "aspirec4-e2e-bun" "bun")
+test-e2e-bun configuration=build_configuration: (_e2e-cli-image "aspirec4-e2e-bun" "bun")
     just _e2e-cli-run aspirec4-e2e-bun {{ configuration }}
 
 # Build and run integration tests with deno as the LikeC4 server (WithLocalCLI Deno)
 [group('Container Tests')]
-test-e2e-deno configuration=config_default: (_e2e-cli-image "aspirec4-e2e-deno" "deno")
+test-e2e-deno configuration=build_configuration: (_e2e-cli-image "aspirec4-e2e-deno" "deno")
     just _e2e-cli-run aspirec4-e2e-deno {{ configuration }}
 
 # Build and run all e2e integration tests: Docker container runtime + all local CLI runtimes
 [group('Container Tests')]
-test-e2e configuration=config_default: (test-e2e-docker configuration) (test-e2e-cli configuration)
+test-e2e configuration=build_configuration: (test-e2e-docker configuration) (test-e2e-cli configuration)
 
 # Build and run integration tests for all local CLI runtimes (npm, pnpm, yarn, bun, deno)
 [group('Container Tests')]
-test-e2e-cli configuration=config_default: (test-e2e-npm configuration) (test-e2e-pnpm configuration) (test-e2e-yarn configuration) (test-e2e-bun configuration) (test-e2e-deno configuration)
-
-# Build (or rebuild) a named e2e test runner image from its Dockerfile
-[private]
-_e2e-image image dockerfile:
-    docker build -f {{ dockerfile }} -t {{ image }} .
+test-e2e-cli configuration=build_configuration: (test-e2e-npm configuration) (test-e2e-pnpm configuration) (test-e2e-yarn configuration) (test-e2e-bun configuration) (test-e2e-deno configuration)
 
 # Build (or rebuild) a named local-CLI e2e image from the shared Dockerfile.e2e-cli
 [private]
@@ -268,34 +230,19 @@ _e2e-cli-run image configuration:
             --project src/tests/AspireC4.IntegrationTests \
             --verbosity normal \
             --configuration {{ configuration }}
-[private]
-_run-likec4 path=justfile_dir():
-    just _try-docker {{ path }} || just _try-bun {{ path }}
-[private]
-_try-docker path=justfile_dir():
-    echo "Using Docker..."
-    docker run --rm \
-        -v "{{ justfile_directory() }}:/data" \
-        --init -t \
-        -p 5173:5173 -p 24678:24678 \
-        -e CHOKIDAR_USEPOLLING=1 \
-        -e CHOKIDAR_INTERVAL=200 \
-        ghcr.io/likec4/likec4 serve {{ path }}
-[private]
-_try-bun path=justfile_dir():
-    echo "Docker not available, falling back to Bun..."
-    sh -c 'set -- --use-hash-history; if command -v dot >/dev/null 2>&1; then set -- "$@" --use-dot-bin; fi; bunx likec4 serve "{{ path }}" "$@"'
 
 # ── ER diagrams ───────────────────────────────────────────────────────────────
 
 # Rebuild the viewer's bundled JavaScript. Pass --embed to refresh the copies shipped with the
 # package (after a dependency bump); pass a directory to write plain files into <dir>/vendor.
+[doc('Rebuild the ER viewer bundled JavaScript (--embed refreshes the shipped copies)')]
 [group('Diagrams')]
 erd-vendor target="--embed":
     bun scripts/erd-vendor.mts "{{ target }}"
 
 # Drive the interactive viewer in a real browser and assert it renders, lays out, searches and
 # animates. Takes a generated model JSON. Requires: bunx playwright install chromium
+[doc('Drive the ER viewer in Chromium and assert it renders, lays out and searches')]
 [group('Diagrams')]
 erd-check model="src/src/TestAppHost/.aspirec4/erd/schema.gen.json":
     bun scripts/erd-vendor.mts artifacts/erd-viewer-check
@@ -303,6 +250,7 @@ erd-check model="src/src/TestAppHost/.aspirec4/erd/schema.gen.json":
 
 # Drive the Mermaid preview in a real browser. Takes an optional .mmd; uses a representative
 # diagram when omitted. Requires: bunx playwright install chromium
+[doc('Drive the ER Mermaid preview in Chromium')]
 [group('Diagrams')]
 erd-mermaid-check diagram="":
     bun scripts/erd-vendor.mts artifacts/erd-mermaid-check
@@ -310,6 +258,7 @@ erd-mermaid-check diagram="":
 
 # Render an emitted Mermaid .mmd to SVG using mermaid-cli 12 in a one-shot container.
 # Animated edges are browser-only and will not appear in this output.
+[doc('Render an emitted Mermaid .mmd to SVG in a one-shot container')]
 [group('Diagrams')]
 erd-svg input output="artifacts/erd/schema.svg":
     # justfile_directory() rather than $(pwd): under Git Bash on Windows the latter resolves to the

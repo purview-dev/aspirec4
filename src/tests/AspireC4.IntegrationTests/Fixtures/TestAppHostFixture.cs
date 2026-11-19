@@ -5,6 +5,13 @@ using Aspire.Hosting.Publishing;
 using Aspire.Hosting.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+// AspireC4.Aspire13.IntegrationTests compiles this suite with ASPIRE13 defined, against the Aspire 13
+// copy of the sample AppHost; everything else is identical.
+#if ASPIRE13
+using SampleAppHost = Projects.TestAppHost_Aspire13;
+#else
+using SampleAppHost = Projects.TestAppHost;
+#endif
 
 namespace Aspire.Hosting.AspireC4.Fixtures;
 
@@ -24,7 +31,7 @@ namespace Aspire.Hosting.AspireC4.Fixtures;
 /// starting the app, so consuming tests can report <c>Skipped</c> rather than failing.
 /// </para>
 /// </remarks>
-public sealed class TestAppHostFixture : TUnit.Aspire.AspireFixture<Projects.TestAppHost>
+public sealed class TestAppHostFixture : TUnit.Aspire.AspireFixture<SampleAppHost>
 {
 	readonly List<DistributedApplication> _publishApps = [];
 	readonly List<string> _publishOutputDirs = [];
@@ -360,6 +367,13 @@ public sealed class TestAppHostFixture : TUnit.Aspire.AspireFixture<Projects.Tes
 	protected override bool EnableTelemetryCollection => false;
 
 	/// <summary>
+	/// Three minutes rather than TUnit.Aspire's 60 seconds. <c>just test</c> runs every test project at once,
+	/// so the sample's eight containers start while the unit suites load the machine; Postgres has been seen
+	/// still unhealthy at 60 seconds and failing the whole Aspire 13 suite, then healthy on a rerun.
+	/// </summary>
+	protected override TimeSpan ResourceTimeout => TimeSpan.FromMinutes(3);
+
+	/// <summary>
 	/// Waits for the LikeC4 server to be running. The default <c>AllHealthy</c> wait is unsuitable for
 	/// this AppHost: the auto-generated <c>node-app-installer</c> resource completes into a terminal
 	/// <c>Finished</c> state (which Aspire's fail-fast treats as a startup failure), and the outer
@@ -425,8 +439,14 @@ public sealed class TestAppHostFixture : TUnit.Aspire.AspireFixture<Projects.Tes
 			return;
 		}
 
+		// Held until DisposeAsync, so the other Aspire line's suite starts its AppHost only after this
+		// one has stopped; see AppHostRunLock for why.
+		_appHostRunLock = await AppHostRunLock.AcquireAsync(RunCancellationToken);
+
 		await base.InitializeAsync();
 	}
+
+	AppHostRunLock? _appHostRunLock;
 
 	/// <summary>
 	/// Configures the shared application before it is built: routes AspireC4 output into
@@ -487,7 +507,7 @@ public sealed class TestAppHostFixture : TUnit.Aspire.AspireFixture<Projects.Tes
 			.WithProperty(opts => opts.Title, "Publish Mode Test")
 			.Build();
 
-		var builder = await DistributedApplicationTestingBuilder.CreateAsync<Projects.TestAppHost>(
+		var builder = await DistributedApplicationTestingBuilder.CreateAsync<SampleAppHost>(
 			["publish", "--publisher", "manifest", "--output-path", outputDir],
 			static (_, _) => { },
 			cancellationToken
@@ -548,6 +568,10 @@ public sealed class TestAppHostFixture : TUnit.Aspire.AspireFixture<Projects.Tes
 			await app.DisposeAsync();
 		}
 		_publishApps.Clear();
+
+		// Every AppHost this fixture started has stopped, so the other suite may start its own.
+		_appHostRunLock?.Dispose();
+		_appHostRunLock = null;
 
 		foreach (var dir in _publishOutputDirs.Append(OutputDirectory))
 		{

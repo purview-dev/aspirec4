@@ -52,10 +52,10 @@ The dashboard link opens `/view/{DefaultViewId}` (`index` by default — the ID 
 
 ## Hot Module Replacement
 
-HMR keeps the diagram up to date in the browser as the file regenerates. The HMR endpoint is exposed in the dashboard (details view) and, on Windows/Docker Desktop, `CHOKIDAR_USEPOLLING`/`CHOKIDAR_INTERVAL` environment variables are set on the container so file changes are detected via polling. Disable HMR with `WithHMRDisabled()`. See [Configuration](Configuration.md) for `HMRPort` behavior across LikeC4 versions.
+HMR keeps the diagram up to date in the browser as the file regenerates. The HMR endpoint is exposed in the dashboard (details view) and, on Windows/Docker Desktop, `CHOKIDAR_USEPOLLING`/`CHOKIDAR_INTERVAL` environment variables are set on the container so file changes are detected via polling. Disable HMR with `WithHMRDisabled()`. See [Configuration](configuration/README.md) for `HMRPort` behavior across LikeC4 versions.
 
 ## Next pages
 
 - [Generated Output](Generated-Output.md)
 - [Entity Framework Core ER Diagrams](Entity-Framework-Diagrams.md)
-- [Configuration](Configuration.md)
+- [Configuration](configuration/README.md)

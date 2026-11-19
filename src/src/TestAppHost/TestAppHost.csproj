@@ -1,6 +1,14 @@
-<Project Sdk="Aspire.AppHost.Sdk">
+<!--
+	Aspire 17 obsoletes Aspire.AppHost.Sdk (ASPIRE012): an AppHost is a plain Microsoft.NET.Sdk
+	project that references Aspire.Hosting.AppHost, with .NET project resources added by path through
+	Aspire.Hosting.Dotnet's AddDotnetProject.
+-->
+<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<OutputType>Exe</OutputType>
+		<!--
+			No OutputType: Purview.BuildSdk detects this as an Aspire AppHost from its Aspire.Hosting.AppHost
+			reference (IsAspireHostProject) and makes it an Exe.
+		-->
 		<!--
 			Single-target, unlike the libraries: an Aspire AppHost is a runnable project that Aspire
 			starts with `dotnet run`, which cannot choose a target framework for it. It compiles against
@@ -9,9 +17,13 @@
 		<TargetFramework>net10.0</TargetFramework>
 		<AspireUseCliBundle>true</AspireUseCliBundle>
 		<NoWarn>$(NoWarn);CA2234;</NoWarn>
+		<!-- Runs on the Aspire 17 line; the libraries it references declare the 13.6.5 floor. -->
+		<UseAspireAppHostVersion>true</UseAspireAppHostVersion>
 	</PropertyGroup>
 
 	<ItemGroup>
+		<PackageReference Include="Aspire.Hosting.AppHost" />
+		<PackageReference Include="Aspire.Hosting.Dotnet" />
 		<PackageReference Include="Aspire.Hosting.Azure.PostgreSQL" />
 		<PackageReference Include="Aspire.Hosting.Azure.Redis" />
 		<PackageReference Include="Aspire.Hosting.JavaScript" />
@@ -34,8 +46,15 @@
 	<ItemGroup>
 		<ProjectReference Include="..\AspireC4\AspireC4.csproj" IsAspireProjectResource="false" />
 		<ProjectReference Include="..\EntityFrameworkCore\EntityFrameworkCore.csproj" IsAspireProjectResource="false" />
-		<!-- An Aspire project resource: this one owns the sample EF Core models. -->
-		<ProjectReference Include="..\TestAppHost.DataService\TestAppHost.DataService.csproj" />
+		<!--
+			Build-order edge only: the resource itself is added by path with AddDotnetProject. It is kept
+			so building the AppHost also builds the service, whose output the ER diagram reads at startup.
+		-->
+		<ProjectReference
+			Include="..\TestAppHost.DataService\TestAppHost.DataService.csproj"
+			ReferenceOutputAssembly="false"
+			IsAspireProjectResource="false"
+		/>
 		<ProjectReference
 			Include="..\SourceGenerators\SourceGenerators.csproj"
 			OutputItemType="Analyzer"

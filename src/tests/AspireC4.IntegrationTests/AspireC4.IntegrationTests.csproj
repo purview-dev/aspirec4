@@ -1,4 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<!--
+			Both target frameworks start the same net10.0 TestAppHost. Under Aspire 17, AddDotnetProject
+			rebuilds data-service at startup (the hidden __dotnet-project-build resource), so running the
+			two legs at once has them rebuild one project into the same bin/obj and time out starting.
+		-->
+		<TestTfmsInParallel>false</TestTfmsInParallel>
+		<!--
+			The Aspire 17 leg: this project and the TestAppHost run on 17, while the unit tests resolve the
+			libraries' 13.6.5 floor, so every `just test` covers both Aspire lines.
+		-->
+		<UseAspireAppHostVersion>true</UseAspireAppHostVersion>
+	</PropertyGroup>
+
 	<ItemGroup>
 		<PackageReference Include="Aspire.Hosting.Testing" />
 		<PackageReference Include="TUnit.Aspire" />

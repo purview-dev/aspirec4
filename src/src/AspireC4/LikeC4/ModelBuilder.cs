@@ -54,6 +54,10 @@ static class ModelBuilder
 	/// the same as, or a subclass of, any type in this set. When <see langword="null"/>, no type-based exclusion
 	/// is applied. See <see cref="AspireC4DiagramOptions.ExcludedResourceTypes"/> for the configured default.
 	/// </param>
+	/// <param name="excludedResourceTypeNames">
+	/// Optional set of full type names to exclude: a resource is excluded when its type, or any base type, has
+	/// one of these names. See <see cref="AspireC4DiagramOptions.ExcludedResourceTypeNames"/>.
+	/// </param>
 	[System.Diagnostics.CodeAnalysis.SuppressMessage(
 		"Design",
 		"CA1054:URI-like parameters should not be strings",
@@ -71,12 +75,13 @@ static class ModelBuilder
 		string? dashboardBrowserToken = null,
 		IReadOnlyDictionary<string, string?>? stateTagMap = null,
 		IReadOnlyDictionary<string, IReadOnlyList<(string Url, string Name)>>? resourceSnapshotUrls = null,
-		IReadOnlySet<Type>? excludedResourceTypes = null
+		IReadOnlySet<Type>? excludedResourceTypes = null,
+		IReadOnlySet<string>? excludedResourceTypeNames = null
 	)
 	{
 		ArgumentNullException.ThrowIfNull(resources);
 
-		var visibleResources = BuildVisibleSet(resources, excludedResourceTypes);
+		var visibleResources = BuildVisibleSet(resources, excludedResourceTypes, excludedResourceTypeNames);
 
 		// Build a name → resource lookup so we can resolve "surrogate" resources.
 		// When an Azure resource (e.g. AzureRedisCacheResource) is replaced by a local
@@ -161,19 +166,21 @@ static class ModelBuilder
 	/// </summary>
 	public static IReadOnlySet<string> GetVisibleResourceNames(
 		IReadOnlyList<IResource> resources,
-		IReadOnlySet<Type>? excludedResourceTypes = null
+		IReadOnlySet<Type>? excludedResourceTypes = null,
+		IReadOnlySet<string>? excludedResourceTypeNames = null
 	)
 	{
 		ArgumentNullException.ThrowIfNull(resources);
 
-		return BuildVisibleSet(resources, excludedResourceTypes)
+		return BuildVisibleSet(resources, excludedResourceTypes, excludedResourceTypeNames)
 			.Select(r => r.Name)
 			.ToHashSet(StringComparer.OrdinalIgnoreCase);
 	}
 
 	static HashSet<IResource> BuildVisibleSet(
 		IReadOnlyList<IResource> resources,
-		IReadOnlySet<Type>? excludedResourceTypes
+		IReadOnlySet<Type>? excludedResourceTypes,
+		IReadOnlySet<string>? excludedResourceTypeNames
 	)
 	{
 #pragma warning disable IDE0028 // Simplify collection initialization
@@ -182,7 +189,7 @@ static class ModelBuilder
 
 		foreach (var resource in resources)
 		{
-			if (ShouldExclude(resource, excludedResourceTypes))
+			if (ShouldExclude(resource, excludedResourceTypes, excludedResourceTypeNames))
 			{
 				continue;
 			}
@@ -193,7 +200,11 @@ static class ModelBuilder
 		return visible;
 	}
 
-	static bool ShouldExclude(IResource resource, IReadOnlySet<Type>? excludedResourceTypes)
+	static bool ShouldExclude(
+		IResource resource,
+		IReadOnlySet<Type>? excludedResourceTypes,
+		IReadOnlySet<string>? excludedResourceTypeNames
+	)
 	{
 		// Explicitly excluded by the user via annotation.
 		if (resource.Annotations.OfType<ExcludeFromLikeC4Annotation>().Any())
@@ -222,7 +233,30 @@ static class ModelBuilder
 			}
 		}
 
+		// Name-based exclusion: the same rule by full type name, for types from packages this library
+		// does not reference (the default AzureEnvironmentResource) and for polyglot AppHosts.
+		if (
+			excludedResourceTypeNames is { Count: > 0 }
+			&& HasExcludedTypeName(resource.GetType(), excludedResourceTypeNames)
+		)
+		{
+			return true;
+		}
+
 		return resource.Name == AspireC4LifecycleHook.AspireDashboardResourceName;
+	}
+
+	static bool HasExcludedTypeName(Type? type, IReadOnlySet<string> excludedResourceTypeNames)
+	{
+		for (; type is not null; type = type.BaseType)
+		{
+			if (type.FullName is { } fullName && excludedResourceTypeNames.Contains(fullName))
+			{
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	static LikeC4Element BuildElement(
@@ -533,10 +567,12 @@ static class ModelBuilder
 
 	static bool IsValidMetadataKeyChar(char c) => char.IsLetterOrDigit(c) || c == '_' || c == '-';
 
+	// The .NET project case covers both the legacy ProjectResource and Aspire 17's DotnetProjectResource
+	// (AddDotnetProject). It must precede ExecutableResource: DotnetProjectResource derives from it.
 	static string InferKind(IResource resource) =>
 		resource switch
 		{
-			ProjectResource => LikeC4ElementKind.Component,
+			_ when DotnetProjects.IsDotnetProject(resource) => LikeC4ElementKind.Component,
 			ContainerResource => LikeC4ElementKind.Container,
 			// IResourceWithConnectionString before ExecutableResource to catch DB-like resources
 			IResourceWithConnectionString => LikeC4ElementKind.Database,
@@ -547,7 +583,7 @@ static class ModelBuilder
 	static string? InferTechnology(IResource resource) =>
 		resource switch
 		{
-			ProjectResource => ".NET",
+			_ when DotnetProjects.IsDotnetProject(resource) => ".NET",
 			ContainerResource container => container
 				.Annotations.OfType<ContainerImageAnnotation>()
 				.LastOrDefault()

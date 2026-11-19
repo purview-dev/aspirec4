@@ -38,11 +38,13 @@ sealed partial class AspireC4LifecycleHook
 			dashboardBrowserToken,
 			opts.StateTagMap,
 			resourceSnapshotUrls,
-			opts.ExcludedResourceTypes.Count > 0 ? opts.ExcludedResourceTypes : null
+			opts.ExcludedResourceTypes.Count > 0 ? opts.ExcludedResourceTypes : null,
+			opts.ExcludedResourceTypeNames.Count > 0 ? opts.ExcludedResourceTypeNames : null
 		);
 		var dsl = LikeC4DSLGenerator.Generate(model, opts);
 
-		var (outputDir, serveDir) = LikeC4ProjectLayout.Resolve(Environment.CurrentDirectory, opts);
+		var appHostDirectory = workspaceOptions.Value.ResolveBaseDirectory();
+		var (outputDir, serveDir) = LikeC4ProjectLayout.Resolve(appHostDirectory, opts);
 		Directory.CreateDirectory(outputDir);
 
 		var filename = opts.FileName;
@@ -112,10 +114,8 @@ sealed partial class AspireC4LifecycleHook
 		// Never on publish, which generates the model and exits — see _isPublishMode.
 		if (ShouldExportImages(changed, opts.ExportImages, _isPublishMode))
 		{
-			// The same base directory the output and serve directories were resolved from, so the images
-			// land beside the ER diagram's rather than wherever this AppHost happens to have been started.
-			var appHostDirectory = Environment.CurrentDirectory;
-
+			// appHostDirectory: the same base the output and serve directories were resolved from, so the
+			// images land beside the ER diagram's rather than wherever this AppHost happens to have been started.
 			_ = Task.Run(
 				() => ExportImagesAsync(outputDir, serveDir, appHostDirectory, newRawBody, cancellationToken),
 				cancellationToken

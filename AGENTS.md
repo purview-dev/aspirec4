@@ -48,16 +48,19 @@ SDK's set needs no manifest edit.
 | `src/src/SourceGenerators/` | Roslyn `netstandard2.0` incremental source generator (registry + DSL strict validation) |
 | `src/src/EntityFrameworkCore/` | AppHost-side EF Core → d2 ER diagram library (`AspireC4.Hosting.EntityFrameworkCore`): descriptor and metadata readers, d2 model builder, d2 DSL generator, sidecar resources, lifecycle hook |
 | `src/src/EntityFrameworkCore.Analyzers/` | Roslyn `netstandard2.0` generator packed as the analyzer-only `AspireC4.EntityFrameworkCore` package, referenced by *service* projects |
-| `src/src/TestAppHost/` | C# sample AppHost used by integration tests and manual runs |
+| `src/src/TestAppHost/` | C# sample AppHost (Aspire 17) used by integration tests and manual runs |
+| `src/src/TestAppHost.Aspire13/` | The same AppHost on Aspire 13.6.5, compiled from `TestAppHost`'s sources with `ASPIRE13` |
 | `src/src/TestAppHost.SimpleData/` | Sample EF Core model: one `DbContext`, convention-only configuration |
 | `src/src/TestAppHost.ComplexData/` | Sample EF Core model: three `DbContext` types, schemas, composite keys, self-references, attribute + fluent configuration |
 | `src/tests/AspireC4.UnitTests/` | Unit tests (model builder, DSL generator, options, lifecycle — no Docker) |
 | `src/tests/AspireC4.IntegrationTests/` | Aspire lifecycle tests (requires Docker, pulls `ghcr.io/likec4/likec4`) |
+| `src/tests/AspireC4.Aspire13.IntegrationTests/` | The same suite against `TestAppHost.Aspire13`; no sources of its own |
 | `src/tests/SourceGenerators.UnitTests/` | Source-generator tests (TUnit + `Purview.SourceGeneratorFramework.Testing.TUnit`) |
 | `src/tests/EntityFrameworkCore.UnitTests/` | d2 model builder, d2 DSL generator and descriptor loader tests (no Docker) |
 | `src/tests/EntityFrameworkCore.Analyzers.UnitTests/` | EF model generator tests, plus the generator→assembly→AppHost round-trip test |
 | `src/tests/SharedTestingInfra/` | Shared test helpers for the test projects |
 | `samples/typescript-app-host/` | TypeScript AppHost sample (`apphost.mts`, generated `.aspire/modules/`) |
+| `samples/go-app-host/`, `samples/python-app-host/` | The same sample as a Go and a Python AppHost (`apphost.go`, `apphost.py`); bindings under `.aspire/modules/` are generated, not committed. Python AppHosts are experimental in Aspire 17 (`features.experimentalPolyglotPython`) |
 | `assets/likec4-extensions/` | Extra LikeC4 DSL used by the samples |
 | `assets/images/` | LikeC4 logos/icons used by the samples |
 | `.agents/` | Agent skills installed from other repositories by the skills CLI, plus agents/prompts (see [Skills](#skills)) |
@@ -80,21 +83,43 @@ an Aspire minimum the packages did not declare.
 | Topic | Owner | Summarised in |
 |---|---|---|
 | What a consuming application needs (SDK, target frameworks, Aspire minimum, container and runtime needs) | `docs/wiki/Requirements.md` | root `README.md`, `docs/wiki/Home.md`, `docs/wiki/Getting-Started.md`, package READMEs, the `purview-aspirec4-*` skills |
-| How this repository is built (SDK pin, C# 15, .NET 11 features adopted and avoided, package bands) | `docs/wiki/Toolchain.md` | this file's [Toolchain](#toolchain) section |
+| How this repository is built (SDK pin, C# 15, .NET 11 features adopted and avoided, package bands) | `docs/wiki/contributing/Toolchain.md` | this file's [Toolchain](#toolchain) section |
 | Generated output, source control (`.gitignore` files) and extending the model with hand-written `.c4` | `docs/wiki/Generated-Output.md` | root `README.md`, `src/src/AspireC4/README.md`, `docs/wiki/Migration.md`, the `purview-aspirec4-configuration` skill |
 | How EF domain types (value objects, enums, unions) and relationships are recognised | `docs/wiki/Entity-Framework-Diagrams.md` | root `README.md`, the EF package READMEs, the `purview-aspirec4-entityframework` skill, the EF section below |
 | A feature's behaviour and options | its wiki reference page | root `README.md` (the complete reference), the package README of the package that owns it |
 
-The wiki is layered in `docs/wiki/_Sidebar.md` and `Home.md` as **Using AspireC4** (Requirements,
-Getting Started), **Reference**, and **Working on AspireC4** (Toolchain, Contributing, Release Flow). A
-new page goes into one of those groups in both files.
+The wiki is published on purview.dev (`https://purview.dev/docs/aspirec4/`) and follows the
+`purview-site-docs` layout: one lower-case topic folder per area, each with a `README.md` landing page.
+
+| Where | Pages |
+| --- | --- |
+| root | `Home.md` (hub), `Getting-Started.md` (the catalogue's root page), `Requirements.md`, `Migration.md`, and the pages linked from outside the wiki: `Dashboard-Integration.md` and `Generated-Output.md` (catalogue `docsPage` deep links), `Entity-Framework-Diagrams.md` and `Requirements.md` (absolute links in published NuGet READMEs) |
+| `apphosts/` | AppHost languages: the overview, TypeScript, Go and Python |
+| `configuration/` | options, customizing resources, local CLI runtimes, source-generator validation, advanced configuration |
+| `contributing/` | contributing, toolchain and support matrix, release flow |
+
+A new page goes into its topic folder and into both `_Sidebar.md` and `Home.md`. Moving or renaming a
+page adds a `previous: current` line to `docs/wiki/_redirects.yml` in the same commit, and a root page
+above stays where it is: something outside the wiki links to it.
 
 Two consumer-facing floors come from `Directory.Packages.props`, and changing either is a breaking
 change that updates `Requirements.md` in the same commit:
 
 - `AspireVersion` — the `Aspire.Hosting` version the libraries declare, and so the **Aspire minimum**
   (13.6.5 today). Repeated in the AppHost snippets listed under "Keeping this page true" in
-  `Requirements.md`.
+  `Requirements.md`. Both Aspire lines are supported and tested end to end on every `just test`:
+  - **17:** `TestAppHost` and `AspireC4.IntegrationTests` set `UseAspireAppHostVersion=true`, which pins
+    `Aspire.Hosting` to `AspireAppHostVersion` (17.0.0) instead of the floor.
+  - **13:** `TestAppHost.Aspire13` (`Aspire.AppHost.Sdk/13.6.5`) and `AspireC4.Aspire13.IntegrationTests`
+    have **no sources of their own**: they compile `TestAppHost`'s and `AspireC4.IntegrationTests`'s
+    with `ASPIRE13` defined, and override `AspireAppHostVersion` and `PurviewContainersAspireVersion`
+    back to the 13 builds. Add sample code and tests to the 17 projects; use `#if ASPIRE13` only where
+    an API differs (`SampleDataWiring.cs` is the one place today).
+  - `AppHostRunLock` lets one sample AppHost run at a time across test processes: two at once
+    overloaded Docker and failed both suites.
+
+  Keep the libraries off any API the floor lacks or a later line removed; check with
+  `dnx dotnet-inspect -y -- diff --package Aspire.Hosting@<floor>..<latest> --breaking`.
 - `RoslynCompilerVersion` — the compiler both shipped generators are built against (5.9.0), which is why
   consumers must **build with the .NET 11 SDK** even when the AppHost targets `net10.0`. An older
   compiler reports `CS9057` and skips the generator silently.
@@ -129,12 +154,12 @@ The repository uses `Purview.BuildSdk` (pinned in `global.json` under `msbuild-s
 `src/Directory.Build.props` / `src/Directory.Build.targets`. The SDK classifies projects, adds references,
 sets testing/telemetry defaults, and bootstraps `.editorconfig`, `global.json` and `Directory.Build.rsp`.
 It never touches agent skills during a build: they change only when someone runs `just skills-update`
-(see `Justfile.skills.just`). Use the `purview-buildsdk-project-layout` and
+(see `.build/just/skills.just`). Use the `purview-buildsdk-project-layout` and
 `purview-buildsdk-project-detection` skills when reasoning about its behaviour.
 
 Package versions track the **lowest** target framework, not the SDK: runtime and Microsoft packages stay in
 the `10.0.x` band (`10.0.15` today) so a `net10.0` build never acquires a .NET 11-only binary. Build-only
-tooling (SourceLink, CSharpier, `dotnet-inspect`) may track the SDK. `docs/wiki/Toolchain.md` records the
+tooling (SourceLink, CSharpier, `dotnet-inspect`) may track the SDK. `docs/wiki/contributing/Toolchain.md` records the
 full matrix and which .NET 11 features are deliberately not used; update it with any TFM, SDK or package-band
 change.
 
@@ -151,14 +176,14 @@ just init        # dotnet tool restore, dotnet restore, bun install, lefthook in
 ### Build, test, lint
 
 ```sh
-just build            # Build src/AspireC4.slnx. NOTE: default configuration is Debug (see Justfile config_default)
-just build Release    # Build in Release
+just build            # Build src/AspireC4.slnx. Default configuration is Debug (build_configuration)
+just build_configuration=Release build   # Build in Release
 just test             # Run all tests (unit + integration) via the solution
 just test-unit        # Unit tests only
-just test-integration # Integration tests only (Docker required)
+just test-integration # Integration tests only: both Aspire lines, then the polyglot AppHosts (Docker required)
 just lint-check       # CSharpier check (formatting). NOTE: recipe is lint-check, not "lintcheck"
 just lint-fix         # CSharpier auto-fix. NOTE: recipe is lint-fix, not "lintfix"
-just pack             # Pack NuGet artifacts into artifacts/nuget/
+just pack             # Pack NuGet artifacts into artifacts/nuget/ (artifacts_folder)
 ```
 
 ### Pipelines (Purview.Build)
@@ -212,8 +237,10 @@ just ts-restore     # aspire restore for the TypeScript sample
 just ts-run         # aspire run for the TypeScript sample
 just ts-lint        # oxfmt check on apphost.mts
 just ts-test        # TypeScript test suite (bun test)
-just ts-validate    # global.json Aspire SDK version vs the TypeScript sample
-just ts-validate-fix # Rewrite the TypeScript sample to match global.json
+just samples-validate     # AspireAppHostVersion vs the TypeScript, Go and Python samples
+just samples-validate-fix # Rewrite the samples to match AspireAppHostVersion
+just go-restore / go-run / go-lint   # The Go AppHost sample (go-lint: gofmt + go vet)
+just py-restore / py-run / py-lint   # The Python AppHost sample (py-lint: ruff through uvx)
 just scrub          # Remove bin/obj, clean, restore, shutdown build server
 ```
 
@@ -260,16 +287,16 @@ dotnet test src/tests/AspireC4.UnitTests/AspireC4.UnitTests.csproj \
   `EfModelDumpRead` does; it turns "a new case silently falls through" into a build failure.
 - Introduce a union only when a value genuinely is one of a fixed set of types. Follow the compiler's
   **non-boxing access pattern** (`HasValue` + `TryGetValue`) so value-type cases are not boxed during pattern
-  matching — see `docs/wiki/Toolchain.md`.
+  matching — see `docs/wiki/contributing/Toolchain.md`.
 - The two shipped libraries carry a public-API baseline (`PublicAPI.Shipped.txt` / `PublicAPI.Unshipped.txt`).
   Add every new public symbol to `PublicAPI.Unshipped.txt` in the same change; a release moves the rows to
-  `Shipped.txt`. The flow is in [Release Flow](docs/wiki/Release-Flow.md#public-api-baseline).
+  `Shipped.txt`. The flow is in [Release Flow](docs/wiki/contributing/Release-Flow.md#public-api-baseline).
 
 ## Git hooks and commits
 
 Lefthook (`.config/lefthook.yml`) installs two hooks:
 
-- `pre-commit` — runs `just ts-validate` (the Aspire version in `global.json` against the TypeScript
+- `pre-commit` — runs `just samples-validate` (`AspireAppHostVersion` against the TypeScript, Go and Python
   sample), `just lint-check` (CSharpier over the repo root) and `just ts-lint` (oxfmt over
   `apphost.mts`). Rejects the commit on any failure.
 - `commit-msg` — runs `bun x commitlint --edit` to enforce Conventional Commits.
@@ -331,6 +358,29 @@ runner. Aspire's project-resource runner detects the IDE and fails with
 green; the missing ER diagram content is the only signal. The ER tests now fail with the descriptor
 diagnostics in that situation, but a broken project runner is still a runner problem, not a product one.
 
+### Sample AppHosts: one contract
+
+Five sample AppHosts draw the same architecture: `TestAppHost` (C#, Aspire 17), `TestAppHost.Aspire13`
+(C#, 13.6.5), and `samples/typescript-app-host`, `samples/go-app-host` and `samples/python-app-host`.
+`src/tests/SharedTestingInfra/SampleAppHostContract.cs` defines what they must draw - element ids,
+kinds and labels, the labelled relationships, and what must stay hidden - and every one is asserted
+against it: the C# ones by `SampleAppHostContractTests` in the integration suites, the polyglot ones
+by `AspireC4.AppHosts.IntegrationTests`.
+
+- **Change all five together.** A new resource or relationship in one sample goes into every sample
+  and the contract in the same change. The polyglot samples call the same AspireC4 API in their own
+  spelling (`WithLink`/`withLink`/`with_link`); if a binding cannot express a call, fix the export
+  rather than letting the samples drift.
+- **Exported names match C#.** Set `MethodName` on `[AspireExport]` when the export id must be unique
+  (`withLinkNode` exports as `withLink`). Where a binding cannot overload, give the C# method the
+  shared name too (`WithLikeC4ConnectionReference`), and never export a generic method whose type
+  argument a binding cannot pass - export a by-name form (`WithExcludedResourceType(string)`).
+- **Locally**, a polyglot test skips when its toolchain (Aspire CLI, Docker, npm, Bun/Go/uv) is missing.
+  CI sets `ASPIREC4_REQUIRE_APPHOSTS=true` (`.github/workflows/apphosts.yml`), which makes that a
+  failure, so the gate cannot pass by skipping.
+- Output is redirected with `AspireC4__OutputDirectory` into `artifacts/apphost-contract/` - inside the
+  repository, because the LikeC4 container mounts the common ancestor of the output and the shared
+  `assets/`, and a temp folder on another drive has none.
 ## Source generator work
 
 The generator in `src/src/SourceGenerators/` is built on `Purview.SourceGeneratorFramework`. Follow:
@@ -431,13 +481,13 @@ When writing or validating `.c4`/`.likec4` files, load the `likec4-dsl` skill
   matches the caller's own workflow file). It reads and validates the version, builds, tests, packs, **publishes
   to nuget.org**, then creates the `v<version>` tag and a GitHub Release with notes generated by GitHub. Packages
   are not attached to the GitHub Release.
-- [Release Flow](docs/wiki/Release-Flow.md) owns the pipeline detail and `.config/purview-build.json` owns the
+- [Release Flow](docs/wiki/contributing/Release-Flow.md) owns the pipeline detail and `.config/purview-build.json` owns the
   pack rules — keep both in sync when the release process changes. Prefer `just pipeline-release` /
   `pipeline-local-release`.
 - Roslyn diagnostics (`ASPIREC4001`–`ASPIREC4007`) are tracked in
   `src/src/SourceGenerators/AnalyzerReleases.Shipped.md` / `AnalyzerReleases.Unshipped.md`. Move unshipped rows into
   a new `## Release <version>` shipped section when cutting a release that adds, removes, or changes a rule. See
-  [Release Flow](docs/wiki/Release-Flow.md) for details.
+  [Release Flow](docs/wiki/contributing/Release-Flow.md) for details.
 
 ## Skills
 

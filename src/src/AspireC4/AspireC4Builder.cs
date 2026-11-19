@@ -51,14 +51,29 @@ static class AspireC4Builder
 				}
 			);
 
-			process?.WaitForExit(3_000);
-			return process?.ExitCode == 0;
+			if (process is null)
+				return false;
+
+			// A missing executable fails Process.Start straight away, so the wait only bounds an
+			// installed one that is slow to answer: npx is a Node script behind a shell shim, and on a
+			// loaded machine it took longer than the 3s this used to allow. Reading ExitCode before the
+			// process exits throws, which the catch below turned into "not installed".
+			if (!process.WaitForExit(VersionProbeTimeout))
+			{
+				process.Kill(entireProcessTree: true);
+				return false;
+			}
+
+			return process.ExitCode == 0;
 		}
 		catch
 		{
 			return false;
 		}
 	}
+
+	/// <summary>How long a runtime's <c>--version</c> probe may take before it counts as unusable.</summary>
+	static readonly TimeSpan VersionProbeTimeout = TimeSpan.FromSeconds(15);
 
 	/// <summary>
 	/// Returns the executable and the argument prefix required to invoke <c>likec4</c> via

@@ -1,5 +1,48 @@
 # Migration Guide
 
+## Polyglot API names now match C#
+
+> [!IMPORTANT]
+> A **breaking change for TypeScript AppHosts**. C# AppHosts are unaffected: no C# method was renamed
+> or removed.
+
+The TypeScript, Go and Python bindings now use the C# method names, so one sample reads the same in
+every language. Rename these calls in `apphost.mts`, then run `aspire restore`:
+
+| Before | Now | C# |
+| --- | --- | --- |
+| `withLinkNode`, `withLinkRelationship` | `withLink` | `WithLink(string, …)` |
+| `withLinkUriNode`, `withLinkUriRelationship` | `withLinkUri` | `WithLink(Uri, …)` |
+| `withMetadataNode`, `withMetadataRelationship` | `withMetadata` | `WithMetadata` |
+| `withLikeC4ReferenceWithEnvironmentResource` | `withLikeC4ConnectionReference` | `WithLikeC4ConnectionReference` (new; the `WithLikeC4Reference` overload for a connection-string resource still works) |
+| `withExcludedResourceType()`, `withoutExcludedResourceType()` (no argument) | `withExcludedResourceType(typeName)`, `withoutExcludedResourceType(typeName)` | `WithExcludedResourceType(string)` (new) beside `WithExcludedResourceType<T>()` |
+
+`withLinkUri` keeps a distinct name because a binding has no overloads. The no-argument exclusion pair
+never worked from TypeScript, which cannot pass a C# type argument; the new pair takes the type's full
+name, such as `Aspire.Hosting.Azure.AzureEnvironmentResource`.
+
+**C# AppHosts: check your connection references.** `WithLikeC4Reference(db, opts => ...)` never called
+Aspire's `WithReference`: with only a target and a callback, C# binds it to the relationship-only
+overload, and the connection-string overload is chosen only when a connection argument
+(`connectionName`, `optional`, `skipAspireReference`) is passed. Where you meant the connection, switch
+to `WithLikeC4ConnectionReference`, which always adds it.
+
+Two additions came with it:
+
+- **`WithServerLikeC4Details`** describes the LikeC4 server node without a resource-builder callback,
+  which Go and Python cannot use. `ConfigureServer` still works in C# and TypeScript.
+- **The Azure provisioning environment is no longer drawn.** `AzureEnvironmentResource` is excluded by
+  default (`AspireC4DiagramOptions.ExcludedResourceTypeNames`), because it is infrastructure and its
+  fallback `system` kind collides with the `system` element kind most LikeC4 projects declare. Bring it
+  back with `WithoutExcludedResourceType("Aspire.Hosting.Azure.AzureEnvironmentResource")`, or in C#
+  `WithoutExcludedResourceType<AzureEnvironmentResource>()`.
+- **TypeScript AppHosts: the architecture diagram moved beside `apphost.mts`.** Relative output paths
+  are now resolved against the AppHost's folder at runtime, as they already were at build time and for
+  the ER diagram. Before, the architecture diagram was written under
+  `.aspire/integrations/apphosts/<id>/.aspirec4/likec4/`, the Aspire CLI's AppHost server folder, while
+  the ER diagram was beside `apphost.mts`; both now share `./.aspirec4/`. A C# AppHost started from its
+  own folder, which is the usual case, sees no change.
+
 ## 13.6 — generated output and dashboard names
 
 > [!IMPORTANT]
@@ -138,7 +181,7 @@ This section covers breaking changes introduced by the migration of the source g
 
 ## See also
 
-- [Configuration](Configuration.md)
+- [Configuration](configuration/README.md)
 - [Generated Output](Generated-Output.md)
-- [Source Generator Validation](Source-Generator.md)
-- [TypeScript AppHosts](Typescript-AppHost.md)
+- [Source Generator Validation](configuration/Source-Generator.md)
+- [TypeScript AppHosts](apphosts/TypeScript.md)

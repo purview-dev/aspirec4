@@ -6,18 +6,53 @@
 		<TUnitVersion>1.83.0</TUnitVersion>
 		<PurviewSourceGenVersion>2.1.0</PurviewSourceGenVersion>
 		<PurviewTelemetryVersion>6.0.1</PurviewTelemetryVersion>
+		<!--
+			Two Aspire versions, on purpose:
+
+			- AspireVersion is the Aspire.Hosting floor the shipped libraries compile against and
+			  declare, so an AppHost on the Aspire 13 line (13.6.5+) and one on 17+ can both install
+			  them; NuGet lifts a 17 AppHost's graph to its own version. Only the shipped libraries
+			  reference Aspire.Hosting directly.
+			- AspireAppHostVersion is what this repository's own AppHost and tests run on: the sample
+			  AppHost and the integration tests exercise the 17 line, while the unit tests resolve the
+			  floor through their library references and so exercise the 13 line.
+		-->
 		<AspireVersion>13.6.5</AspireVersion>
-		<PurviewContainersVersion>1.0.0-prerelease.13</PurviewContainersVersion>
+		<AspireAppHostVersion>17.0.0</AspireAppHostVersion>
+		<PurviewContainersVersion>1.0.0-prerelease.14</PurviewContainersVersion>
+		<!--
+			Containers.Aspire follows the Aspire line, unlike Containers.Environment: .14 needs Aspire 17.
+			The Aspire 13 sample AppHost sets both this and AspireAppHostVersion in its .csproj; PackageVersion
+			items evaluate after every property, so a project's own value is the one used.
+		-->
+		<PurviewContainersAspireVersion>$(PurviewContainersVersion)</PurviewContainersAspireVersion>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageVersion Include="Aspire.Hosting" Version="$(AspireVersion)" />
+		<!--
+			Transitive pinning is on, so a project that runs on the 17 line (it references
+			Aspire.Hosting.AppHost or .Testing) sets UseAspireAppHostVersion=true in its .csproj; items
+			evaluate after every property, so the switch is seen here. Everything else pins the floor.
+		-->
+		<PackageVersion
+			Include="Aspire.Hosting"
+			Version="$(AspireVersion)"
+			Condition="'$(UseAspireAppHostVersion)' != 'true'"
+		/>
+		<PackageVersion
+			Include="Aspire.Hosting"
+			Version="$(AspireAppHostVersion)"
+			Condition="'$(UseAspireAppHostVersion)' == 'true'"
+		/>
+		<!-- Environment has no Aspire dependency; Containers.Aspire is referenced by the sample AppHosts only. -->
 		<PackageVersion Include="Purview.Containers.Environment" Version="$(PurviewContainersVersion)" />
-		<PackageVersion Include="Purview.Containers.Aspire" Version="$(PurviewContainersVersion)" />
-		<PackageVersion Include="Aspire.Hosting.Testing" Version="$(AspireVersion)" />
-		<PackageVersion Include="Aspire.Hosting.JavaScript" Version="$(AspireVersion)" />
-		<PackageVersion Include="Aspire.Hosting.Azure.PostgreSQL" Version="$(AspireVersion)" />
-		<PackageVersion Include="Aspire.Hosting.Azure.Redis" Version="$(AspireVersion)" />
+		<PackageVersion Include="Purview.Containers.Aspire" Version="$(PurviewContainersAspireVersion)" />
+		<PackageVersion Include="Aspire.Hosting.AppHost" Version="$(AspireAppHostVersion)" />
+		<PackageVersion Include="Aspire.Hosting.Dotnet" Version="$(AspireAppHostVersion)" />
+		<PackageVersion Include="Aspire.Hosting.Testing" Version="$(AspireAppHostVersion)" />
+		<PackageVersion Include="Aspire.Hosting.JavaScript" Version="$(AspireAppHostVersion)" />
+		<PackageVersion Include="Aspire.Hosting.Azure.PostgreSQL" Version="$(AspireAppHostVersion)" />
+		<PackageVersion Include="Aspire.Hosting.Azure.Redis" Version="$(AspireAppHostVersion)" />
 		<PackageVersion Include="Microsoft.SourceLink.GitHub" Version="11.0.100" />
 		<PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="$(RoslynCompilerVersion)" />
 		<PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="$(RoslynAnalyzersVersion)" />

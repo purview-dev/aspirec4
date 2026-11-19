@@ -24,8 +24,8 @@ builder.AddAspireC4(options =>
 | `ViewTitle` | `"Architecture"` | Title shown in the generated view. |
 | `ViewDescription` | `null` | Optional view description (Markdown supported by recent LikeC4 versions). |
 | `OutputDirectory` | `"./.aspirec4/likec4/"` | Directory where the generated `.c4` file is written. |
-| `ProjectDirectory` | `null` | An existing hand-authored LikeC4 project to generate into and serve. Set with `WithLikeC4ProjectFolder(path)`. See [Generated Output](Generated-Output.md). |
-| `UseLegacyLayout` | `false` | Restores the pre-13.6 output paths (`./likec4/gen/`, `./erd/gen/`) and flat dashboard resource names. Set with `WithLegacyLayout()`. A compatibility shim — see [Migration](Migration.md). |
+| `ProjectDirectory` | `null` | An existing hand-authored LikeC4 project to generate into and serve. Set with `WithLikeC4ProjectFolder(path)`. See [Generated Output](../Generated-Output.md). |
+| `UseLegacyLayout` | `false` | Restores the pre-13.6 output paths (`./likec4/gen/`, `./erd/gen/`) and flat dashboard resource names. Set with `WithLegacyLayout()`. A compatibility shim — see [Migration](../Migration.md). |
 | `FileName` | `"model.gen"` | Generated file name without extension. |
 | `DisableHMR` | `false` | Disable the Hot Module Replacement channel. |
 | `HMRPort` | `null` (dynamic) | Fixed HMR port when the LikeC4 server supports configurable ports (v1.57+); ignored on older versions, which always use port `24678`. |
@@ -46,14 +46,15 @@ builder.AddAspireC4(options =>
 | `AdditionalDSLFolders` | `[]` | Directories scanned recursively for `.c4` files, added to `include.paths` in the generated config. |
 | `ImageAliases` | `{}` | Image alias definitions (keys start with `@`) written to the `imageAliases` section of the generated config. |
 | `GenerateConfigFile` | `true` | Generate a `likec4.config.json` in the output directory. |
-| `GenerateGitIgnoreFile` | `true` | Write a `.gitignore` beside the generated files naming exactly what AspireC4 writes, and one in the image directory ignoring only the export stamps. A `.gitignore` AspireC4 did not write is never touched. See [Source control](Generated-Output.md#source-control). |
-| `ExtensionsDirectory` | `"./likec4-extensions"` | A folder of hand-written `.c4` files, relative to the AppHost directory, included automatically when it exists. `null`/empty turns the convention off. See [Extending the generated model](Generated-Output.md#extending-the-generated-model). |
+| `GenerateGitIgnoreFile` | `true` | Write a `.gitignore` beside the generated files naming exactly what AspireC4 writes, and one in the image directory ignoring only the export stamps. A `.gitignore` AspireC4 did not write is never touched. See [Source control](../Generated-Output.md#source-control). |
+| `ExtensionsDirectory` | `"./likec4-extensions"` | A folder of hand-written `.c4` files, relative to the AppHost directory, included automatically when it exists. `null`/empty turns the convention off. See [Extending the generated model](../Generated-Output.md#extending-the-generated-model). |
 | `IncludeAspireDashboardLinks` | `true` | Add links from each element to the Aspire dashboard console/structured-logs pages (requires `AutoIncludeAspireMetadata.Links`). |
 | `IncludeAspireTokenInDashboardLinks` | `false` | **Security risk** — embed the Aspire browser token in dashboard links. See below. |
 | `StateTagMap` | `{}` | Override the `aspire-run-state-*` tag applied for a given resource state; `null` suppresses the tag. |
 | `IncludeDefaultStateStyles` | `true` | Emit default `style element.tag = #aspire-run-state-* {}` rules in the generated view. |
 | `IncludeAspireC4InternalResource` | `false` | Include the internal AspireC4 server resource in the diagram (for debugging). |
 | `ExcludedResourceTypes` | `{ParameterResource}` | Resource types excluded from the diagram (type and subclasses). |
+| `ExcludedResourceTypeNames` | `{"Aspire.Hosting.Azure.AzureEnvironmentResource"}` | The same, by full type name: the form TypeScript, Go and Python AppHosts use, and for types from packages the AppHost does not reference. |
 | `IconResolvers` | `[]` | Custom icon resolvers evaluated before built-in icon inference. |
 | `ConfigFileMetadata` | `{}` | Additional metadata included in the generated `likec4.config.json`. |
 
@@ -81,10 +82,10 @@ Every property has a corresponding fluent `With*` method, for example:
 - `WithIconResolver(Func<IconResolverContext, string?>)`
 - `WithElementKindSpec(LikeC4ElementKindSpec)`, `WithRelationshipKindSpec(...)`
 - `WithAdditionalDSLFile(string)`, `WithAdditionalDSLFolder(string)`, `WithImageAliasFolder(string, string)`
-- `WithExcludedResourceType<T>()`, `WithoutExcludedResourceType<T>()`
+- `WithExcludedResourceType<T>()`, `WithoutExcludedResourceType<T>()`, and by full type name `WithExcludedResourceType(string)`, `WithoutExcludedResourceType(string)` (the form exported to TypeScript, Go and Python)
 - `WithIncludeAspireC4InternalResource(bool)`
 
-See [Advanced Configuration](Advanced-Configuration.md) for the folder, alias, resolver, and spec extensions, and [Source Generator Validation](Source-Generator.md) for the `AspireC4Strict` MSBuild property.
+See [Advanced Configuration](Advanced.md) for the folder, alias, resolver, and spec extensions, and [Source Generator Validation](Source-Generator.md) for the `AspireC4Strict` MSBuild property.
 
 ## Common examples
 
@@ -134,7 +135,7 @@ shim, not an alternative layout, and will be removed in a future major version.
 - It does not affect `WithLikeC4ProjectFolder(...)`; generated output always stays beneath the
   hand-authored project.
 
-See [Migration](Migration.md) for the complete before/after and the steps to move off the shim.
+See [Migration](../Migration.md) for the complete before/after and the steps to move off the shim.
 
 ### Security note — dashboard tokens in links
 
