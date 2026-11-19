@@ -1,11 +1,11 @@
 # Advanced Configuration
 
-Configuration topics beyond the core options in [Configuration](Configuration.md).
+Configuration topics beyond the core options in [Configuration](README.md).
 
 > [!TIP]
 > For hand-written LikeC4 files beside the AppHost you usually need neither method below: a
 > `likec4-extensions/` folder there is included automatically. See
-> [Extending the generated model](Generated-Output.md#extending-the-generated-model). Use these for files
+> [Extending the generated model](../Generated-Output.md#extending-the-generated-model). Use these for files
 > kept somewhere else, such as a shared folder of the repository.
 
 ## Additional DSL files
@@ -116,17 +116,17 @@ builder.AddAspireC4(options => options.WithRelationshipKindSyntax(LikeC4Relation
 
 ## Type-based exclusions
 
-`ExcludedResourceTypes` controls which resource types are omitted from the diagram (type and subclasses). The default excludes `ParameterResource`. See [Customizing Resources](Customizing-Resources.md).
+`ExcludedResourceTypes` controls which resource types are omitted from the diagram (type and subclasses), and `ExcludedResourceTypeNames` does the same by full type name. The defaults exclude `ParameterResource` and Aspire's `AzureEnvironmentResource`. See [Customizing Resources](Customizing-Resources.md).
 
 ## Formatting timeouts
 
-`ExternalProcessTimeoutSeconds` (default 30) caps how long the optional `npx likec4 format` step can block startup. See [Generated Output](Generated-Output.md).
+`ExternalProcessTimeoutSeconds` (default 30) caps how long the optional `npx likec4 format` step can block startup. See [Generated Output](../Generated-Output.md).
 
 ## Output layout and legacy mode
 
 Generated output defaults to `./.aspirec4/likec4/` for the architecture diagram and `./.aspirec4/erd/` for the ER diagram. `WithOutputDirectory(...)` moves either one; an explicit value always wins.
 
-To restore the pre-13.6 paths (`./likec4/gen/` and `./erd/gen/`) and the flat `aspirec4` / `aspirec4-er` dashboard rows, use `WithLegacyLayout()` (legacy mode). See [Configuration](Configuration.md#keep-the-pre-136-layout-legacy-mode) and [Migration](Migration.md).
+To restore the pre-13.6 paths (`./likec4/gen/` and `./erd/gen/`) and the flat `aspirec4` / `aspirec4-er` dashboard rows, use `WithLegacyLayout()` (legacy mode). See [Configuration](README.md#keep-the-pre-136-layout-legacy-mode) and [Migration](../Migration.md).
 
 ## Including the internal resource
 
@@ -134,5 +134,5 @@ To restore the pre-13.6 paths (`./likec4/gen/` and `./erd/gen/`) and the flat `a
 
 ## Next pages
 
-- [Configuration](Configuration.md)
-- [Generated Output](Generated-Output.md)
+- [Configuration](README.md)
+- [Generated Output](../Generated-Output.md)

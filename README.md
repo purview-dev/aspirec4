@@ -51,7 +51,7 @@ types to be registered as .NET project resources, with `AddProject<Projects.X>(.
 **.NET 8 and .NET 9 are not supported.** [Requirements](docs/wiki/Requirements.md) owns the detail: the
 target frameworks each package ships, what each optional package needs, and what happens when a
 requirement is missing. How this repository is built is in
-[Toolchain and support matrix](docs/wiki/Toolchain.md).
+[Toolchain and support matrix](docs/wiki/contributing/Toolchain.md).
 
 ## Installation
 
@@ -314,9 +314,9 @@ builder.AddProject<Projects.Api>("api")
        .WithLikeC4Element("cloud.backend.api");
 ```
 
-The generated model emits an `extend` block for a mapped resource:
+The generated model emits an `extend` block for a mapped resource (LikeC4 DSL, shown as code):
 
-```likec4
+```text
 model {
   extend cloud.backend.api {
     #aspire-run-state-running
@@ -719,64 +719,23 @@ Prefer the `configure` callback over configuration for `OutputDirectory`. The si
 fixed when the AppHost builder runs, so a value supplied through configuration changes where the file
 is written but **not** what the container serves. The callback is applied in time for both.
 
-## Aspire TypeScript AppHost support
+## TypeScript, Go and Python AppHosts
 
-AspireC4 supports both C# and TypeScript Aspire AppHosts. In a TypeScript AppHost, the Aspire integration exports the
-same diagram configuration, resource metadata, grouping, and relationship features through camel-cased asynchronous
-APIs. The C# registry source generator described later is not applied to TypeScript; TypeScript applications configure
-tags, kinds, groups, and metadata through the generated fluent API.
+AspireC4 works from every Aspire AppHost language. A TypeScript, Go or Python AppHost declares
+`AspireC4.Hosting` in the `packages` of its `aspire.config.json`, and `aspire restore` generates the
+binding for that language under `.aspire/modules/` (never edit it; restore again). The method names match
+C#, in each language's spelling:
 
-The Aspire CLI generates the TypeScript API surface under `.aspire/modules/`. Import `createBuilder` from the generated
-Aspire module, then add AspireC4 to the builder:
-
-```typescript
-import { createBuilder } from "./.aspire/modules/aspire.mjs";
-
-const builder = await createBuilder();
-
-await builder
-    .addAspireC4({
-        configure: async (options) => {
-            options
-                .withTitle("My distributed application")
-                .withViewTitle("Architecture")
-                .withViewDescription("Generated from the Aspire resource graph");
-        },
-    })
-    .configureServer(async (resource) => {
-        resource.withLikeC4Details({
-            configure: async (options) => {
-                options.withLabel("Architecture diagram");
-            },
-        });
-    });
-
-const api = await builder.addNodeApp("api", "../api", "index.ts");
-
-await api.withLikeC4Details({
-    configure: async (options) => {
-        options
-            .withLabel("API")
-            .withTechnology("Node.js")
-            .withTag("backend");
-    },
-});
-
-const app = await builder.build();
-await app.run();
-```
-
-Declare the integration and its Aspire dependencies in `aspire.config.json`:
+| AppHost | Entry point | Example call | Sample | Run it |
+| --- | --- | --- | --- | --- |
+| TypeScript | `apphost.mts` | `withLikeC4ConnectionReference(cache, { configure })` | [`samples/typescript-app-host`](samples/typescript-app-host) | `just ts-run` |
+| Go | `apphost.go` | `WithLikeC4ConnectionReference(cache, &aspire.WithLikeC4ConnectionReferenceOptions{...})` | [`samples/go-app-host`](samples/go-app-host) | `just go-run` |
+| Python (experimental in Aspire 17) | `apphost.py` | `with_like_c4_connection_reference(cache, configure=...)` | [`samples/python-app-host`](samples/python-app-host) | `just py-run` |
 
 ```json
 {
-  "appHost": {
-    "path": "apphost.mts",
-    "language": "typescript/nodejs"
-  },
-  "sdk": {
-    "version": "17.0.0"
-  },
+  "appHost": { "path": "apphost.mts", "language": "typescript/nodejs" },
+  "sdk": { "version": "17.0.0" },
   "packages": {
     "Aspire.Hosting.JavaScript": "17.0.0",
     "AspireC4.Hosting": "<version>"
@@ -784,59 +743,37 @@ Declare the integration and its Aspire dependencies in `aspire.config.json`:
 }
 ```
 
-Replace `<version>` with the current `AspireC4.Hosting` release (the NuGet badge above), and keep the Aspire pins at
-13.6.5 or later; the sample uses 17.0.0. The repository sample points `AspireC4.Hosting` at
-`../../src/src/AspireC4/AspireC4.csproj` so it exercises the local source instead of a published package.
+```typescript
+import { createBuilder } from "./.aspire/modules/aspire.mjs";
 
-### Run the TypeScript sample
+const builder = await createBuilder();
 
-The sample at [`samples/typescript-app-host`](samples/typescript-app-host) demonstrates:
+await builder
+	.addAspireC4({ configure: async (options) => options.withTitle("My distributed application") })
+	.withServerLikeC4Details({ configure: async (options) => options.withLabel("Architecture diagram") });
 
-- AspireC4 configuration from `apphost.mts`.
-- Azure Redis and PostgreSQL resources running as local containers.
-- Redis Commander and PgWeb dashboard resources.
-- A TypeScript Node.js service with Redis and PostgreSQL references.
-- LikeC4 labels, descriptions, links, icons, metadata, tags, groups, and relationships.
-- Additional LikeC4 DSL and image folders from this repository's `assets` directory.
-
-Prerequisites are Docker, the Aspire CLI, and Bun. From the
-repository root:
-
-```bash
-cd samples/typescript-app-host
-bun install
-aspire restore
-aspire start
+const app = await builder.build();
+await app.run();
 ```
 
-`aspire restore` restores the integrations declared in `aspire.config.json` and regenerates `.aspire/modules/`. Once
-`aspire start` completes, open the Aspire dashboard URL printed by the CLI and select the LikeC4 resource or its
-architecture-diagram link. The sample also exposes the `node-app` `/health`, `/ping/redis`, and `/ping/postgres`
-endpoints through Aspire-assigned URLs.
+Replace `<version>` with the current `AspireC4.Hosting` release (the NuGet badge above); keep the Aspire pins
+at 13.6.5 or later. The samples point `AspireC4.Hosting` at the local project instead.
 
-For an interactive foreground session, the sample's Bun script is equivalent to `aspire run`:
+What differs from a C# AppHost:
 
-```bash
-bun run dev
-```
+- **Label the LikeC4 server with `WithServerLikeC4Details`.** Go and Python bindings cannot pass
+  `ConfigureServer`'s `IResource` callback argument.
+- **Exclude resource types by full type name** (`withExcludedResourceType("…")`); a binding cannot pass a
+  C# type argument.
+- **No compile-time registry validation**, because the AppHost does not compile C#.
+- **The ER diagram still reads only .NET EF Core projects**, added with `addDotnetProject`.
 
-Stop a background session with:
-
-```bash
-aspire stop
-```
-
-### Generated TypeScript modules
-
-Do not edit files under `.aspire/modules/`; Aspire owns and regenerates them. If the folder is missing or stale after a
-pull, clean, or branch switch, run:
-
-```bash
-aspire restore
-```
-
-When adding another Aspire integration, use `aspire add <package>` so Aspire updates `aspire.config.json` and regenerates
-the TypeScript API. Inspect `.aspire/modules/aspire.mts` to see the APIs currently available to `apphost.mts`.
+All five sample AppHosts — C# on Aspire 17 and 13.6.5, TypeScript, Go and Python — build the same
+graph and are checked against one shared contract on every pull request and release
+(`just test-apphosts` runs the polyglot ones locally). See
+[AppHost languages](https://purview.dev/docs/aspirec4/apphosts/) for the comparison and the
+[TypeScript](docs/wiki/apphosts/TypeScript.md), [Go](docs/wiki/apphosts/Go.md) and
+[Python](docs/wiki/apphosts/Python.md) pages.
 
 ## Compile-time registry validation
 

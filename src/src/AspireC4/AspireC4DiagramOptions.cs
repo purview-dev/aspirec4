@@ -52,7 +52,7 @@ public sealed class AspireC4DiagramOptions
 
 	/// <summary>
 	/// Directory where the generated <c>.c4</c> file is written.
-	/// Defaults to <c>./.aspirec4/likec4/</c> relative to the AppHost working directory.
+	/// Defaults to <c>./.aspirec4/likec4/</c> relative to the AppHost directory (<c>AppHostDirectory</c>), not the process's
 	/// </summary>
 	/// <remarks>
 	/// Every AspireC4 diagram writes beneath the same <c>.aspirec4/</c> root, so a consumer only ever
@@ -535,6 +535,36 @@ public sealed class AspireC4DiagramOptions
 		Justification = "Settable for configuration binding and direct assignment in user code"
 	)]
 	public HashSet<Type> ExcludedResourceTypes { get; set; } = [typeof(ParameterResource)];
+
+	/// <summary>The full name of Aspire's Azure provisioning environment resource, excluded by default.</summary>
+	internal const string AzureEnvironmentResourceTypeName = "Aspire.Hosting.Azure.AzureEnvironmentResource";
+
+	/// <summary>
+	/// Resource types, by full type name, that are excluded from the generated LikeC4 diagram. A resource
+	/// is excluded when its type, or any base type, has one of these names.
+	/// <para>
+	/// The by-name form exists for two reasons: it can name a type from a package AspireC4 does not
+	/// reference, and it is the only form a TypeScript, Go or Python AppHost can use, since their
+	/// generated bindings cannot pass a C# type argument to <c>WithExcludedResourceType&lt;T&gt;()</c>.
+	/// </para>
+	/// <para>
+	/// Defaults to Aspire's <c>Aspire.Hosting.Azure.AzureEnvironmentResource</c>: the implicit Azure
+	/// provisioning environment is infrastructure, not architecture, and its fallback <c>system</c> kind
+	/// collides with the <c>system</c> element kind most LikeC4 projects declare.
+	/// </para>
+	/// <para>
+	/// Use <c>opts.WithExcludedResourceTypeName(name)</c> to add one and
+	/// <c>opts.WithoutExcludedResourceTypeName(name)</c> (or <c>WithoutExcludedResourceType&lt;T&gt;()</c>)
+	/// to remove one, including the default.
+	/// </para>
+	/// </summary>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage(
+		"Usage",
+		"CA2227:Collection properties should be read only",
+		Justification = "Settable for configuration binding and direct assignment in user code"
+	)]
+	public HashSet<string> ExcludedResourceTypeNames { get; set; } =
+		new(StringComparer.Ordinal) { AzureEnvironmentResourceTypeName };
 
 	/// <summary>
 	/// Custom icon resolvers that are evaluated before the built-in auto-icon inference.

@@ -15,6 +15,8 @@ solution_file := "src/AspireC4.slnx"
 artifacts_folder := "./artifacts/nuget"
 
 _typescriptAppHost := "samples/typescript-app-host/"
+_goAppHost := "samples/go-app-host/"
+_pythonAppHost := "samples/python-app-host/"
 
 [private]
 default:
@@ -35,11 +37,19 @@ init: ensure-tools restore
 test-unit *args:
     just test "/*/*/*/*[Category=Unit]" {{ args }}
 
-# Run integration tests only, on both Aspire lines (Docker required)
+# Run integration tests only: the C# AppHost on both Aspire lines, then the polyglot AppHosts (Docker required)
 [group('Build and Test')]
 test-integration configuration=build_configuration *args:
     dotnet test --project src/tests/AspireC4.IntegrationTests --configuration {{ configuration }} {{ args }}
     dotnet test --project src/tests/AspireC4.Aspire13.IntegrationTests --configuration {{ configuration }} {{ args }}
+    just test-apphosts {{ configuration }} {{ args }}
+
+# Run the TypeScript, Go and Python sample AppHosts against the shared sample contract. Tests whose
+# toolchain is missing skip; set ASPIREC4_REQUIRE_APPHOSTS=true to make that a failure, as CI does.
+[doc('Run the TypeScript, Go and Python AppHosts against the shared sample contract')]
+[group('Build and Test')]
+test-apphosts configuration=build_configuration *args:
+    dotnet test --project src/tests/AspireC4.AppHosts.IntegrationTests --configuration {{ configuration }} {{ args }}
 
 # Run all tests: unit, integration and every e2e runtime
 [group('Build and Test')]
@@ -47,9 +57,10 @@ test-all: test test-integration test-e2e
 
 # ── TypeScript AppHost ────────────────────────────────────────────────────────
 
-# Restore dependencies for the TypeScript AppHost sample
+# Restore the TypeScript AppHost sample: its Bun dependencies, then its generated bindings
 [group('Typescript')]
 ts-restore:
+    cd {{ _typescriptAppHost }} && bun install
     aspire restore --apphost {{ _typescriptAppHost }}
 
 # Run the TypeScript AppHost sample with Aspire
@@ -62,20 +73,58 @@ ts-run:
 ts-lint:
     cd {{ _typescriptAppHost }} && bun run lint
 
-# Verify the Aspire SDK version in global.json matches the TypeScript sample
-[group('Typescript')]
-ts-validate:
-    bun scripts/validate-aspire-version.mts
-
-# Rewrite the TypeScript sample's Aspire version to match global.json
-[group('Typescript')]
-ts-validate-fix:
-    bun scripts/validate-aspire-version.mts --fix
-
 # Run the TypeScript test suite directly
 [group('Typescript')]
 ts-test:
     bun test
+
+# ── Go and Python AppHosts ────────────────────────────────────────────────────
+
+# Generate the Go AppHost sample's bindings (.aspire/modules)
+[group('Go')]
+go-restore:
+    aspire restore --apphost {{ _goAppHost }}
+
+# Run the Go AppHost sample with Aspire
+[group('Go')]
+go-run:
+    aspire run --apphost {{ _goAppHost }}
+
+# Check the Go AppHost's formatting and vet it (run go-restore first)
+[group('Go')]
+go-lint:
+    test -z "$(gofmt -l {{ _goAppHost }}apphost.go)" || { gofmt -d {{ _goAppHost }}apphost.go; exit 1; }
+    cd {{ _goAppHost }} && go vet ./...
+
+# Python AppHosts are experimental in Aspire 17. The sample enables them in its own aspire.config.json,
+# which the CLI reads from the working directory, so these recipes run from inside the sample.
+
+# Generate the Python AppHost sample's bindings and virtual environment
+[group('Python')]
+py-restore:
+    cd {{ _pythonAppHost }} && aspire restore
+
+# Run the Python AppHost sample with Aspire
+[group('Python')]
+py-run:
+    cd {{ _pythonAppHost }} && aspire run
+
+# Check the Python AppHost's formatting and lint it with ruff (through uvx)
+[group('Python')]
+py-lint:
+    cd {{ _pythonAppHost }} && uvx ruff format --check apphost.py && uvx ruff check apphost.py
+
+# ── Polyglot samples ──────────────────────────────────────────────────────────
+
+# Verify every polyglot sample pins the Aspire version the C# AppHost runs on (AspireAppHostVersion)
+[group('Samples')]
+samples-validate:
+    bun scripts/validate-aspire-version.mts
+
+# Rewrite every polyglot sample's Aspire version to match AspireAppHostVersion
+[group('Samples')]
+samples-validate-fix:
+    bun scripts/validate-aspire-version.mts --fix
 
 # ── LikeC4 diagrams ───────────────────────────────────────────────────────────
 

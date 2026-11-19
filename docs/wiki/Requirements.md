@@ -4,7 +4,7 @@ This page is the **single source** for what an application needs in order to use
 page — the README, [Getting Started](Getting-Started.md), the package READMEs on NuGet and the agent
 skills — summarises it and links here. How *this repository* is built (SDK pin, C# 15 settings, the .NET 11
 features adopted and avoided) is a separate concern, recorded in
-[Toolchain and support matrix](Toolchain.md).
+[Toolchain and support matrix](contributing/Toolchain.md).
 
 ## At a glance
 
@@ -51,7 +51,7 @@ Pin it in the consuming repository's `global.json` so every machine and CI agent
 }
 ```
 
-TypeScript AppHosts are not affected: they do not compile C#, so they never load the generator.
+TypeScript, Go and Python AppHosts are not affected: they do not compile C#, so they never load the generator.
 
 ## Target frameworks
 
@@ -118,15 +118,17 @@ experimental under `ASPIREDOTNETPROJECT001`). Both appear as components with the
 dashboard's diagram link, and are scanned for the ER diagram, so a 13 AppHost needs no AspireC4 change
 when it moves to 17.
 
-A TypeScript AppHost states the same version as `sdk.version` and in its `Aspire.Hosting.*` pins in
-`aspire.config.json` — see [TypeScript AppHosts](Typescript-AppHost.md).
+A TypeScript, Go or Python AppHost states the same version as `sdk.version` and in its `Aspire.Hosting.*`
+pins in `aspire.config.json` — see [AppHost languages](apphosts/README.md). The Go and Python samples are tested on Aspire 17, where
+Python AppHosts are experimental. Whatever the AppHost's language, the ER diagram reads only .NET Entity Framework Core
+projects.
 
 ## Without a container runtime
 
 Docker (or Podman) is the default, not a hard requirement:
 
 - the architecture diagram can run through a local Node CLI with `.WithLocalCLI()` — see
-  [Local CLI Runtimes](Local-CLI.md);
+  [Local CLI Runtimes](configuration/Local-CLI.md);
 - the ER diagram can skip its viewer sidecar and image export — see
   [Entity Framework Core ER Diagrams](Entity-Framework-Diagrams.md).
 
@@ -159,6 +161,6 @@ the detail. When a requirement changes, update this page first, then the summari
   [Getting Started](Getting-Started.md), `README.md`, `src/src/AspireC4/README.md` and the
   `purview-aspirec4-quickstart` skill.
 - Compiler floor — `RoslynCompilerVersion` in `Directory.Packages.props`.
-- Target frameworks — Purview.BuildSdk's set; see [Toolchain and support matrix](Toolchain.md#keeping-this-page-true).
+- Target frameworks — Purview.BuildSdk's set; see [Toolchain and support matrix](contributing/Toolchain.md#keeping-this-page-true).
 - The model dump runtime — `TargetFramework` and `RollForward` in
   `src/src/EntityFrameworkCore.ModelDump/EntityFrameworkCore.ModelDump.csproj`.

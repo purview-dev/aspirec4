@@ -1,0 +1,67 @@
+name: AppHosts
+
+# Builds and runs every polyglot sample AppHost (TypeScript, Go, Python) and asserts each draws the shared
+# sample architecture contract (src/tests/SharedTestingInfra/SampleAppHostContract.cs).
+#
+# The C# AppHosts (Aspire 17 and 13.6.5) are covered by the shared purview-build pipeline, which runs
+# their integration suites. It cannot run the polyglot ones: it installs no Aspire CLI, Bun, Go or uv,
+# so there AspireC4.AppHosts.IntegrationTests skips. This job installs them and sets
+# ASPIREC4_REQUIRE_APPHOSTS, which turns a missing tool into a failure, so the gate cannot pass by
+# skipping. pr.yml and release.yml both call it, and release.yml publishes nothing until it passes.
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  apphosts:
+    name: TypeScript, Go and Python AppHosts
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      ASPIREC4_REQUIRE_APPHOSTS: "true"
+      DOTNET_NOLOGO: "true"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+      ASPIRE_CLI_TELEMETRY_OPTOUT: "true"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      # npm installs the sample Node.js app every AppHost starts.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: samples/go-app-host/go.mod
+          cache: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: astral-sh/setup-uv@v6
+
+      # The same version the samples pin in aspire.config.json (AspireAppHostVersion), checked by
+      # `just samples-validate` on every commit.
+      - name: Install the Aspire CLI
+        run: |
+          version=$(sed -n 's:.*<AspireAppHostVersion>\(.*\)</AspireAppHostVersion>.*:\1:p' Directory.Packages.props)
+          dotnet tool install --global Aspire.Cli --version "$version"
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+      - name: Check the samples pin that Aspire version
+        run: bun scripts/validate-aspire-version.mts
+
+      - name: Run the AppHost contract suite
+        run: dotnet test --project src/tests/AspireC4.AppHosts.IntegrationTests --configuration Release

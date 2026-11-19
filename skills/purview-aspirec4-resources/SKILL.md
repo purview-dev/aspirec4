@@ -48,7 +48,7 @@ builder.AddProject<Projects.Api>("api")
 
 ## `WithLikeC4Reference` — the relationship
 
-Two overloads, and the difference matters:
+Two methods, and the difference matters:
 
 ```csharp
 // Any resource builder - describes the relationship only.
@@ -60,12 +60,16 @@ builder.AddNodeApp("app", ...)
 
 // A resource with a connection string - ALSO calls Aspire's WithReference.
 builder.AddProject<Projects.Api>("api")
-    .WithLikeC4Reference(db, opts => opts.WithLabel("Persists data"), connectionName: "postgres");
+    .WithLikeC4ConnectionReference(db, opts => opts.WithLabel("Persists data"));
 ```
 
-The `IResourceWithConnectionString` overload wires up Aspire's `WithReference` as well, so the
-connection string reaches the consumer. Pass `skipAspireReference: true` to opt out — useful when the
-reference already exists and you only want to describe it.
+`WithLikeC4ConnectionReference` wires up Aspire's `WithReference` as well, so the connection string
+reaches the consumer; it has the same name in TypeScript, Go and Python. Pass `skipAspireReference: true`
+to only describe a reference that already exists.
+
+**Do not rely on `WithLikeC4Reference(db, ...)` for the connection.** Its connection-string overload is
+only chosen by C# when a connection argument (`connectionName`, `optional`, `skipAspireReference`) is
+passed; otherwise the call binds to the relationship-only overload and `WithReference` is never called.
 
 | Method | Purpose |
 | --- | --- |
@@ -106,6 +110,13 @@ Type-based exclusion applies globally. `ParameterResource` — passwords and sec
 builder.AddAspireC4(options => options
     .WithExcludedResourceType<SomeInternalResource>()
     .WithoutExcludedResourceType<ParameterResource>());
+```
+
+By full type name — the only form a TypeScript, Go or Python AppHost can use. Aspire's
+`Aspire.Hosting.Azure.AzureEnvironmentResource` is excluded this way by default:
+
+```csharp
+builder.AddAspireC4(options => options.WithExcludedResourceType("Acme.Hosting.InternalResource"));
 ```
 
 A resource is excluded when its runtime type **is, or derives from**, any type in the set.

@@ -117,6 +117,74 @@ public sealed class AspireC4ResourceExtensionsTests
 		await Assert.That(args).Contains($"{AspireC4Resource.DefaultPort}");
 	}
 
+	[Test]
+	public async Task WithServerLikeC4Details_AppliesTheDetailsToTheServerResource()
+	{
+		// Arrange
+		var appBuilder = CreateAppBuilder();
+		var visualization = appBuilder.AddAspireC4();
+
+		// Act
+		visualization.WithServerLikeC4Details(static details =>
+			details.WithLabel("AspireC4").WithSummary("Live diagram")
+		);
+
+		// Assert
+		var details = ServerDetails(visualization.Resource.InnerResource!);
+		await Assert.That(details).IsNotNull();
+		await Assert.That(details!.Label).IsEqualTo("AspireC4");
+		await Assert.That(details.Summary).IsEqualTo("Live diagram");
+	}
+
+	[Test]
+	public async Task WithServerLikeC4Details_LeavesTheOuterResourceWithoutDetails()
+	{
+		// Arrange
+		var appBuilder = CreateAppBuilder();
+		var visualization = appBuilder.AddAspireC4();
+
+		// Act
+		visualization.WithServerLikeC4Details(static details => details.WithLabel("AspireC4"));
+
+		// Assert
+		await Assert.That(ServerDetails(visualization.Resource)).IsNull();
+	}
+
+	[Test]
+	public async Task WithServerLikeC4Details_BeforeWithLocalCLI_MovesTheDetailsToTheCLIResource()
+	{
+		// Arrange
+		var appBuilder = CreateAppBuilder();
+		var visualization = appBuilder.AddAspireC4();
+
+		// Act
+		visualization
+			.WithServerLikeC4Details(static details => details.WithLabel("AspireC4"))
+			.WithLocalCLI(LocalCLIRuntime.Npx);
+
+		// Assert
+		var localResource = (LikeC4LocalServerResource)visualization.Resource.InnerResource!;
+		await Assert.That(ServerDetails(localResource)?.Label).IsEqualTo("AspireC4");
+	}
+
+	[Test]
+	public async Task WithServerLikeC4Details_AfterWithLocalCLI_AppliesTheDetailsToTheCLIResource()
+	{
+		// Arrange
+		var appBuilder = CreateAppBuilder();
+		var visualization = appBuilder.AddAspireC4().WithLocalCLI(LocalCLIRuntime.Npx);
+
+		// Act
+		visualization.WithServerLikeC4Details(static details => details.WithLabel("AspireC4"));
+
+		// Assert
+		var localResource = (LikeC4LocalServerResource)visualization.Resource.InnerResource!;
+		await Assert.That(ServerDetails(localResource)?.Label).IsEqualTo("AspireC4");
+	}
+
+	static AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation? ServerDetails(IResource resource) =>
+		resource.Annotations.OfType<AspireC4.LikeC4.Annotations.LikeC4NodeDetailsAnnotation>().LastOrDefault();
+
 	[System.Diagnostics.CodeAnalysis.SuppressMessage(
 		"Performance",
 		"CA1859",

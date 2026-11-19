@@ -12,7 +12,7 @@
 -->
 <Project Sdk="Aspire.AppHost.Sdk/13.6.5">
 	<PropertyGroup>
-		<OutputType>Exe</OutputType>
+		<!-- No OutputType: Purview.BuildSdk detects the Aspire.AppHost.Sdk AppHost and makes it an Exe. -->
 		<TargetFramework>net10.0</TargetFramework>
 		<AspireUseCliBundle>true</AspireUseCliBundle>
 		<NoWarn>$(NoWarn);CA2234;</NoWarn>

@@ -367,6 +367,13 @@ public sealed class TestAppHostFixture : TUnit.Aspire.AspireFixture<SampleAppHos
 	protected override bool EnableTelemetryCollection => false;
 
 	/// <summary>
+	/// Three minutes rather than TUnit.Aspire's 60 seconds. <c>just test</c> runs every test project at once,
+	/// so the sample's eight containers start while the unit suites load the machine; Postgres has been seen
+	/// still unhealthy at 60 seconds and failing the whole Aspire 13 suite, then healthy on a rerun.
+	/// </summary>
+	protected override TimeSpan ResourceTimeout => TimeSpan.FromMinutes(3);
+
+	/// <summary>
 	/// Waits for the LikeC4 server to be running. The default <c>AllHealthy</c> wait is unsuitable for
 	/// this AppHost: the auto-generated <c>node-app-installer</c> resource completes into a terminal
 	/// <c>Finished</c> state (which Aspire's fail-fast treats as a startup failure), and the outer

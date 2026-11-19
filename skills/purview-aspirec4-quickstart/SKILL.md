@@ -165,15 +165,22 @@ Behaviour worth knowing:
   explicitly.
 - HMR is enabled with `--hmr-port` unless `DisableHMR` is set.
 
-### `ConfigureServer`
+### Describing the server: `WithServerLikeC4Details`
 
 ```csharp
 builder.AddAspireC4()
-    .ConfigureServer(server => server.WithLikeC4Details(options => options.WithLabel("Architecture diagram")));
+    .WithServerLikeC4Details(options => options.WithLabel("Architecture diagram"));
 ```
 
-**Call it *after* `.WithLocalCLI()`.** Calling it first configures the Docker container that is then
-replaced.
+Sets the node details of the LikeC4 server, drawn when `WithIncludeAspireC4InternalResource(true)` is
+set. Order with `.WithLocalCLI()` does not matter: the details move to the CLI resource. Use it, not
+`ConfigureServer`, from a Go or Python AppHost, whose bindings cannot pass `ConfigureServer`'s callback
+argument.
+
+### `ConfigureServer`
+
+For anything else on the inner server resource. **Call it *after* `.WithLocalCLI()`.** Calling it
+first configures the Docker container that is then replaced.
 
 ## TypeScript AppHosts
 

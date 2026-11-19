@@ -32,4 +32,23 @@ sealed class ContainerWorkspaceOptions
 	/// and is set by <see cref="AspireC4LifecycleHook"/> during <c>BeforeStartEvent</c>.
 	/// </summary>
 	public string ContainerServePath { get; set; } = LikeC4ServerResource.WorkspacePath;
+
+	/// <summary>
+	/// The AppHost directory (<c>IDistributedApplicationBuilder.AppHostDirectory</c>), which relative
+	/// output, serve and image paths are resolved against at runtime, as they are at build time and by the
+	/// ER diagram. Set during <c>AddAspireC4</c>.
+	/// </summary>
+	/// <remarks>
+	/// Not the process's working directory: a TypeScript, Go or Python AppHost runs AspireC4 inside the
+	/// Aspire CLI's AppHost server, whose working directory is under the AppHost's <c>.aspire/</c> folder,
+	/// so resolving against it put the architecture diagram there and the ER diagram beside the AppHost.
+	/// </remarks>
+	public string? AppHostDirectory { get; set; }
+
+	/// <summary>
+	/// <see cref="AppHostDirectory"/>, or the current directory when it was never set (a lifecycle hook
+	/// constructed without <c>AddAspireC4</c>, as in some tests).
+	/// </summary>
+	public string ResolveBaseDirectory() =>
+		string.IsNullOrWhiteSpace(AppHostDirectory) ? Environment.CurrentDirectory : AppHostDirectory;
 }

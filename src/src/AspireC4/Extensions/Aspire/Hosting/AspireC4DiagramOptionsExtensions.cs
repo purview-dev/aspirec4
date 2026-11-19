@@ -389,7 +389,9 @@ public static class AspireC4DiagramOptionsExtensions
 	/// </typeparam>
 	/// <returns>The same <see cref="AspireC4DiagramOptions"/> for further configuration.</returns>
 	/// <seealso cref="AspireC4DiagramOptions.ExcludedResourceTypes"/>
-	[AspireExport]
+	[AspireExportIgnore(
+		Reason = "Polyglot bindings cannot pass a C# type argument; WithExcludedResourceType(string) is exported instead."
+	)]
 	public static AspireC4DiagramOptions WithExcludedResourceType<T>([NotNull] this AspireC4DiagramOptions options)
 		where T : IResource
 	{
@@ -401,14 +403,68 @@ public static class AspireC4DiagramOptionsExtensions
 	/// Removes <typeparamref name="T"/> from the set of resource types that are automatically
 	/// excluded from the generated LikeC4 diagram, allowing resources of that type to appear.
 	/// </summary>
+	/// <remarks>
+	/// Also removes <typeparamref name="T"/>'s full name from
+	/// <see cref="AspireC4DiagramOptions.ExcludedResourceTypeNames"/>, so it re-includes a type excluded
+	/// by name as well, such as the default <c>AzureEnvironmentResource</c>.
+	/// </remarks>
 	/// <typeparam name="T">The resource type to re-include in the diagram.</typeparam>
 	/// <returns>The same <see cref="AspireC4DiagramOptions"/> for further configuration.</returns>
 	/// <seealso cref="AspireC4DiagramOptions.ExcludedResourceTypes"/>
-	[AspireExport]
+	[AspireExportIgnore(
+		Reason = "Polyglot bindings cannot pass a C# type argument; WithoutExcludedResourceType(string) is exported instead."
+	)]
 	public static AspireC4DiagramOptions WithoutExcludedResourceType<T>([NotNull] this AspireC4DiagramOptions options)
 		where T : IResource
 	{
 		options.ExcludedResourceTypes.Remove(typeof(T));
+		if (typeof(T).FullName is { } fullName)
+			options.ExcludedResourceTypeNames.Remove(fullName);
+
+		return options;
+	}
+
+	/// <summary>
+	/// Excludes resources whose type, or any base type, has the full name <paramref name="typeName"/>
+	/// (for example <c>Aspire.Hosting.Azure.AzureEnvironmentResource</c>) from the generated diagram.
+	/// </summary>
+	/// <remarks>
+	/// The form to use from a TypeScript, Go or Python AppHost, and for a type from a package the AppHost
+	/// does not reference. In C#, <see cref="WithExcludedResourceType{T}"/> is the type-safe equivalent.
+	/// </remarks>
+	/// <param name="options">The diagram options.</param>
+	/// <param name="typeName">The resource type's full name, including its namespace.</param>
+	/// <returns>The same <see cref="AspireC4DiagramOptions"/> for further configuration.</returns>
+	/// <seealso cref="AspireC4DiagramOptions.ExcludedResourceTypeNames"/>
+	[AspireExport(id: "withExcludedResourceTypeName", MethodName = "withExcludedResourceType")]
+	public static AspireC4DiagramOptions WithExcludedResourceType(
+		[NotNull] this AspireC4DiagramOptions options,
+		string typeName
+	)
+	{
+		ArgumentException.ThrowIfNullOrWhiteSpace(typeName);
+
+		options.ExcludedResourceTypeNames.Add(typeName);
+		return options;
+	}
+
+	/// <summary>
+	/// Removes <paramref name="typeName"/> from the resource types excluded by name, allowing resources of
+	/// that type to appear, including the default <c>Aspire.Hosting.Azure.AzureEnvironmentResource</c>.
+	/// </summary>
+	/// <param name="options">The diagram options.</param>
+	/// <param name="typeName">The resource type's full name, including its namespace.</param>
+	/// <returns>The same <see cref="AspireC4DiagramOptions"/> for further configuration.</returns>
+	/// <seealso cref="AspireC4DiagramOptions.ExcludedResourceTypeNames"/>
+	[AspireExport(id: "withoutExcludedResourceTypeName", MethodName = "withoutExcludedResourceType")]
+	public static AspireC4DiagramOptions WithoutExcludedResourceType(
+		[NotNull] this AspireC4DiagramOptions options,
+		string typeName
+	)
+	{
+		ArgumentException.ThrowIfNullOrWhiteSpace(typeName);
+
+		options.ExcludedResourceTypeNames.Remove(typeName);
 		return options;
 	}
 

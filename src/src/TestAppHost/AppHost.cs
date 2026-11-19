@@ -12,7 +12,7 @@ For more details on all of these tools and components, see:
 
 - [Aspire](https://aspire.dev/)
 - [LikeC4](https://likec4.dev/)
-- [AspireC4](https://kjl.dev/projects/aspirec4/)
+- [AspireC4](https://purview.dev/projects/aspirec4/)
 "
 		)
 );
@@ -100,7 +100,7 @@ var localRedis = builder
 		opts.WithDescription(
 				@"For testing **locally**, uses Redis as a container.
 
-When using Azure Managed Redis with `.RunAsContainer()`, the application will differenciate between that and a real Redis resource using `.AddRedis(...)` and pick the correct icon/ technology."
+When using Azure Managed Redis with `.RunAsContainer()`, the application will differentiate between that and a real Redis resource using `.AddRedis(...)` and pick the correct icon/ technology."
 			)
 			.WithSummary("Local redis for development")
 			.WithLink("https://redis.io/", "Learn more about Redis")
@@ -120,56 +120,15 @@ var localPostgres = builder
 	)
 	.WithLikeC4Group("Local Dev/ Sync Group");
 
-// Our app...
-var nodeApp = builder
-	.AddNodeApp("node-app", "../../../samples/node-app", "index.ts")
-	// Add LikeC4 details to the component for better visualization in the C4 model.
-	.WithLikeC4Details(options =>
-		options
-			.WithLabel("Sample Node App")
-			.WithDescription("A sample Node.js application that connects to Azure Redis and Azure Postgres")
-	)
-	.WithNpm(install: true)
-	.WithHttpEndpoint(env: "PORT")
-	.WithUrlForEndpoint("http", url => url.Url = "/health")
-	// These references will be used to generate the connections in the C4 model,
-	// _and_ ensure that the application has the connection strings for these dependencies by internally
-	// calling `.WithReference(...)`.
-	.WithLikeC4Reference(azureManagerRedis, opts =>
-		opts.WithLabel("Caches sessions").WithTechnology("Redis Protocol").WithKind("RESP")
-	)
-	.WithLikeC4Reference(localRedis, opts =>
-		opts.WithLabel("Caches  sessions (local)").WithTechnology("Redis Protocol").WithKind("RESP")
-	)
-	.WithLikeC4Reference(azurePostgres, opts =>
-		opts.WithLabel("Persists data").WithTechnology("PostgreSQL / JDBC").WithKind("tcp-ip")
-	)
-	.WithLikeC4Reference(localPostgres, opts =>
-		opts.WithLabel("Persists data (local)").WithTechnology("PostgreSQL / JDBC").WithKind("tcp-ip")
-	)
-	.WaitFor(azureManagerRedis)
-	.WaitFor(localRedis)
-	.WaitFor(azurePostgres)
-	.WaitFor(localPostgres);
+// Our app, its connections to the stores above, and some parameters the diagram hides automatically.
+builder.AddSampleNodeApp(azureManagerRedis, localRedis, azurePostgres, localPostgres);
 
-localPostgres.WithLikeC4Reference(azurePostgres, opts =>
+localPostgres.WithLikeC4ConnectionReference(azurePostgres, opts =>
 	opts.WithLabel("syncs with").WithTechnology("PostgreSQL / JDBC").WithKind("tcp-ip")
 );
-localRedis.WithLikeC4Reference(azureManagerRedis, opts =>
+localRedis.WithLikeC4ConnectionReference(azureManagerRedis, opts =>
 	opts.WithLabel("syncs with").WithTechnology("Redis Protocol").WithKind("RESP")
 );
-
-// Test adding some parameters , including one from configuration.
-// These should be automatically hidden from the LikeC4 model as they are not relevant to the architecture and would just add noise to the visualisation.
-var testingParam = builder
-	.AddParameter("testing-resource-parameter", "This should be hidden from the LikeC4 model", false, false)
-	.WithDescription("This should be hidden from the LikeC4 model");
-var testParamFromConfig = builder
-	.AddParameterFromConfiguration("testing-resource-parameter-from-config", "DOTNET_ENVIRONMENT", false)
-	.WithDescription("This should be hidden from the LikeC4 model");
-
-testingParam.WithReferenceRelationship(nodeApp);
-testParamFromConfig.WithReferenceRelationship(nodeApp);
 
 var app = builder.Build();
 

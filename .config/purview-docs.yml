@@ -11,8 +11,9 @@ name: AspireC4
 shortDescription: Live LikeC4 architecture diagrams from the Aspire resource graph.
 description: >-
   An Aspire extension that generates live LikeC4 architectural diagrams
-  from the Aspire resource graph, with a Roslyn source generator for
-  compile-time validation of tags, kinds, groups, and metadata.
+  from the Aspire resource graph, in C#, TypeScript, Go and Python AppHosts, with an optional
+  Entity Framework Core ER diagram and a Roslyn source generator for compile-time validation of
+  tags, kinds, groups, and metadata.
 origin: >-
   Aspire already holds a useful model of a distributed application, so manually maintaining a
   separate architecture diagram was repetition that could be removed.
@@ -35,11 +36,18 @@ docs:
     - Home.md
     - index.md
 targetFrameworks:
-  - net8.0
+  - net10.0
+  - net11.0
 packages:
   - id: AspireC4.Hosting
     description: Aspire hosting extension for the AspireC4 plugin, generating a dynamic LikeC4 architecture diagram for your Aspire application.
     primary: true
+  - id: AspireC4.Hosting.EntityFrameworkCore
+    description: Adds a live Entity Framework Core ER diagram beside the AspireC4 architecture diagram.
+  - id: AspireC4.EntityFrameworkCore
+    description: Analyzer-only package for the project that declares a DbContext, giving the ER diagram the complete model.
+  - id: AspireC4.EntityFrameworkCore.ModelDump
+    description: Build-time tool that dumps the real EF Core model, including conventions and value converters, for the ER diagram.
 useCases:
   - audience: developer
     title: A live architecture diagram with three lines of code

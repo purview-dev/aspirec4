@@ -5,7 +5,10 @@
 -->
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<OutputType>Exe</OutputType>
+		<!--
+			No OutputType: Purview.BuildSdk detects this as an Aspire AppHost from its Aspire.Hosting.AppHost
+			reference (IsAspireHostProject) and makes it an Exe.
+		-->
 		<!--
 			Single-target, unlike the libraries: an Aspire AppHost is a runnable project that Aspire
 			starts with `dotnet run`, which cannot choose a target framework for it. It compiles against

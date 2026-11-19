@@ -54,7 +54,8 @@ Two distinct brands exist in this repository. Use them consistently:
 | `just clean` | Clean build outputs |
 | `just test` | **Run all tests** (unit + integration) |
 | `just test-unit` | Run unit tests only |
-| `just test-integration` | Run integration tests only |
+| `just test-integration` | Run integration tests only: the C# AppHost on Aspire 17 and 13.6.5, then the polyglot AppHosts |
+| `just test-apphosts` | Run the TypeScript, Go and Python sample AppHosts against the shared sample contract (needs the Aspire CLI, Docker, npm, Bun, Go and uv; missing tools skip) |
 | `just lint-check` | Check formatting with CSharpier |
 | `just lint-fix` | Auto-fix formatting with CSharpier |
 | `just pack` | Pack NuGet artifacts into `artifacts/nuget/` |
@@ -64,8 +65,10 @@ Two distinct brands exist in this repository. Use them consistently:
 | Recipe | Description |
 |---|---|
 | `just ts-test` | Run the TypeScript test suite with Bun |
-| `just ts-validate` | Check the TypeScript sample's Aspire version against `global.json` |
-| `just ts-validate-fix` | Rewrite the TypeScript sample to the Aspire version in `global.json` |
+| `just samples-validate` | Check the TypeScript, Go and Python samples' Aspire version against `AspireAppHostVersion` |
+| `just samples-validate-fix` | Rewrite the samples to the Aspire version in `AspireAppHostVersion` |
+| `just go-restore` / `go-run` / `go-lint` | Generate, run, or format-check and vet the Go AppHost sample |
+| `just py-restore` / `py-run` / `py-lint` | Generate, run, or lint (ruff) the Python AppHost sample |
 
 ### Container runtime tests (local only)
 
@@ -113,7 +116,7 @@ CSharpier runs automatically on every `git commit` via Lefthook. **Do not pin a 
 
 | Hook | What it does |
 |---|---|
-| `pre-commit` | Runs `just ts-validate` (the Aspire version in `global.json` against the TypeScript sample) `just lint-check` (CSharpier over the repo root) and `just ts-lint` (oxfmt over `apphost.mts`). Rejects the commit on any failure. |
+| `pre-commit` | Runs `just samples-validate` (`AspireAppHostVersion` against the TypeScript, Go and Python samples) `just lint-check` (CSharpier over the repo root) and `just ts-lint` (oxfmt over `apphost.mts`). Rejects the commit on any failure. |
 | `commit-msg` | Runs `commitlint` to enforce conventional commit format. |
 
 Lefthook installs when you run `just init`. To verify it is active:
@@ -136,7 +139,7 @@ Commit messages must follow [Conventional Commits](https://www.conventionalcommi
 
 **Format:**
 
-```
+```text
 <type>(<optional scope>): <subject>
 
 <optional body>
@@ -178,7 +181,7 @@ project's TFM from the project file text, and a directory-level value shadows it
 
 Two versions in `Directory.Packages.props` are floors every consumer inherits: `AspireVersion` is the
 Aspire minimum, and `RoslynCompilerVersion` is why consumers must build with the .NET 11 SDK. Raising
-either is a breaking change, and [Requirements](Requirements.md) is updated in the same commit.
+either is a breaking change, and [Requirements](../Requirements.md) is updated in the same commit.
 
 ```csharp
 [Test]

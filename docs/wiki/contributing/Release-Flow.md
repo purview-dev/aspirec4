@@ -24,7 +24,14 @@ just pipeline-local-release  # Same but to a local NuGet feed (use forward slash
 
 ## CI release workflow
 
-A push to `main` triggers `.github/workflows/release.yml`, which calls the `purview-dev/build/actions/purview-release` composite action with `release-mode: NuGet`. It uses the action rather than the reusable `purview-release.yml` because nuget.org Trusted Publishing matches the OIDC `job_workflow_ref` claim against the caller's own workflow file. It:
+A push to `main` triggers `.github/workflows/release.yml`. Its first job, **AppHosts**
+(`.github/workflows/apphosts.yml`, which `pr.yml` runs on every pull request too), installs the Aspire
+CLI, Bun, Go and uv and runs the TypeScript, Go and Python sample AppHosts against the shared sample
+contract; the C# AppHosts are covered by the solution's own integration tests in the steps below. The
+release job `needs` it, so **nothing is published unless every AppHost implementation builds and
+passes**.
+
+The release job then calls the `purview-dev/build/actions/purview-release` composite action with `release-mode: NuGet`. It uses the action rather than the reusable `purview-release.yml` because nuget.org Trusted Publishing matches the OIDC `job_workflow_ref` claim against the caller's own workflow file. It:
 
 1. Evaluates release eligibility with the shared tool (`purview-build release-explain --format=json`). When `v<version>` already exists the job finishes green and nothing is published; a policy violation fails the job, naming the `REL0nn` rule that rejected it.
 2. Builds the solution and runs the tests selected by `Build:TestFilter` in `purview-build.json`.
@@ -110,4 +117,4 @@ the `aspirec4.hosting` rule asserts it is there.
 
 ## See also
 
-- [Contributing](Contributing.md)
+- [Contributing](README.md)

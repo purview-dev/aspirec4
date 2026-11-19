@@ -100,7 +100,7 @@ public sealed class LikeC4RelationshipDetailsAnnotation : IResourceAnnotation
 	/// <summary>Adds a hyperlink to this relationship.</summary>
 	/// <param name="url">The URL, which may be absolute or relative to the <c>.c4</c> file.</param>
 	/// <param name="title">Optional display text.</param>
-	[AspireExport(id: "withLinkRelationship")]
+	[AspireExport(id: "withLinkRelationship", MethodName = "withLink")]
 	public LikeC4RelationshipDetailsAnnotation WithLink(string url, string? title = null)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(url);
@@ -109,12 +109,12 @@ public sealed class LikeC4RelationshipDetailsAnnotation : IResourceAnnotation
 	}
 
 	/// <inheritdoc cref="WithLink(string, string?)"/>
-	[AspireExport(id: "withLinkUriRelationship")]
+	[AspireExport(id: "withLinkUriRelationship", MethodName = "withLinkUri")]
 	public LikeC4RelationshipDetailsAnnotation WithLink(Uri uri, string? title = null) =>
 		WithLink(uri?.ToString()!, title);
 
 	/// <summary>Adds a metadata key-value pair to this relationship.</summary>
-	[AspireExport(id: "withMetadataRelationship")]
+	[AspireExport(id: "withMetadataRelationship", MethodName = "withMetadata")]
 	public LikeC4RelationshipDetailsAnnotation WithMetadata(string key, string value)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(key);

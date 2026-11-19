@@ -2,18 +2,23 @@
 - **Using AspireC4**
   - [Requirements](Requirements.md)
   - [Getting Started](Getting-Started.md)
-- **Reference**
-  - [Configuration](Configuration.md)
-  - [Customizing Resources](Customizing-Resources.md)
-  - [Entity Framework Core ER Diagrams](Entity-Framework-Diagrams.md)
-  - [TypeScript AppHosts](Typescript-AppHost.md)
+  - [Migration Guide](Migration.md)
+- **AppHost languages**
+  - [Overview](apphosts/README.md)
+  - [TypeScript](apphosts/TypeScript.md)
+  - [Go](apphosts/Go.md)
+  - [Python](apphosts/Python.md)
+- **Diagrams**
   - [Generated Output](Generated-Output.md)
   - [Dashboard Integration](Dashboard-Integration.md)
-  - [Local CLI Runtimes](Local-CLI.md)
-  - [Source Generator Validation](Source-Generator.md)
-  - [Advanced Configuration](Advanced-Configuration.md)
-  - [Migration Guide](Migration.md)
+  - [Entity Framework Core ER Diagrams](Entity-Framework-Diagrams.md)
+- **Configuration**
+  - [Options](configuration/README.md)
+  - [Customizing Resources](configuration/Customizing-Resources.md)
+  - [Local CLI Runtimes](configuration/Local-CLI.md)
+  - [Source Generator Validation](configuration/Source-Generator.md)
+  - [Advanced Configuration](configuration/Advanced.md)
 - **Working on AspireC4**
-  - [Toolchain and support matrix](Toolchain.md)
-  - [Contributing](Contributing.md)
-  - [Release Flow](Release-Flow.md)
+  - [Contributing](contributing/README.md)
+  - [Toolchain and support matrix](contributing/Toolchain.md)
+  - [Release Flow](contributing/Release-Flow.md)

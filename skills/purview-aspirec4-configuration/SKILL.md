@@ -109,6 +109,7 @@ LikeC4 v1.57 cannot be configured correctly without resolving the actual version
 | `AutoIncludeAspireMetadata` | `All` | `None`, `Metadata` (`aspire-name`, `aspire-type`), `Links` (endpoint URLs), or `All` |
 | `NormaliseMetadataBehaviour` | `Normalise` | how invalid characters in metadata keys are handled: `Normalise`, `NormaliseLowercase`, or `Throw` |
 | `ExcludedResourceTypes` | `{ParameterResource}` | types excluded from the diagram, including subclasses |
+| `ExcludedResourceTypeNames` | `{"Aspire.Hosting.Azure.AzureEnvironmentResource"}` | the same by full type name; the only form a TypeScript, Go or Python AppHost can use |
 | `StateTagMap` | `{}` | override the `aspire-run-state-*` tag for a given state; `null` suppresses it |
 | `IncludeDefaultStateStyles` | `true` | emit default `style element.tag = #aspire-run-state-* {}` rules |
 
@@ -262,6 +263,7 @@ WithExtensionsFolder(string)              WithoutExtensionsFolder()
 WithoutGitIgnoreFileGeneration()
 WithImageAliasFolder(string, string)
 WithExcludedResourceType<T>()             WithoutExcludedResourceType<T>()
+WithExcludedResourceType(string)          WithoutExcludedResourceType(string)
 WithIncludeAspireC4InternalResource(bool)
 WithLegacyLayout()                        WithLikeC4ProjectFolder(string)
 WithImageExport(params LikeC4ImageFormat[])

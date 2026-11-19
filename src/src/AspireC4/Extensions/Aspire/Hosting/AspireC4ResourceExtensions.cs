@@ -38,6 +38,10 @@ public static class AspireC4ResourceExtensions
 	{
 		var aspirec4 = builder.Resource;
 
+		// Details set through WithServerLikeC4Details describe the server, not the container, so they move
+		// to the CLI resource that replaces it: the two calls then work in either order.
+		var serverDetails = aspirec4.InnerResource?.Annotations.OfType<LikeC4NodeDetailsAnnotation>().LastOrDefault();
+
 		// Remove the existing server resource (container by default) from the app model.
 		if (aspirec4.InnerResource is not null)
 			builder.ApplicationBuilder.Resources.Remove(aspirec4.InnerResource);
@@ -85,6 +89,9 @@ public static class AspireC4ResourceExtensions
 		);
 
 		AddLocalServerResource(builder, aspirec4, baseArgs, localResource);
+
+		if (serverDetails is not null)
+			localResource.Annotations.Add(serverDetails);
 
 		aspirec4.InnerResource = localResource;
 
@@ -176,6 +183,42 @@ public static class AspireC4ResourceExtensions
 
 		var innerBuilder = builder.ApplicationBuilder.CreateResourceBuilder(innerResource);
 		configure(innerBuilder);
+
+		return builder;
+	}
+
+	/// <summary>
+	/// Sets the LikeC4 node details — label, summary, icon, links, metadata, tags — of the LikeC4 server
+	/// resource, the node drawn for AspireC4 itself when
+	/// <see cref="AspireC4DiagramOptions.IncludeAspireC4InternalResource"/> is on.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// This is <see cref="AspireC4ResourceBuilderExtensions.WithLikeC4Details{T}"/> applied to the inner
+	/// server, without the resource-builder callback <see cref="ConfigureServer"/> needs. Prefer it from
+	/// a Go or Python AppHost: their generated bindings cannot pass <see cref="ConfigureServer"/>'s
+	/// <see cref="IResource"/> argument to the callback, so the AppHost fails at startup.
+	/// </para>
+	/// <para>
+	/// Unlike <see cref="ConfigureServer"/>, it does not depend on call order: the details move to the
+	/// CLI resource when <c>.WithLocalCLI()</c> replaces the container afterwards.
+	/// </para>
+	/// </remarks>
+	/// <param name="builder">The <see cref="AspireC4Resource"/> builder.</param>
+	/// <param name="configure">Optional action that configures the server's node details.</param>
+	/// <returns>The same <see cref="IResourceBuilder{AspireC4Resource}"/> for further configuration.</returns>
+	[AspireExport(RunSyncOnBackgroundThread = true)]
+	public static IResourceBuilder<AspireC4Resource> WithServerLikeC4Details(
+		[NotNull] this IResourceBuilder<AspireC4Resource> builder,
+		Action<LikeC4NodeDetailsAnnotation>? configure = null
+	)
+	{
+		var innerResource = builder.Resource.InnerResource
+			?? throw new InvalidOperationException(
+				$"The inner server resource has not been initialised yet. Ensure {nameof(AspireC4DistributedApplicationBuilderExtensions.AddAspireC4)}() has completed before calling {nameof(WithServerLikeC4Details)}()."
+			);
+
+		builder.ApplicationBuilder.CreateResourceBuilder(innerResource).WithLikeC4Details(configure);
 
 		return builder;
 	}

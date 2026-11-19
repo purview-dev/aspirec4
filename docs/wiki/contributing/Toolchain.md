@@ -3,7 +3,7 @@
 This page records how this repository is built and which .NET 11 features are deliberately used or
 deliberately not used. It is the reference for "can I move this project to .NET 11?" questions. What a
 **consuming application** needs — the .NET 11 SDK, the target frameworks each package ships, the Aspire
-minimum — is owned by [Requirements](Requirements.md); this page explains where those facts come from in
+minimum — is owned by [Requirements](../Requirements.md); this page explains where those facts come from in
 the build.
 
 ## Support matrix
@@ -11,7 +11,7 @@ the build.
 **.NET 8 and .NET 9 are not supported.** They were removed from the build, the tests, the packages and
 the container test images; nothing in this repository targets them.
 
-The per-package targets are listed in [Requirements](Requirements.md#target-frameworks). The two
+The per-package targets are listed in [Requirements](../Requirements.md#target-frameworks). The two
 libraries multi-target the **lowest common supported pair**, `net10.0` (the LTS, and the framework an
 Aspire AppHost targets) and `net11.0` (the current release), both built from the same source.
 
@@ -85,7 +85,7 @@ currently `10.0.15` — never to `11.0.x`. The code that consumes them compiles 
 Versions live in `Directory.Packages.props`; the rule when bumping is "newest patch in the band that
 matches the lowest target framework", not "newest version published".
 
-Two floors are consumer-facing and are recorded in [Requirements](Requirements.md):
+Two floors are consumer-facing and are recorded in [Requirements](../Requirements.md):
 
 - **`Aspire.Hosting`** (`AspireVersion`, 13.6.5) is the Aspire minimum every consuming AppHost inherits.
   The repository tests both supported lines on every run: `TestAppHost` and `AspireC4.IntegrationTests`
@@ -96,7 +96,7 @@ Two floors are consumer-facing and are recorded in [Requirements](Requirements.m
   not a target-framework choice — the generators are `netstandard2.0` — and lowering it would mean an
   older `Purview.SourceGeneratorFramework`, which is itself built against Roslyn 5.9.
 
-Raising either is a breaking change for consumers; update [Requirements](Requirements.md) in the same
+Raising either is a breaking change for consumers; update [Requirements](../Requirements.md) in the same
 change.
 
 Build-only tooling may track the SDK instead, because it is never part of a consumer's output:
@@ -143,7 +143,7 @@ experimental (`RSEXPERIMENTAL006`). The analyzer runs inside whatever compiler t
 call is isolated in one non-inlined method that treats a missing member as "not a union", and the
 `[Union]` attribute and `IUnion` interface checks stand behind it. The metadata reader resolves those two
 types defensively too: on a .NET 10 host they do not exist, and an unresolvable attribute must not drop
-the whole assembly. See [Value objects, enums and unions](Entity-Framework-Diagrams.md#value-objects-enums-and-unions).
+the whole assembly. See [Value objects, enums and unions](../Entity-Framework-Diagrams.md#value-objects-enums-and-unions).
 If a union is added, follow the compiler's **non-boxing access pattern** rather than relying on the
 generated `Value` property, so value-type cases are not boxed during pattern matching:
 
@@ -190,7 +190,7 @@ pattern; without them it falls back to `Value` and boxes. The same polyfill rule
 | --- | --- | --- |
 | Performance | the SDK's JIT improvements (bounds-check elimination, devirtualisation, `SequenceEqual` folding) apply to both assemblies when they run on .NET 11; no hot-path rewrite was needed, because the diagram work is I/O- and string-shaped, not compute-shaped | runtime behaviour, no source change |
 | Stability | GA SDK pinned, no preview SDK, no roll-forward to a future major, no shadowed TFM evaluation | `global.json`, `src/Directory.Build.props` |
-| Stability | the sample AppHost now resolves `Aspire.Hosting.AppHost` from `global.json` instead of a stale SDK-embedded 13.6.3, which carried a high-severity advisory (`NU1903`) | `TestAppHost.csproj` |
+| Stability | the Aspire 17 sample AppHost references `Aspire.Hosting.AppHost` at `AspireAppHostVersion`, centrally, instead of a version embedded in an SDK; `global.json` no longer pins `Aspire.AppHost.Sdk`, and the Aspire 13 twin pins `Aspire.AppHost.Sdk/13.6.5` in its own project | `TestAppHost.csproj`, `TestAppHost.Aspire13.csproj` |
 | Runtime | a .NET 11 host gets a `net11.0` assembly built against the .NET 11 reference assemblies; a .NET 10 host keeps the LTS assembly | `lib/net10.0/`, `lib/net11.0/` |
 | Testing | the suite runs twice, once per TFM, on Microsoft.Testing.Platform, including both integration runs | `just test` |
 | Build | SDK-bootstrapped `-mt` multithreaded builds, SDK-owned TFM sets | `Directory.Build.rsp`, `.build/just/` |
@@ -207,5 +207,5 @@ When the target frameworks, SDK pin, a package band, or a consumer-facing floor 
   rules follow the target set on their own
 - `tests/Docker/Dockerfile.e2e` and `Dockerfile.e2e-cli` (SDK image)
 - the single-target project files listed above
-- this page, [Requirements](Requirements.md) (which lists the summaries that repeat a requirement), and
+- this page, [Requirements](../Requirements.md) (which lists the summaries that repeat a requirement), and
   `AGENTS.md`

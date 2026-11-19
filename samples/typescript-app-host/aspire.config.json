@@ -18,7 +18,9 @@
   "packages": {
     "Aspire.Hosting.Azure.PostgreSQL": "17.0.0",
     "Aspire.Hosting.Azure.Redis": "17.0.0",
+    "Aspire.Hosting.Dotnet": "17.0.0",
     "Aspire.Hosting.JavaScript": "17.0.0",
-    "AspireC4.Hosting": "../../src/src/AspireC4/AspireC4.csproj"
+    "AspireC4.Hosting": "../../src/src/AspireC4/AspireC4.csproj",
+    "AspireC4.Hosting.EntityFrameworkCore": "../../src/src/EntityFrameworkCore/EntityFrameworkCore.csproj"
   }
 }

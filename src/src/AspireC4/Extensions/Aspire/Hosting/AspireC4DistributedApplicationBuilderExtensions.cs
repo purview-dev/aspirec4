@@ -96,6 +96,7 @@ public static class AspireC4DistributedApplicationBuilderExtensions
 			{
 				runtime.ImageTag = imageTag;
 				runtime.ResolvedHMRPort = resolvedHmrPort;
+				runtime.AppHostDirectory = appHostDirectory;
 			});
 
 		builder.Services.AddEventingSubscriber<AspireC4LifecycleHook>();

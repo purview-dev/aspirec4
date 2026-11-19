@@ -17,8 +17,17 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Every AppHost implementation must build and pass the shared sample contract before anything is
+  # published: the composite release action covers the C# AppHosts, this covers TypeScript, Go and Python.
+  apphosts:
+    name: AppHosts
+    uses: ./.github/workflows/apphosts.yml
+    permissions:
+      contents: read
+
   release:
     name: Release packages
+    needs: apphosts
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:

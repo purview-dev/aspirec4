@@ -147,7 +147,7 @@ builder.AddProject<Projects.Api>("api")
         .WithDescription("The public HTTP API surface.")
         .WithIcon("tech:dotnet")
         .WithTag("backend"))
-    .WithLikeC4Reference(db, opts => opts.WithLabel("Persists orders"))   // also calls WithReference
+    .WithLikeC4ConnectionReference(db, opts => opts.WithLabel("Persists orders"))   // also calls WithReference
     .WithLikeC4Group("Platform");
 
 builder.AddContainer("debug-tools", "busybox")

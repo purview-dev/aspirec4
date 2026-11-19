@@ -293,12 +293,17 @@ sealed partial class AspireC4LifecycleHook
 	async Task WatchResourceStatesAsync(
 		DistributedApplicationModel appModel,
 		IReadOnlySet<Type>? excludedResourceTypes,
+		IReadOnlySet<string>? excludedResourceTypeNames,
 		CancellationToken cancellationToken
 	)
 	{
 		try
 		{
-			var visibleNames = ModelBuilder.GetVisibleResourceNames([.. appModel.Resources], excludedResourceTypes);
+			var visibleNames = ModelBuilder.GetVisibleResourceNames(
+				[.. appModel.Resources],
+				excludedResourceTypes,
+				excludedResourceTypeNames
+			);
 
 			await foreach (var notification in resourceNotificationService.WatchAsync(cancellationToken))
 			{

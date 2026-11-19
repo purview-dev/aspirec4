@@ -1,0 +1,13 @@
+# Moved pages: previous: current (slugs, or paths from the docs root). purview.dev writes a redirect
+# page at each old address. Add a pair in the commit that moves a page, and never remove a released one.
+#
+# Configuration.md and Contributing.md moved too, to configuration/README.md and contributing/README.md,
+# but a folder's README.md is published at the folder's own URL, which is the old one; they need no pair.
+redirects:
+  Typescript-AppHost.md: apphosts/TypeScript.md
+  Advanced-Configuration.md: configuration/Advanced.md
+  Local-CLI.md: configuration/Local-CLI.md
+  Customizing-Resources.md: configuration/Customizing-Resources.md
+  Source-Generator.md: configuration/Source-Generator.md
+  Toolchain.md: contributing/Toolchain.md
+  Release-Flow.md: contributing/Release-Flow.md

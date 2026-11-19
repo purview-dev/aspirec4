@@ -281,5 +281,5 @@ Images** command that opens the folder. Grouping and the `-likec4` rename arrive
 - [Getting Started](Getting-Started.md)
 - [Generated Output](Generated-Output.md)
 - [Dashboard Integration](Dashboard-Integration.md)
-- [Configuration](Configuration.md)
+- [Configuration](configuration/README.md)
 

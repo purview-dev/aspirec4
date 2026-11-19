@@ -1,0 +1,29 @@
+{
+  "appHost": {
+    "path": "apphost.py",
+    "language": "python"
+  },
+  "sdk": {
+    "version": "17.0.0"
+  },
+  "features": {
+    "experimentalPolyglotPython": "true"
+  },
+  "profiles": {
+    "https": {
+      "applicationUrl": "https://localhost:17384;http://localhost:15385",
+      "environmentVariables": {
+        "ASPIRE_DASHBOARD_OTLP_ENDPOINT_URL": "https://localhost:21326",
+        "ASPIRE_RESOURCE_SERVICE_ENDPOINT_URL": "https://localhost:22362"
+      }
+    }
+  },
+  "packages": {
+    "Aspire.Hosting.Azure.PostgreSQL": "17.0.0",
+    "Aspire.Hosting.Azure.Redis": "17.0.0",
+    "Aspire.Hosting.Dotnet": "17.0.0",
+    "Aspire.Hosting.JavaScript": "17.0.0",
+    "AspireC4.Hosting": "../../src/src/AspireC4/AspireC4.csproj",
+    "AspireC4.Hosting.EntityFrameworkCore": "../../src/src/EntityFrameworkCore/EntityFrameworkCore.csproj"
+  }
+}
