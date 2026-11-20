@@ -363,9 +363,10 @@ diagnostics in that situation, but a broken project runner is still a runner pro
 Five sample AppHosts draw the same architecture: `TestAppHost` (C#, Aspire 17), `TestAppHost.Aspire13`
 (C#, 13.6.5), and `samples/typescript-app-host`, `samples/go-app-host` and `samples/python-app-host`.
 `src/tests/SharedTestingInfra/SampleAppHostContract.cs` defines what they must draw - element ids,
-kinds and labels, the labelled relationships, and what must stay hidden - and every one is asserted
-against it: the C# ones by `SampleAppHostContractTests` in the integration suites, the polyglot ones
-by `AspireC4.AppHosts.IntegrationTests`.
+kinds and labels, the labelled relationships, tags, technology, links, metadata, groups, what must
+stay hidden, and the ER diagram's contexts and shared styling (`SampleErdStyling.WithSharedSampleStyling`
+in C#) - and every one is asserted against it: the C# ones by `SampleAppHostContractTests` in the
+integration suites, the polyglot ones by `AspireC4.AppHosts.IntegrationTests`.
 
 - **Change all five together.** A new resource or relationship in one sample goes into every sample
   and the contract in the same change. The polyglot samples call the same AspireC4 API in their own

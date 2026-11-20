@@ -28,4 +28,17 @@ public sealed class SampleAppHostContractTests(Fixtures.TestAppHostFixture fixtu
 		// Assert
 		await Assert.That(violations).IsEmpty().Because(string.Join(Environment.NewLine, violations));
 	}
+
+	[Test]
+	public async Task StartAsync_WhenAppStarts_DrawsTheSharedSampleErDiagram(CancellationToken cancellationToken)
+	{
+		// Arrange
+		var model = await fixture.ReadErModelAsync(cancellationToken);
+
+		// Act
+		var violations = SampleAppHostContract.VerifyErModel(model);
+
+		// Assert
+		await Assert.That(violations).IsEmpty().Because(string.Join(Environment.NewLine, violations));
+	}
 }

@@ -275,7 +275,14 @@ renders separately. An exception is rethrown naming the element.
 | `HighlightOnHover` | `true` | hovering a table fades everything unrelated |
 | `WithViewerDefaults(theme, background?, tables?)` | `Auto`, `Lines`, `Columns` | where the viewer starts; a reader's stored choice is kept only while the default it was made against is unchanged |
 | `WithLegend()` / `ShowTooltips` | `false` / `true` | legend of contexts, keys and style badges; hover detail on columns and headers |
-| `WithContextPalette(...)` | built-in six | per-`DbContext` colours, also used for Mermaid's fills |
+| `WithContextPalette(...)` / `WithContextPaletteColours(...)` | built-in six | per-`DbContext` colours, also used for Mermaid's fills; the string form uses one colour for both themes |
+
+### From TypeScript, Go and Python
+
+Every option above is on the options object a polyglot `withEntityFrameworkDiagram` callback receives,
+in that language's spelling, except three: the `On*Style` callbacks, `WithStyle(ErdStyleRule)` (use the
+callback form) and the `ErdColour` palette, which is `withContextPalette(string[])` there. Rules and
+light-and-dark colours can still come from configuration.
 
 ### Descriptions
 

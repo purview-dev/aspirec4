@@ -3,7 +3,13 @@
 // that all of them draw the same architecture diagram. Keep the samples in step.
 import fs from "node:fs";
 import path from "node:path";
-import { createBuilder, LocalCLIRuntime } from "./.aspire/modules/aspire.mjs";
+import {
+	createBuilder,
+	ErdEdgeAnimation,
+	ErdEdgeStyle,
+	ErdLayoutDirection,
+	LocalCLIRuntime,
+} from "./.aspire/modules/aspire.mjs";
 
 const builder = await createBuilder();
 
@@ -67,9 +73,24 @@ if (cliRuntime !== undefined) {
 // Adds the d2 ER diagram plus the .NET service that owns the sample Entity Framework Core models. The
 // ER diagram is built from .NET EF Core code, so it always draws .NET projects, whatever the AppHost's
 // language.
+// The styling is the shared part of the C# sample's (SampleErdStyling.WithSharedSampleStyling), which the
+// AppHost contract asserts for every sample.
 await c4.withEntityFrameworkDiagram({
 	configure: async (opts) => {
 		await opts.title.set("AspireC4 Sample Schema");
+		await opts
+			.withTableStyle("Order*", async (style) => {
+				await style.withAccent("#dc2626", { dark: "#f87171" }).withBadge("SALES");
+			})
+			.withTypeStyle("decimal", async (style) => {
+				await style.withAccent("#16a34a");
+			})
+			.withContextPalette(["#2563eb", "#16a34a", "#d97706", "#9333ea", "#e11d48", "#0d9488"])
+			.withLayout(ErdLayoutDirection.Right, { layerSpacing: 160 })
+			.withEdgeStyle(ErdEdgeStyle.SmoothStep)
+			.withAnimation(ErdEdgeAnimation.Slow)
+			.withLegend()
+			.withDescriptions();
 	},
 });
 

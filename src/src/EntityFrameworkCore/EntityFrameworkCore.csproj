@@ -22,9 +22,10 @@
 		<!--
 			RS0027 (PublicApiAnalyzers) wants the overload carrying an optional parameter to also have
 			the most parameters. WithEntityFrameworkModel(string? label = null) is the compact form
-			and WithEntityFrameworkModel(Action<AspireC4EfProjectOptions>) the full one; both are
-			[AspireExport]ed and are the shipped preview shape. Widening the compact overload would
-			change the generated TypeScript surface, so the baseline records the shape instead.
+			and WithEntityFrameworkModel(Action<AspireC4EfProjectOptions>) the full one. Only the
+			compact form is [AspireExport]ed (the callback overload is [AspireExportIgnore]d), and
+			widening it would change the generated polyglot surface, so the baseline records the
+			shape instead.
 		-->
 		<NoWarn>$(NoWarn);RS0027</NoWarn>
 		<EnableAspireIntegrationAnalyzers>true</EnableAspireIntegrationAnalyzers>

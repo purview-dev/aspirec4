@@ -5,33 +5,57 @@ using Aspire.Hosting.AspireC4.EntityFrameworkCore;
 /// ER Diagram Styling page, against the sample's own tables.
 /// </summary>
 /// <remarks>
+/// <para>
 /// Kept apart from <see cref="SampleDataWiring"/>, which stays small to keep the AppHost under the
 /// CA1506 class-coupling limit. The integration suite asserts that these reach the generated model,
 /// so a change here that stops styling something shows up as a failing test.
+/// </para>
+/// <para>
+/// <see cref="WithSharedSampleStyling"/> is the part every sample AppHost applies, in its own language;
+/// <c>SampleAppHostContract</c> asserts it for all five. Change it, the TypeScript, Go and Python samples,
+/// and the contract together.
+/// </para>
 /// </remarks>
 static class SampleErdStyling
 {
+	/// <summary>The styling every sample AppHost applies, whatever its language.</summary>
+	public static AspireC4EfDiagramOptions WithSharedSampleStyling(this AspireC4EfDiagramOptions options)
+	{
+		ArgumentNullException.ThrowIfNull(options);
+
+		return options
+			.WithTableStyle("Order*", style => style.WithAccent("#dc2626", "#f87171").WithBadge("SALES"))
+			.WithTypeStyle("decimal", style => style.WithAccent("#16a34a"))
+			.WithContextPaletteColours("#2563eb", "#16a34a", "#d97706", "#9333ea", "#e11d48", "#0d9488")
+			.WithLayout(ErdLayoutDirection.Right, layerSpacing: 160)
+			.WithEdgeStyle(ErdEdgeStyle.SmoothStep)
+			.WithAnimation(ErdEdgeAnimation.Slow)
+			.WithLegend()
+			.WithDescriptions();
+	}
+
 	/// <summary>Applies the sample's styling, layout and description options.</summary>
+	/// <remarks>
+	/// The shared styling plus the forms only C# can use: the per-regeneration callbacks and colours
+	/// with a separate dark-theme value. Rules apply in order and a later match overrides only what it
+	/// sets, so the broad C#-only rules come first, the shared ones after them, and the light-and-dark
+	/// palette last, replacing the shared single-colour one.
+	/// </remarks>
 	public static AspireC4EfDiagramOptions WithSampleStyling(this AspireC4EfDiagramOptions options)
 	{
 		ArgumentNullException.ThrowIfNull(options);
 
 		return options
 			// ── Rules ───────────────────────────────────────────────────────────────────────
-			// Rules apply in order, and a later match overrides only what it sets — so this broad rule
-			// comes first, and the Order* rule below replaces its badge on Orders while keeping the rest.
-			// Every table that has a matching column, rather than the column itself.
+			// This broad rule comes first, so the shared Order* rule below replaces its badge on Orders
+			// while keeping the rest. Every table that has a matching column, rather than the column itself.
 			.WithStyle(rule => rule.ForColumn("CustomerId").ForTables().WithBadge("CUSTOMER"))
-			// A table pattern, with a colour for each theme and a badge.
-			.WithTableStyle("Order*", style => style.WithAccent("#dc2626", "#f87171").WithBadge("SALES"))
 			// A whole context, by name: rules naming only a context style its tables.
 			.WithStyle(rule =>
 				rule.ForContext("AuditDbContext")
 					.WithLineStyle(ErdLineStyle.Dashed)
 					.WithBackground("#fafaf9", "#1c1917")
 			)
-			// A type pattern: decimal matches decimal(18,2) and decimal(18,4) alike.
-			.WithTypeStyle("decimal", style => style.WithAccent("#16a34a"))
 			// A kind of domain type.
 			.WithTypeStyle("enum", style => style.WithItalic())
 			// One column of one table — the fluent rename, so the column name rather than the property.
@@ -74,6 +98,10 @@ static class SampleErdStyling
 					ctx.Style.WithLineStyle(ErdLineStyle.Dashed);
 				}
 			})
+			// ── Shared with every sample: a table pattern with a colour for each theme and a badge, a
+			// type pattern (decimal matches decimal(18,2) and decimal(18,4) alike), layout, animation,
+			// the viewer and descriptions ([Description]/[Display]/[DisplayName], XML summaries, comments).
+			.WithSharedSampleStyling()
 			// ── Colours per DbContext, light and dark ───────────────────────────────────────
 			.WithContextPalette(
 				new ErdColour("#2563eb", "#60a5fa"),
@@ -82,13 +110,6 @@ static class SampleErdStyling
 				new ErdColour("#9333ea", "#c084fc"),
 				new ErdColour("#e11d48", "#fb7185"),
 				new ErdColour("#0d9488", "#2dd4bf")
-			)
-			// ── Layout, animation and the viewer ────────────────────────────────────────────
-			.WithLayout(ErdLayoutDirection.Right, layerSpacing: 160)
-			.WithEdgeStyle(ErdEdgeStyle.SmoothStep)
-			.WithAnimation(ErdEdgeAnimation.Slow)
-			.WithLegend()
-			// ── Descriptions: [Description]/[Display]/[DisplayName], XML summaries, comments ──
-			.WithDescriptions();
+			);
 	}
 }

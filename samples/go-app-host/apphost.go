@@ -74,9 +74,24 @@ func main() {
 	// Adds the d2 ER diagram plus the .NET service that owns the sample Entity Framework Core models.
 	// The ER diagram is built from .NET EF Core code, so it always draws .NET projects, whatever the
 	// AppHost's language.
+	// The styling is the shared part of the C# sample's (SampleErdStyling.WithSharedSampleStyling), which
+	// the AppHost contract asserts for every sample.
 	c4.WithEntityFrameworkDiagram(&aspire.WithEntityFrameworkDiagramOptions{
 		Configure: func(opts aspire.AspireC4EfDiagramOptions) {
 			opts.SetTitle(ptr("AspireC4 Sample Schema"))
+			opts.
+				WithTableStyle("Order*", func(style aspire.ErdElementStyle) {
+					style.WithAccent("#dc2626", &aspire.WithAccentOptions{Dark: ptr("#f87171")}).WithBadge("SALES")
+				}).
+				WithTypeStyle("decimal", func(style aspire.ErdElementStyle) {
+					style.WithAccent("#16a34a")
+				}).
+				WithContextPalette([]string{"#2563eb", "#16a34a", "#d97706", "#9333ea", "#e11d48", "#0d9488"}).
+				WithLayout(aspire.ErdLayoutDirectionRight, &aspire.WithLayoutOptions{LayerSpacing: ptr(160)}).
+				WithEdgeStyle(aspire.ErdEdgeStyleSmoothStep).
+				WithAnimation(aspire.ErdEdgeAnimationSlow).
+				WithLegend().
+				WithDescriptions()
 		},
 	})
 

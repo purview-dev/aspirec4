@@ -444,7 +444,7 @@ aspirec4                 # parent row, added only when there is more than one di
 | `ViewerExportTimeoutSeconds` | `600` | How long to wait for a viewer-fidelity export, which may be pulling the image |
 | `Styles` | `[]` | Style rules matching tables, columns, types and relationships by pattern. `WithStyle`, `WithTableStyle`, `WithColumnStyle`, `WithTypeStyle` |
 | `TableStyleCallbacks` / `ColumnStyleCallbacks` / `RelationshipStyleCallbacks` | `[]` | Per-element callbacks run after the rules on every regeneration. `OnTableStyle`, `OnColumnStyle`, `OnRelationshipStyle` |
-| `ContextPalette` | `[]` (built-in six) | The colours each `DbContext` is drawn in. `WithContextPalette(...)` |
+| `ContextPalette` | `[]` (built-in six) | The colours each `DbContext` is drawn in. `WithContextPalette(...)`, or `WithContextPaletteColours(...)` with one CSS colour string per context (the form TypeScript, Go and Python call as `withContextPalette`) |
 | `LayoutDirection` | `Down` | `Down`, `Right`, `Up` or `Left`. Viewer, d2 and Mermaid. `WithLayout(...)` |
 | `NodeSpacing` / `LayerSpacing` / `ContextSpacing` | `72` / `120` / `88` | Viewer spacing, in pixels. `WithLayout(...)` |
 | `EdgeStyle` | `Bezier` | `Bezier`, `SmoothStep`, `Step` or `Straight`. `WithEdgeStyle(...)` |

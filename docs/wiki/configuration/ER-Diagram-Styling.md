@@ -23,6 +23,67 @@ builder.AddAspireC4()
 The interactive viewer applies all of it. Mermaid, d2 and DBML apply what their formats can express,
 listed in [What each renderer applies](#what-each-renderer-applies).
 
+### From TypeScript, Go and Python
+
+The same methods are on the options object a polyglot AppHost's `withEntityFrameworkDiagram` callback
+receives, in each language's spelling. The style callbacks take an `ErdElementStyle` or `ErdStyleRule`
+handle, and optional arguments become an options object, an options struct or keyword arguments:
+
+```typescript
+await c4.withEntityFrameworkDiagram({
+	configure: async (opts) => {
+		await opts
+			.withTableStyle("Order*", async (s) => {
+				await s.withAccent("#dc2626", { dark: "#f87171" }).withBadge("SALES");
+			})
+			.withTypeStyle("decimal", async (s) => {
+				await s.withAccent("#16a34a");
+			})
+			.withContextPalette(["#2563eb", "#16a34a", "#d97706"])
+			.withLayout(ErdLayoutDirection.Right, { layerSpacing: 160 })
+			.withEdgeStyle(ErdEdgeStyle.SmoothStep)
+			.withDescriptions()
+			.withLegend();
+	},
+});
+```
+
+```go
+c4.WithEntityFrameworkDiagram(&aspire.WithEntityFrameworkDiagramOptions{
+	Configure: func(opts aspire.AspireC4EfDiagramOptions) {
+		opts.
+			WithTableStyle("Order*", func(s aspire.ErdElementStyle) {
+				s.WithAccent("#dc2626", &aspire.WithAccentOptions{Dark: ptr("#f87171")}).WithBadge("SALES")
+			}).
+			WithContextPalette([]string{"#2563eb", "#16a34a", "#d97706"}).
+			WithLayout(aspire.ErdLayoutDirectionRight, &aspire.WithLayoutOptions{LayerSpacing: ptr(160)}).
+			WithDescriptions()
+	},
+})
+```
+
+```python
+def er_diagram(opts: AspireC4EfDiagramOptions) -> None:
+    opts.with_table_style("Order*", order_style).with_layout("Right", layer_spacing=160).with_descriptions()
+
+
+def order_style(s: ErdElementStyle) -> None:
+    s.with_accent("#dc2626", dark="#f87171").with_badge("SALES")
+```
+
+Three things are C#-only, because a binding cannot express them:
+
+- the [style callbacks](#style-callbacks) `OnTableStyle`, `OnColumnStyle` and `OnRelationshipStyle`, which
+  run against model types the bindings do not see;
+- an `ErdStyleRule` built up front and passed to `WithStyle(ErdStyleRule)`; use the callback form,
+  `withStyle(rule => …)`;
+- [context colours](#context-colours) with a separate dark-theme value. `withContextPalette` takes
+  strings, each used in both themes; it is `WithContextPaletteColours` in C#.
+
+Rules and light-and-dark context colours can still be set from any language through
+[configuration](#styles-from-configuration), which every AppHost reads; the callbacks cannot, since they
+are code.
+
 > [!TIP]
 > The sample AppHost applies one working example of every option on this page to its own tables, in
 > [`SampleErdStyling.cs`](https://github.com/purview-dev/aspirec4/blob/main/src/src/TestAppHost/SampleErdStyling.cs).
@@ -200,7 +261,13 @@ and the colours are cycled in order:
 
 ```csharp
 options.WithContextPalette(new ErdColour("#0f766e", "#2dd4bf"), new ErdColour("#7c3aed", "#a78bfa"));
+
+// One colour per context, used in both themes; the form TypeScript, Go and Python call as withContextPalette.
+options.WithContextPaletteColours("#0f766e", "#7c3aed");
 ```
+
+`ErdColour.IsValid(value)` reports whether a string is a colour these accept, so a value from elsewhere
+can be checked before it is used.
 
 Mermaid uses the palette for its per-context fills, deriving each fill from the colour the way the
 built-in pairs are derived.

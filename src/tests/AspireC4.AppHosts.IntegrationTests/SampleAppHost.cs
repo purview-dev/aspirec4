@@ -34,6 +34,10 @@ sealed class SampleAppHost : IAsyncDisposable
 
 	string ModelPath => Path.Combine(_outputDirectory, "model.gen.c4");
 
+	string ErOutputDirectory => Path.Combine(_outputDirectory, "erd");
+
+	string ErModelPath => Path.Combine(ErOutputDirectory, "schema.gen.json");
+
 	/// <summary>Restores the sample's dependencies and generates its AspireC4 bindings.</summary>
 	public static async Task<SampleAppHost> PrepareAsync(string sample, CancellationToken cancellationToken)
 	{
@@ -97,6 +101,17 @@ sealed class SampleAppHost : IAsyncDisposable
 				if (File.Exists(ModelPath))
 				{
 					violations = SampleAppHostContract.Verify(await ReadSharedAsync(ModelPath, timeout.Token));
+
+					// The ER diagram is part of the contract too: it is how the bindings' ER options are
+					// proven to reach the model, not merely to compile.
+					violations = File.Exists(ErModelPath)
+						?
+						[
+							.. violations,
+							.. SampleAppHostContract.VerifyErModel(await ReadSharedAsync(ErModelPath, timeout.Token)),
+						]
+						: [.. violations, $"{Sample} wrote no ER model to '{ErModelPath}'"];
+
 					if (violations.Count == 0)
 						return violations;
 				}
@@ -165,6 +180,7 @@ sealed class SampleAppHost : IAsyncDisposable
 		startInfo.Environment["AspireC4__OutputDirectory"] = _outputDirectory;
 		startInfo.Environment["AspireC4__ExportImages"] = "false";
 		startInfo.Environment["AspireC4__EntityFramework__ExportImages"] = "false";
+		startInfo.Environment["AspireC4__EntityFramework__OutputDirectory"] = ErOutputDirectory;
 		startInfo.Environment["ASPIRE_CLI_TELEMETRY_OPTOUT"] = "true";
 
 		using Process process = new() { StartInfo = startInfo };

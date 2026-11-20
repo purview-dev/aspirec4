@@ -48,6 +48,11 @@ callbacks, Go option structs (`&aspire.WithLikeC4DetailsOptions{...}`), and Pyth
 | Label the LikeC4 server node | `WithServerLikeC4Details` or `ConfigureServer` | `withServerLikeC4Details` or `configureServer` | **`WithServerLikeC4Details` only** — the bindings cannot pass `ConfigureServer`'s `IResource` callback argument |
 | Exclude a resource type | `WithExcludedResourceType<T>()` or by full type name | by full type name | by full type name |
 | Compile-time [registry validation](../configuration/Source-Generator.md) (`ASPIREC4xxx`) | yes | no — it does not compile C#, so the .NET 11 SDK floor does not apply | no |
+| [ER diagram styling](../configuration/ER-Diagram-Styling.md): rules, layout, animation, viewer, descriptions, image export | every option | every option except the three below | every option except the three below |
+| ER per-regeneration style callbacks (`OnTableStyle`, `OnColumnStyle`, `OnRelationshipStyle`) | yes | **no** — they run against model types the bindings cannot see | **no** |
+| ER context palette | `WithContextPalette(ErdColour…)`, light and dark per colour, or `WithContextPaletteColours(string…)` | `withContextPalette(string[])`, one colour for both themes | as TypeScript |
+| An `ErdStyleRule` built up front (`WithStyle(ErdStyleRule)`) | yes | use the callback form, `withStyle(rule => …)` | as TypeScript |
+
 Generated output lands in the same place for every AppHost: `.aspirec4/` beside the AppHost — the
 project for C#, and the folder holding `apphost.mts`, `apphost.go` or `apphost.py` otherwise — with the
 architecture diagram in `likec4/`, the ER diagram in `erd/` and exported images in `images/`. Relative
@@ -67,8 +72,9 @@ environment variable.
 
 All five samples build the same resource graph — Azure Redis and Postgres running as local containers,
 Redis Commander and PgWeb, local Redis and Postgres in a group, a Node.js app connected to all four, the
-.NET data service with its ER diagram, and hidden parameters — and every pull request and release
-checks that each draws the same diagram:
+.NET data service with its styled ER diagram, and hidden parameters — and every pull request and release
+checks that each draws the same diagrams: the elements, relationships, tags, technology, links, metadata
+and groups of the architecture diagram, and the contexts and shared styling of the ER diagram:
 
 - the C# AppHosts, through the integration suites' `SampleAppHostContractTests`;
 - the TypeScript, Go and Python AppHosts, through `AspireC4.AppHosts.IntegrationTests`, which starts

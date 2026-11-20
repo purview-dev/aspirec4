@@ -10,7 +10,7 @@ namespace Aspire.Hosting.AspireC4.EntityFrameworkCore;
 /// <c>AddOptions&lt;AspireC4EfDiagramOptions&gt;()</c> — never <c>Options.Create</c>, which would
 /// suppress later <c>Configure</c> callbacks.
 /// </remarks>
-[AspireExport(ExposeProperties = true)]
+[AspireExport(ExposeProperties = true, ExposeMethods = true)]
 public sealed class AspireC4EfDiagramOptions
 {
 	/// <summary>The configuration section this options class binds from.</summary>
@@ -447,6 +447,7 @@ public sealed class AspireC4EfDiagramOptions
 	/// <summary>Adds a style rule.</summary>
 	/// <param name="rule">The rule.</param>
 	/// <returns>This options instance, for chaining.</returns>
+	[AspireExportIgnore(Reason = "Exported as the callback form, withStyle(configure).")]
 	public AspireC4EfDiagramOptions WithStyle(ErdStyleRule rule)
 	{
 		ArgumentNullException.ThrowIfNull(rule);
@@ -497,6 +498,7 @@ public sealed class AspireC4EfDiagramOptions
 	/// <summary>Adds a callback that adjusts each table's style, after the rules, on every regeneration.</summary>
 	/// <param name="callback">The callback; change <see cref="ErdTableStyleContext.Style"/> in place.</param>
 	/// <returns>This options instance, for chaining.</returns>
+	[AspireExportIgnore(Reason = "Runs on every regeneration against a context type the bindings cannot see; C# only.")]
 	public AspireC4EfDiagramOptions OnTableStyle(Action<ErdTableStyleContext> callback)
 	{
 		ArgumentNullException.ThrowIfNull(callback);
@@ -509,6 +511,7 @@ public sealed class AspireC4EfDiagramOptions
 	/// <summary>Adds a callback that adjusts each column's style, after the rules, on every regeneration.</summary>
 	/// <param name="callback">The callback; change <see cref="ErdColumnStyleContext.Style"/> in place.</param>
 	/// <returns>This options instance, for chaining.</returns>
+	[AspireExportIgnore(Reason = "Runs on every regeneration against a context type the bindings cannot see; C# only.")]
 	public AspireC4EfDiagramOptions OnColumnStyle(Action<ErdColumnStyleContext> callback)
 	{
 		ArgumentNullException.ThrowIfNull(callback);
@@ -523,6 +526,7 @@ public sealed class AspireC4EfDiagramOptions
 	/// </summary>
 	/// <param name="callback">The callback; change <see cref="ErdRelationshipStyleContext.Style"/> in place.</param>
 	/// <returns>This options instance, for chaining.</returns>
+	[AspireExportIgnore(Reason = "Runs on every regeneration against a context type the bindings cannot see; C# only.")]
 	public AspireC4EfDiagramOptions OnRelationshipStyle(Action<ErdRelationshipStyleContext> callback)
 	{
 		ArgumentNullException.ThrowIfNull(callback);
@@ -536,6 +540,9 @@ public sealed class AspireC4EfDiagramOptions
 	/// <remarks>Passing none restores the built-in palette.</remarks>
 	/// <param name="colours">The colours, cycled in order.</param>
 	/// <returns>This options instance, for chaining.</returns>
+	[AspireExportIgnore(
+		Reason = "A binding cannot construct an ErdColour; exported as withContextPalette(colours) over WithContextPaletteColours."
+	)]
 	public AspireC4EfDiagramOptions WithContextPalette(params ErdColour[] colours)
 	{
 		ArgumentNullException.ThrowIfNull(colours);
@@ -543,6 +550,23 @@ public sealed class AspireC4EfDiagramOptions
 		ContextPalette = [.. colours.Where(c => c is { IsEmpty: false })];
 
 		return this;
+	}
+
+	/// <summary>Replaces the colours each <c>DbContext</c> is drawn in, from CSS colour strings.</summary>
+	/// <remarks>
+	/// The same as <see cref="WithContextPalette(ErdColour[])"/> with one colour per string, used in both
+	/// themes. It is the form TypeScript, Go and Python AppHosts call, as <c>withContextPalette</c>: a
+	/// binding cannot construct an <see cref="ErdColour"/>. Passing none restores the built-in palette.
+	/// </remarks>
+	/// <param name="colours">The colours, cycled in order, such as <c>#2563eb</c>.</param>
+	/// <returns>This options instance, for chaining.</returns>
+	/// <exception cref="ArgumentException">A value is not a CSS colour; see <see cref="ErdColour.IsValid"/>.</exception>
+	[AspireExport(MethodName = "withContextPalette")]
+	public AspireC4EfDiagramOptions WithContextPaletteColours(params string[] colours)
+	{
+		ArgumentNullException.ThrowIfNull(colours);
+
+		return WithContextPalette([.. colours.Select(colour => new ErdColour(colour))]);
 	}
 
 	/// <summary>Sets how the diagram is laid out.</summary>
