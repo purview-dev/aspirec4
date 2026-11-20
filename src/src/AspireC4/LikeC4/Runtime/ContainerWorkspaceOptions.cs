@@ -12,6 +12,19 @@ sealed class ContainerWorkspaceOptions
 	public string? ImageTag { get; set; }
 
 	/// <summary>
+	/// The LikeC4 version actually running, when it differs from what <see cref="ImageTag"/> says —
+	/// resolved at startup for the <c>latest</c> tag, or from the local CLI. <see langword="null"/> until
+	/// then, or when it could not be determined.
+	/// </summary>
+	public string? ResolvedVersion { get; set; }
+
+	/// <summary>
+	/// The version that version-gated features are decided against: <see cref="ResolvedVersion"/> when
+	/// known, else <see cref="ImageTag"/>.
+	/// </summary>
+	public string? EffectiveVersion => ResolvedVersion ?? ImageTag;
+
+	/// <summary>
 	/// The resolved HMR port to use for the LikeC4 server, both as the container target port
 	/// and as the value passed via <c>--hmr-port</c> in Configurable mode.
 	/// Defaults to <see cref="AspireC4Resource.DefaultHMRPort"/> (24678).

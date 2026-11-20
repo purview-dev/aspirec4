@@ -1,4 +1,4 @@
-﻿using Purview.Telemetry;
+using Purview.Telemetry;
 
 namespace Aspire.Hosting.AspireC4.Lifecycle;
 
@@ -51,10 +51,10 @@ interface IAspireC4LifecycleHookTelemetry
 	void FailedToRunFormatter(Exception ex);
 
 	[Info]
-	void ResolvedLatestContainerVersion(string version);
+	void ResolvedLikeC4Version(string version);
 
 	[Warning]
-	void FailedToResolveLatestContainerVersion();
+	void FailedToResolveLikeC4Version(string command, string reason);
 
 	[Debug]
 	void ApplyingDiagramOptionsSnapshot();

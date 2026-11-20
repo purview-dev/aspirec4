@@ -82,7 +82,10 @@ anything that addresses the `aspirec4` resource by name.
 | `FormatGeneratedFile` | `false` | run `npx likec4 format --files <file>` after writing. **Failures are ignored** |
 
 `CheckLatestImageVersion` exists because `latest` does not tell you what it is: a feature gated on
-LikeC4 v1.57 cannot be configured correctly without resolving the actual version first.
+LikeC4 v1.57 cannot be configured correctly without resolving the actual version first. The probe
+pulls the image (`--pull always`, like the server) and is capped by `ExternalProcessTimeoutSeconds`;
+when it fails, the tag is used as-is, HMR falls back to the fixed port, and the diagram's Console tab
+says why. Pin `ContainerImageTag` to skip it.
 
 ## The dashboard
 

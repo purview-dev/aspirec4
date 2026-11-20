@@ -302,11 +302,21 @@ public sealed class TestAppHostFixture : TUnit.Aspire.AspireFixture<SampleAppHos
 	/// the parent without touching the annotation the builder added.
 	/// </remarks>
 	/// <returns>The parent resource name, or <see langword="null"/> when the snapshot carries none.</returns>
-	public async Task<string?> GetDashboardParentAsync(string resourceName, CancellationToken cancellationToken)
-	{
+	public Task<string?> GetDashboardParentAsync(string resourceName, CancellationToken cancellationToken) =>
 		// Aspire's own KnownProperties.Resource.ParentName, which is internal to Aspire.Hosting.
-		const string parentNameProperty = "resource.parentName";
+		GetSnapshotPropertyAsync(resourceName, "resource.parentName", cancellationToken);
 
+	/// <summary>
+	/// Reads a property from the snapshot a resource publishes once it is running — what the dashboard
+	/// shows on its row.
+	/// </summary>
+	/// <returns>The property's value, or <see langword="null"/> when the snapshot carries none.</returns>
+	public async Task<string?> GetSnapshotPropertyAsync(
+		string resourceName,
+		string propertyName,
+		CancellationToken cancellationToken
+	)
+	{
 		if (_app is null)
 			return null;
 
@@ -315,7 +325,7 @@ public sealed class TestAppHostFixture : TUnit.Aspire.AspireFixture<SampleAppHos
 		using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 		cts.CancelAfter(TimeSpan.FromSeconds(30));
 
-		string? parent = null;
+		string? value = null;
 
 		try
 		{
@@ -324,15 +334,15 @@ public sealed class TestAppHostFixture : TUnit.Aspire.AspireFixture<SampleAppHos
 				if (!evt.Resource.Name.Equals(resourceName, StringComparison.OrdinalIgnoreCase))
 					continue;
 
-				parent =
+				value =
 					evt.Snapshot.Properties.FirstOrDefault(p =>
-						p.Name.Equals(parentNameProperty, StringComparison.Ordinal)
+						p.Name.Equals(propertyName, StringComparison.Ordinal)
 					)?.Value as string;
 
 				// The resource publishes more than once — initial state, then whatever the lifecycle
 				// hook forwards onto it — and it is the last word that the dashboard draws.
 				if (evt.Snapshot.State?.Text == KnownResourceStates.Running)
-					return parent;
+					return value;
 			}
 		}
 		catch (OperationCanceledException)
@@ -340,7 +350,7 @@ public sealed class TestAppHostFixture : TUnit.Aspire.AspireFixture<SampleAppHos
 			// Fall through: the resource never reached Running.
 		}
 
-		return parent;
+		return value;
 	}
 
 	/// <summary>Directory containing the copied image aliases (svg/png assets).</summary>

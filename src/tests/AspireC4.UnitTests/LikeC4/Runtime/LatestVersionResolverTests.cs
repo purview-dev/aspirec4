@@ -100,4 +100,33 @@ public sealed class LatestVersionResolverTests
 		await Assert.That(found).IsTrue();
 		await Assert.That(versionToken).IsEqualTo("1.60.2");
 	}
+
+	[Test]
+	public async Task TryExtractVersion_WholeMultiLineOutput_ExtractsTheVersion()
+	{
+		// Arrange
+		// The whole of a runtime's output is handed over, preamble included, not one pre-selected line.
+		const string cliOutput = "some preamble\r\n@likec4/cli/1.60.2 linux-x64 node-v22.14.0\r\n";
+
+		// Act
+		var found = LatestVersionResolver.TryExtractVersion(cliOutput, out var versionToken);
+
+		// Assert
+		await Assert.That(found).IsTrue();
+		await Assert.That(versionToken).IsEqualTo("1.60.2");
+	}
+
+	[Test]
+	public async Task ContainerArguments_AlwaysPullsTheImageBeforeAskingForItsVersion()
+	{
+		// The server pulls with ImagePullPolicy.Always; a probe against a stale cached "latest" would
+		// report the old version while the server runs a newer one.
+		// Act
+		var arguments = LatestVersionResolver.ContainerArguments("ghcr.io/likec4/likec4:latest");
+
+		// Assert
+		await Assert
+			.That(arguments)
+			.IsEquivalentTo(["run", "--rm", "--pull", "always", "ghcr.io/likec4/likec4:latest", "--version"]);
+	}
 }
