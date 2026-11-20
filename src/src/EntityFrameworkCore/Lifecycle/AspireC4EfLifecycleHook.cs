@@ -25,6 +25,8 @@ sealed partial class AspireC4EfLifecycleHook(
 {
 	readonly AspireC4EfDiagramOptions _options = options.Value;
 
+	readonly ErdBackgroundTask _background = new(resourceNotificationService, resourceLoggerService);
+
 	/// <summary>The last written body, with the timestamp header stripped, used to skip no-op writes.</summary>
 	string? _lastRawBody;
 
@@ -77,7 +79,18 @@ sealed partial class AspireC4EfLifecycleHook(
 					AddOpenImagesCommand(resource);
 				}
 
-				var contexts = await WriteDiagramAsync(evt.Model, resource, ct).ConfigureAwait(false);
+				// A diagram that cannot be generated must not stop the application it describes from
+				// starting, so the first write reports its failure on the row like every later one.
+				var contexts = 0;
+				await _background
+					.RunAsync(
+						"generate the diagram",
+						resource,
+						async () => contexts = await WriteDiagramAsync(evt.Model, resource, ct).ConfigureAwait(false),
+						writesDiagram: true,
+						ct
+					)
+					.ConfigureAwait(false);
 
 				// Backstop for the descriptor lookup. The diagram is built from each contributing
 				// project's build output, which may not exist yet, and the project watch below only
@@ -86,7 +99,13 @@ sealed partial class AspireC4EfLifecycleHook(
 				// real model instead of staying empty for the life of the application.
 				if (contexts == 0)
 				{
-					_ = Task.Run(() => RetryUntilModelFoundAsync(evt.Model, resource, ct), ct);
+					_ = _background.Start(
+						"retry until a model is found",
+						resource,
+						() => RetryUntilModelFoundAsync(evt.Model, resource, ct),
+						writesDiagram: true,
+						ct
+					);
 				}
 
 				// The sidecar is an implementation detail: the diagram row forwards its URLs and its
@@ -94,22 +113,58 @@ sealed partial class AspireC4EfLifecycleHook(
 				// hook treats its own server resource.
 				if (resource.InnerResource is not null)
 				{
-					_ = Task.Run(() => KeepHiddenAsync(resource.InnerResource, ct), ct);
-					_ = Task.Run(() => ForwardInnerResourceLogsAsync(resource, ct), ct);
+					_ = _background.Start(
+						"keep the server hidden",
+						resource,
+						() => KeepHiddenAsync(resource.InnerResource, ct),
+						writesDiagram: false,
+						ct
+					);
+					_ = _background.Start(
+						"forward the server's logs",
+						resource,
+						() => ForwardInnerResourceLogsAsync(resource, ct),
+						writesDiagram: false,
+						ct
+					);
 				}
 
 				// Hiding the diagram too leaves the URL cross-linked onto the contributing projects as
 				// the only way in, which is the whole point of the option.
 				if (_options.HideFromDashboard)
 				{
-					_ = Task.Run(() => KeepHiddenAsync(resource, ct), ct);
+					_ = _background.Start(
+						"keep the diagram hidden",
+						resource,
+						() => KeepHiddenAsync(resource, ct),
+						writesDiagram: false,
+						ct
+					);
 				}
 
 				// The descriptor is read from each project's build output, which may not exist on the
 				// very first run after a clean. Regenerating once projects start makes that self-healing.
-				_ = Task.Run(() => WatchProjectsAsync(evt.Model, resource, ct), ct);
-				_ = Task.Run(() => CrossLinkAsync(resource, ct), ct);
-				_ = Task.Run(() => PublishViewerAccessAsync(resource, ct), ct);
+				_ = _background.Start(
+					"watch the contributing projects",
+					resource,
+					() => WatchProjectsAsync(evt.Model, resource, ct),
+					writesDiagram: false,
+					ct
+				);
+				_ = _background.Start(
+					"link the diagram to its projects",
+					resource,
+					() => CrossLinkAsync(resource, ct),
+					writesDiagram: false,
+					ct
+				);
+				_ = _background.Start(
+					"publish the viewer link",
+					resource,
+					() => PublishViewerAccessAsync(resource, ct),
+					writesDiagram: false,
+					ct
+				);
 			}
 		);
 
@@ -153,10 +208,17 @@ sealed partial class AspireC4EfLifecycleHook(
 		{
 			ErdLog.Unchanged(logger);
 
+			// A pass that fails before reaching the model (a project's build output mid-rewrite, say)
+			// leaves the row failed; this one succeeded, so the diagram on disk is current again.
+			if (_background.ClearFailure())
+			{
+				await resourceNotificationService
+					.PublishUpdateAsync(resource, snapshot => snapshot with { State = KnownResourceStates.Running })
+					.ConfigureAwait(false);
+			}
+
 			return efModel.Contexts.Count;
 		}
-
-		_lastRawBody = body;
 
 		Directory.CreateDirectory(directory);
 
@@ -180,6 +242,10 @@ sealed partial class AspireC4EfLifecycleHook(
 		{
 			await WriteGitIgnoreAsync(directory, files, logger, cancellationToken).ConfigureAwait(false);
 		}
+
+		// Recorded only once every file is on disk. Recording it first meant a write that threw part-way
+		// through made every later pass look like a no-op, so the half-written diagram stayed for the run.
+		_lastRawBody = body;
 
 		var tables = efModel.Contexts.Sum(c => c.Tables.Count);
 
@@ -225,14 +291,18 @@ sealed partial class AspireC4EfLifecycleHook(
 			// already correct; the export itself races the publish and could not be relied on for it.
 			_imageDirectory = ErdImageExporter.ResolveImageDirectory(_options, resource.AppHostDirectory);
 
-			_ = Task.Run(
+			_ = _background.Start(
+				"export the diagram's images",
+				resource,
 				() => ExportImagesAsync(efModel, directory, resource.AppHostDirectory, logger, cancellationToken),
+				writesDiagram: false,
 				cancellationToken
 			);
 		}
 
 		// This resource runs no process of its own, so it has to publish its own state or the
-		// dashboard leaves it Unknown with no logs.
+		// dashboard leaves it Unknown with no logs. Running also replaces an earlier failed state.
+		_background.ClearFailure();
 		await resourceNotificationService
 			.PublishUpdateAsync(resource, snapshot =>
 				snapshot with
@@ -354,6 +424,21 @@ sealed partial class AspireC4EfLifecycleHook(
 			if (projectModel.Contexts.Count > 0)
 			{
 				contributors.Add(resource);
+
+				if (logger is not null)
+				{
+					// Says which discovery source won, which is otherwise only visible when one fails.
+					var approximate = projectModel.Contexts.Count(c => c.Fidelity == EfModelFidelity.Approximate);
+
+					ErdLog.ProjectModelLoaded(
+						logger,
+						diagnostics.ProjectPath,
+						projectModel.Contexts.Count,
+						diagnostics.DumpStatus,
+						diagnostics.DescriptorsFound,
+						approximate
+					);
+				}
 			}
 			else if (logger is not null && resource.TryGetLastAnnotation<AspireC4EfProjectAnnotation>(out _))
 			{
@@ -456,7 +541,17 @@ sealed partial class AspireC4EfLifecycleHook(
 			{
 				if (watched.Contains(evt.Resource.Name) && evt.Snapshot.State?.Text == KnownResourceStates.Running)
 				{
-					await WriteDiagramAsync(model, resource, cancellationToken).ConfigureAwait(false);
+					// Reported per write rather than around the loop: one failed regeneration — a file
+					// locked by an editor, say — must not end the watch for the rest of the run.
+					await _background
+						.RunAsync(
+							"regenerate the diagram",
+							resource,
+							() => WriteDiagramAsync(model, resource, cancellationToken),
+							writesDiagram: true,
+							cancellationToken
+						)
+						.ConfigureAwait(false);
 				}
 			}
 		}

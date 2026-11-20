@@ -77,6 +77,7 @@ sealed partial class AspireC4LifecycleHook(
 			async (evt, ct) =>
 			{
 				var aspirec4Resource = evt.Model.Resources.OfType<AspireC4Resource>().FirstOrDefault();
+				_diagramResource = aspirec4Resource;
 				var serverResource = aspirec4Resource?.InnerResource as LikeC4ServerResource;
 				var localServerResource = aspirec4Resource?.InnerResource as LikeC4LocalServerResource;
 

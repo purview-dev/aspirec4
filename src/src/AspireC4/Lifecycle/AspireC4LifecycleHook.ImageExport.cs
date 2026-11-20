@@ -90,9 +90,21 @@ sealed partial class AspireC4LifecycleHook
 				modelBody,
 				localCLI,
 				telemetry,
+				DiagramResourceLogger,
 				cancellationToken
 			);
 		}
+		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+		{
+			// Shutdown.
+		}
+#pragma warning disable CA1031 // intentional: the export is fire-and-forget and must not fault unobserved
+		catch (Exception ex)
+		{
+			telemetry.ImageExportFailed(ex);
+			ReportToDashboard("AspireC4 could not export the architecture diagram's images", ex);
+		}
+#pragma warning restore CA1031
 		finally
 		{
 			_exportGate.Release();

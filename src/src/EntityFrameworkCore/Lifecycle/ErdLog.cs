@@ -111,4 +111,25 @@ static partial class ErdLog
 			+ "call WithoutImageExport() to stop trying."
 	)]
 	public static partial void ImageExportFailed(ILogger logger, string command, string reason);
+
+	[LoggerMessage(
+		Level = LogLevel.Warning,
+		Message = "AspireC4 could not complete '{Task}' for the ER diagram: {Error}. The diagram already "
+			+ "written is unaffected."
+	)]
+	public static partial void BackgroundTaskFailed(ILogger logger, string task, string error, Exception exception);
+
+	[LoggerMessage(
+		Level = LogLevel.Information,
+		Message = "Read {Contexts} context(s) from {ProjectPath} (model dump: {DumpStatus}, "
+			+ "{DescriptorsFound} descriptor(s) found, {Approximate} recovered from metadata)."
+	)]
+	public static partial void ProjectModelLoaded(
+		ILogger logger,
+		string projectPath,
+		int contexts,
+		EfModelDumpStatus dumpStatus,
+		int descriptorsFound,
+		int approximate
+	);
 }

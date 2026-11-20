@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Aspire.Hosting.AspireC4.ApplicationModel;
 using Aspire.Hosting.AspireC4.Lifecycle;
+using Microsoft.Extensions.Logging;
 using Purview.Containers.Environment;
 
 namespace Aspire.Hosting.AspireC4.LikeC4.Runtime;
@@ -172,6 +173,10 @@ static class LikeC4ImageExporter
 	/// </param>
 	/// <param name="localCLI">The host CLI to run, or <see langword="null"/> for the container.</param>
 	/// <param name="telemetry">Where export progress and failures are reported.</param>
+	/// <param name="resourceLogger">
+	/// The diagram resource's logger, so a failed format also shows on its Console tab in the dashboard,
+	/// or <see langword="null"/> to report to <paramref name="telemetry"/> only.
+	/// </param>
 	/// <param name="cancellationToken">Cancelled on shutdown.</param>
 	public static async Task<int> ExportAsync(
 		AspireC4DiagramOptions options,
@@ -181,6 +186,7 @@ static class LikeC4ImageExporter
 		string modelBody,
 		(string Command, string[] Prefix)? localCLI,
 		IAspireC4LifecycleHookTelemetry telemetry,
+		ILogger? resourceLogger,
 		CancellationToken cancellationToken
 	)
 	{
@@ -248,7 +254,16 @@ static class LikeC4ImageExporter
 				telemetry.ExportingImages(name, imageDirectory);
 
 				if (
-					await RunAsync(command, arguments, workingDirectory, options, name, telemetry, cancellationToken)
+					await RunAsync(
+							command,
+							arguments,
+							workingDirectory,
+							options,
+							name,
+							telemetry,
+							resourceLogger,
+							cancellationToken
+						)
 						.ConfigureAwait(false)
 				)
 				{
@@ -362,9 +377,21 @@ static class LikeC4ImageExporter
 		AspireC4DiagramOptions options,
 		string format,
 		IAspireC4LifecycleHookTelemetry telemetry,
+		ILogger? resourceLogger,
 		CancellationToken cancellationToken
 	)
 	{
+		void Fail(string reason)
+		{
+			telemetry.FailedToExportImages(format, reason);
+			resourceLogger?.Log(
+				LogLevel.Warning,
+				"AspireC4 could not export the architecture diagram as {Format}: {Reason}",
+				format,
+				reason
+			);
+		}
+
 		try
 		{
 			ProcessStartInfo startInfo = new()
@@ -394,44 +421,23 @@ static class LikeC4ImageExporter
 
 			if (process is null)
 			{
-				telemetry.FailedToExportImages(format, "the process could not be started");
+				Fail("the process could not be started");
 
 				return false;
 			}
 
-			using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-			cts.CancelAfter(TimeSpan.FromSeconds(options.ImageExportTimeoutSeconds));
-
-			// Drained before waiting: likec4 export is verbose, and a full pipe would deadlock the wait.
-			var error = await process.StandardError.ReadToEndAsync(cts.Token).ConfigureAwait(false);
-
-			try
-			{
-				await process.WaitForExitAsync(cts.Token).ConfigureAwait(false);
-			}
-			catch (OperationCanceledException)
-			{
-				try
-				{
-					process.Kill(entireProcessTree: true);
-				}
-				catch
-				{
-					// Best-effort kill.
-				}
-
-				throw;
-			}
+			// Both streams are drained while waiting: likec4 export is verbose, and either pipe filling up
+			// would block the process until the timeout killed it.
+			var (_, error) = await ProcessOutput
+				.WaitAsync(process, TimeSpan.FromSeconds(options.ImageExportTimeoutSeconds), cancellationToken)
+				.ConfigureAwait(false);
 
 			if (process.ExitCode == 0)
 			{
 				return true;
 			}
 
-			telemetry.FailedToExportImages(
-				format,
-				string.IsNullOrWhiteSpace(error) ? $"it exited with code {process.ExitCode}" : error.Trim()
-			);
+			Fail(string.IsNullOrWhiteSpace(error) ? $"it exited with code {process.ExitCode}" : error.Trim());
 
 			return false;
 		}
@@ -442,7 +448,7 @@ static class LikeC4ImageExporter
 		}
 		catch (Exception ex)
 		{
-			telemetry.FailedToExportImages(format, ex.Message);
+			Fail(ex.Message);
 
 			return false;
 		}

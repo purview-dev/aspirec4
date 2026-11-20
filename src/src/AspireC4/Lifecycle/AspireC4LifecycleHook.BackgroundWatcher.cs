@@ -40,7 +40,7 @@ sealed partial class AspireC4LifecycleHook
 #pragma warning disable CA1031
 		catch (Exception ex)
 		{
-			telemetry.StateWatcherFailed(ex.Message);
+			ReportWatcherFailed("dashboard URL", ex);
 		}
 #pragma warning restore CA1031
 	}

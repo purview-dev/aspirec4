@@ -24,7 +24,19 @@ interface IAspireC4LifecycleHookTelemetry
 	void RegeneratingDiagramDueToStateChange();
 
 	[Warning]
-	void StateWatcherFailed(string error);
+	void StateWatcherFailed(string watcher, Exception ex);
+
+	[Warning]
+	void DiagramRegenerationFailed(Exception ex);
+
+	[Warning]
+	void ImageExportFailed(Exception ex);
+
+	[Warning]
+	void AdditionalDSLFileMissing(string path);
+
+	[Warning]
+	void FormatterExited(int exitCode, string error);
 
 	[Debug]
 	void LikeC4FormatApplied();
