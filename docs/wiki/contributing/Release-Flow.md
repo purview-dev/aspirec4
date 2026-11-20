@@ -24,12 +24,19 @@ just pipeline-local-release  # Same but to a local NuGet feed (use forward slash
 
 ## CI release workflow
 
-A push to `main` triggers `.github/workflows/release.yml`. Its first job, **AppHosts**
-(`.github/workflows/apphosts.yml`, which `pr.yml` runs on every pull request too), installs the Aspire
-CLI, Bun, Go and uv and runs the TypeScript, Go and Python sample AppHosts against the shared sample
-contract; the C# AppHosts are covered by the solution's own integration tests in the steps below. The
-release job `needs` it, so **nothing is published unless every AppHost implementation builds and
-passes**.
+A push to `main` triggers `.github/workflows/release.yml`. Three gate jobs run first, and the release
+job `needs` all of them, so **nothing is published unless each passes**:
+
+| Job | Workflow | Also on pull requests | What it proves |
+| --- | --- | --- | --- |
+| **AppHosts** | `apphosts.yml` | yes | the TypeScript, Go and Python sample AppHosts draw the shared sample contract; it installs the Aspire CLI, Bun, Go and uv and sets `ASPIREC4_REQUIRE_APPHOSTS`, so a missing tool fails rather than skips |
+| **ER viewer** | `erd.yml` | yes | the interactive ER viewer and the Mermaid preview render, lay out, search and apply the presentation in Chromium (`just erd-check`, `just erd-mermaid-check`), against the model the sample AppHost writes |
+| **Local CLI runtimes** | `e2e-cli.yml` | no — slow; run it from the Actions tab when changing CLI support | the C# integration suite with the LikeC4 server on npm, pnpm, yarn, bun and deno (`just test-e2e-<runtime>`) |
+
+The C# AppHosts on both Aspire lines are covered by the solution's own integration tests in the steps
+below. On GitHub Actions those suites fail rather than skip when Docker is unavailable
+(`RequiredEnvironment.DockerRequired`, overridable with `ASPIREC4_REQUIRE_DOCKER=false`), so a runner
+whose Docker has stopped cannot pass the gate by skipping.
 
 The release job then calls the `purview-dev/build/actions/purview-release` composite action with `release-mode: NuGet`. It uses the action rather than the reusable `purview-release.yml` because nuget.org Trusted Publishing matches the OIDC `job_workflow_ref` claim against the caller's own workflow file. It:
 

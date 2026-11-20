@@ -11,7 +11,7 @@ between them.
 | --- | --- | --- | --- | --- | --- |
 | **C#**, Aspire 17 and later | `AppHost.cs` | a `Microsoft.NET.Sdk` project referencing `Aspire.Hosting.AppHost` | 17.0.0+ | `src/src/TestAppHost` | `dotnet run --project src/src/TestAppHost` |
 | **C#**, the Aspire 13 line | `AppHost.cs` | a `Aspire.AppHost.Sdk/13.6.5` project | 13.6.5+ | `src/src/TestAppHost.Aspire13` | `dotnet run --project src/src/TestAppHost.Aspire13` |
-| [**TypeScript**](TypeScript.md) | `apphost.mts` | `aspire.config.json`, `"language": "typescript/nodejs"` | 13.6.5+ | `samples/typescript-app-host` | `just ts-run` |
+| [**TypeScript**](TypeScript.md) | `apphost.mts` | `aspire.config.json`, `"language": "typescript/nodejs"` | 13.6.5+, tested on 17.0.0 | `samples/typescript-app-host` | `just ts-run` |
 | [**Go**](Go.md) | `apphost.go` | `aspire.config.json`, `"language": "go"` | 17.0.0 | `samples/go-app-host` | `just go-run` |
 | [**Python**](Python.md) (experimental in Aspire 17) | `apphost.py` | `aspire.config.json`, `"language": "python"` | 17.0.0 | `samples/python-app-host` | `just py-run` |
 

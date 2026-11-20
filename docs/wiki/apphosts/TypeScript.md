@@ -29,7 +29,8 @@ Declare AspireC4, and the integrations it draws, in `aspire.config.json`:
 ```
 
 Replace `<version>` with the current [`AspireC4.Hosting` release on NuGet](https://www.nuget.org/packages/AspireC4.Hosting).
-The Aspire pins must be at least 13.6.5, the minimum in [Requirements](../Requirements.md#aspire). The
+The Aspire pins must be at least 13.6.5, the minimum in [Requirements](../Requirements.md#aspire); the sample,
+and the contract tests that run it, use Aspire 17, so that is the line a TypeScript AppHost is tested on. The
 repository sample points `AspireC4.Hosting` at `../../src/src/AspireC4/AspireC4.csproj`, so it exercises
 the local source instead of a published package.
 
@@ -166,7 +167,7 @@ Relative paths are resolved against the AppHost's folder, not the working direct
 AppHost server, which is under `.aspire/`. Set `withOutputDirectory`, or the `AspireC4__OutputDirectory`
 environment variable, to write the architecture diagram elsewhere.
 
-If you are upgrading from 13.5 and need the pre-13.6 layout unchanged, call `withLegacyLayout()` inside
+If you are upgrading from the original layout and need it unchanged, call `withLegacyLayout()` inside
 the `configure` callback:
 
 ```typescript

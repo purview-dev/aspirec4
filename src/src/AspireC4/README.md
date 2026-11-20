@@ -100,7 +100,7 @@ builder.AddAspireC4(configure: options => options
 | `IncludeAspireDashboardLinks` | `true` | Link diagram elements back to the Aspire dashboard |
 | `ExportImages` | `true` | Export every view as an image to `./.aspirec4/images/` when the model changes |
 | `ImageFormats` | `{Png}` | `Png` and/or `Jpg` |
-| `UseLegacyLayout` | `false` | Restore the pre-13.6 output paths and dashboard names |
+| `UseLegacyLayout` | `false` | Restore the original output paths and dashboard names |
 | `ExtensionsDirectory` | `"./likec4-extensions"` | Hand-written `.c4` files beside the AppHost, included automatically when the folder exists |
 | `GenerateGitIgnoreFile` | `true` | Write `.gitignore` files that keep the generated model out of git |
 

@@ -379,6 +379,13 @@ In the viewer, the **Descriptions** setting switches them on and off. It appears
 has descriptions. Descriptions are always sent to the viewer, and `ShowDescriptions` sets whether they
 start shown.
 
+The model keeps the three sources apart, so a renderer or a test can tell where a description came
+from: `EfTable` and `EfColumn` each carry `Description` (the attributes), `Documentation` (the XML
+summary) and, for tables, `Comment`, with a column's database comment on `EfColumn.Comment`. The
+description shown is chosen from them by `DescriptionSources` when the diagram is rendered. On the d2
+side, `D2Table.Style`, `D2Table.Tooltip` and `D2Edge.Style` carry the resolved style and description
+into the d2 output.
+
 ## What each renderer applies
 
 | | Interactive | Mermaid | d2 | DBML |

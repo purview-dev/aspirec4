@@ -190,8 +190,16 @@ just pack             # Pack NuGet artifacts into artifacts/nuget/ (artifacts_fo
 
 The CI/CD pipeline is driven by the `Purview.Build` tool (`pipeline-*` recipes). GitHub workflows are:
 
-- `.github/workflows/pr.yml` — PR build + test against `main`.
-- `.github/workflows/release.yml` — push to `main` triggers the release pipeline (`release-mode: NuGet`).
+- `.github/workflows/pr.yml` — PR build + test against `main`, plus the `apphosts.yml` and `erd.yml` gates.
+- `.github/workflows/release.yml` — push to `main` triggers the release pipeline (`release-mode: NuGet`)
+  once `apphosts.yml`, `erd.yml` and `e2e-cli.yml` pass.
+- `.github/workflows/apphosts.yml` — the TypeScript, Go and Python sample AppHosts against the contract.
+- `.github/workflows/erd.yml` — `erd-check` and `erd-mermaid-check` in Chromium, against the sample's ER model.
+- `.github/workflows/e2e-cli.yml` — `test-e2e-<runtime>` for npm, pnpm, yarn, bun and deno; release only,
+  or on demand (`workflow_dispatch`).
+
+On GitHub Actions the C# integration suites **fail** when Docker is unavailable instead of skipping
+(`SharedTestingInfra/RequiredEnvironment.cs`); set `ASPIREC4_REQUIRE_DOCKER=false` to opt a job out.
 
 ```sh
 just pipeline-pr             # PR pipeline (restore, build, lint, tests)
@@ -378,7 +386,8 @@ integration suites, the polyglot ones by `AspireC4.AppHosts.IntegrationTests`.
   argument a binding cannot pass - export a by-name form (`WithExcludedResourceType(string)`).
 - **Locally**, a polyglot test skips when its toolchain (Aspire CLI, Docker, npm, Bun/Go/uv) is missing.
   CI sets `ASPIREC4_REQUIRE_APPHOSTS=true` (`.github/workflows/apphosts.yml`), which makes that a
-  failure, so the gate cannot pass by skipping.
+  failure, so the gate cannot pass by skipping. `RequiredEnvironment` in `SharedTestingInfra` owns both
+  this switch and the Docker one.
 - Output is redirected with `AspireC4__OutputDirectory` into `artifacts/apphost-contract/` - inside the
   repository, because the LikeC4 container mounts the common ancestor of the output and the shared
   `assets/`, and a temp folder on another drive has none.
@@ -413,7 +422,7 @@ The ER diagram draws from three sources, in precedence order.
    provider; its `build/` target runs automatically. It builds each context's real `IModel` through the
    project's `IDesignTimeDbContextFactory` and writes the diagram contract to `obj/aspirec4/ef/`. That
    directory is never copied to `bin/` or `publish/` and is gitignored, so the dump has no deployment
-   footprint. `EfModelDumpReader.TryReadGraph` reads it from the project *and every project it
+   footprint. `EfModelDumpReader.ReadGraph` reads it from the project *and every project it
    references* — the provider is usually a referenced persistence project, not the service — via
    `obj/project.assets.json`, and falls back when it is missing or stale. This is the only source that
    sees conventions, value converters and composite foreign keys. Use `IDesignTimeModel`, not

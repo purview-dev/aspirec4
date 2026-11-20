@@ -5,10 +5,10 @@ AspireC4 writes a LikeC4 project into the output directory (`./.aspirec4/likec4/
 Every AspireC4 diagram writes beneath the same `./.aspirec4/` root in the AppHost directory — the architecture diagram into `likec4/`, the ER diagram into `erd/`, both diagrams' images into `images/`. AspireC4 writes the `.gitignore` files that keep the generated parts out of git itself, so **your repository needs no entry for it**; see [Source control](#source-control).
 
 > [!NOTE]
-> This root is new in 13.6. `WithLegacyLayout()` restores the pre-13.6 paths for an upgrade that
+> This root replaced the original layout. `WithLegacyLayout()` restores the original paths for an upgrade that
 > changes nothing else:
 >
-> | Diagram | 13.6 default | Legacy mode |
+> | Diagram | Default | Legacy mode |
 > | --- | --- | --- |
 > | Architecture | `./.aspirec4/likec4/` | `./likec4/gen/` |
 > | ER | `./.aspirec4/erd/` | `./erd/gen/` |
@@ -275,6 +275,9 @@ builder.AddAspireC4(configure: options => options
   matched from its label, so `WithContainerImageTechnology("acme/cache", "Redis")` gets the Redis icon.
 - From a TypeScript, Go or Python AppHost the same methods are `withPackageTechnology`,
   `withResourceTypeTechnology` (by name) and `withContainerImageTechnology`.
+- Each method adds a `TechnologyOverride` record to `AspireC4DiagramOptions.TechnologyOverrides`, whose
+  `Match` is a `TechnologyOverrideMatch` — `Package`, `ResourceType` or `ContainerImage`. Add a record
+  to the list directly when the rules come from somewhere else, such as your own configuration.
 
 **For one resource**, use its details. They win over every override:
 

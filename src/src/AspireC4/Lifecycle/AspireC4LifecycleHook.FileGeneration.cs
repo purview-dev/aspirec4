@@ -229,6 +229,9 @@ sealed partial class AspireC4LifecycleHook
 			{
 				// The unformatted file is still valid LikeC4, so this is worth a warning, not a failure.
 				telemetry.FormatterExited(process.ExitCode, error.Trim());
+				ReportToDashboard(
+					$"AspireC4 could not format the generated model (exit code {process.ExitCode}): {error.Trim()}"
+				);
 			}
 		}
 		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -239,6 +242,7 @@ sealed partial class AspireC4LifecycleHook
 		{
 			// Formatting is best-effort; never block startup or regeneration.
 			telemetry.FailedToRunFormatter(ex);
+			ReportToDashboard("AspireC4 could not run the formatter on the generated model", ex);
 		}
 	}
 

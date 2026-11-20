@@ -130,7 +130,7 @@ builder.AddAspireC4(options => options.WithRelationshipKindSyntax(LikeC4Relation
 
 Generated output defaults to `./.aspirec4/likec4/` for the architecture diagram and `./.aspirec4/erd/` for the ER diagram. `WithOutputDirectory(...)` moves either one; an explicit value always wins.
 
-To restore the pre-13.6 paths (`./likec4/gen/` and `./erd/gen/`) and the flat `aspirec4` / `aspirec4-er` dashboard rows, use `WithLegacyLayout()` (legacy mode). See [Configuration](README.md#keep-the-pre-136-layout-legacy-mode) and [Migration](../Migration.md).
+To restore the original paths (`./likec4/gen/` and `./erd/gen/`) and the flat `aspirec4` / `aspirec4-er` dashboard rows, use `WithLegacyLayout()` (legacy mode). See [Configuration](README.md#keep-the-original-layout-legacy-mode) and [Migration](../Migration.md).
 
 ## Including the internal resource
 

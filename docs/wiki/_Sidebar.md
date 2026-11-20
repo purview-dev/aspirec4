@@ -19,6 +19,7 @@
   - [Local CLI Runtimes](configuration/Local-CLI.md)
   - [Source Generator Validation](configuration/Source-Generator.md)
   - [Advanced Configuration](configuration/Advanced.md)
+  - [Logging and Diagnostics](configuration/Logging.md)
 - **Working on AspireC4**
   - [Contributing](contributing/README.md)
   - [Toolchain and support matrix](contributing/Toolchain.md)
