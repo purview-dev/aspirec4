@@ -243,8 +243,9 @@ public static class AspireC4DistributedApplicationBuilderExtensions
 				context.Args.Add("--port");
 				context.Args.Add(AspireC4Resource.DefaultPort);
 
-				// Determine HMR mode based on the image tag at container-start time.
-				var hmrMode = HMRPortCompatibility.Resolve(wsOpts.Value.ImageTag);
+				// Determine HMR mode at container-start time, from the version resolved at startup when the
+				// tag alone ("latest") does not say which one it is.
+				var hmrMode = HMRPortCompatibility.Resolve(wsOpts.Value.EffectiveVersion);
 				if (!diagOpts.Value.DisableHMR && hmrMode == HMRPortMode.Configurable)
 				{
 					// Pass the container-internal HMR port. Because host and container use the

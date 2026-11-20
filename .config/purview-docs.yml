@@ -76,5 +76,6 @@ useCases:
     outcome: >-
       A Roslyn source generator validates the architectural metadata while the AppHost compiles.
     evidence: >-
-      Architectural metadata mistakes fail the build instead of surfacing in a diagram nobody reads.
+      Architectural metadata mistakes are reported as compiler diagnostics, and fail the build when the
+      registry's severity is set to error, instead of surfacing in a diagram nobody reads.
     docsPage: generated-output

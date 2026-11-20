@@ -25,7 +25,7 @@ builder.AddAspireC4(options =>
 | `ViewDescription` | `null` | Optional view description (Markdown supported by recent LikeC4 versions). |
 | `OutputDirectory` | `"./.aspirec4/likec4/"` | Directory where the generated `.c4` file is written. |
 | `ProjectDirectory` | `null` | An existing hand-authored LikeC4 project to generate into and serve. Set with `WithLikeC4ProjectFolder(path)`. See [Generated Output](../Generated-Output.md). |
-| `UseLegacyLayout` | `false` | Restores the pre-13.6 output paths (`./likec4/gen/`, `./erd/gen/`) and flat dashboard resource names. Set with `WithLegacyLayout()`. A compatibility shim — see [Migration](../Migration.md). |
+| `UseLegacyLayout` | `false` | Restores the original output paths (`./likec4/gen/`, `./erd/gen/`) and flat dashboard resource names. Set with `WithLegacyLayout()`. A compatibility shim — see [Migration](../Migration.md). |
 | `FileName` | `"model.gen"` | Generated file name without extension. |
 | `DisableHMR` | `false` | Disable the Hot Module Replacement channel. |
 | `HMRPort` | `null` (dynamic) | Fixed HMR port when the LikeC4 server supports configurable ports (v1.57+); ignored on older versions, which always use port `24678`. |
@@ -111,7 +111,7 @@ builder.AddAspireC4(options => options.WithHMRDisabled());
 builder.AddAspireC4(options => options.WithContainerImageTag("1.57"));
 ```
 
-### Keep the pre-13.6 layout (legacy mode)
+### Keep the original layout (legacy mode)
 
 If you are upgrading and need the old output paths and dashboard names unchanged, turn on **legacy
 mode**:

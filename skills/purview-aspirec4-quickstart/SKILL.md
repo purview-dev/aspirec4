@@ -92,9 +92,9 @@ and PNG — into `./.aspirec4/images/` beside the AppHost. That folder is the fa
 share) the diagram without opening the dashboard, and it is where to look when asked for a screenshot.
 `WithoutImageExport()` turns it off.
 
-## Upgrading from 13.5
+## Upgrading from the original layout
 
-13.6 is breaking for anything that reads AspireC4's generated files or addresses its dashboard
+The `.aspirec4/` layout is breaking for anything that reads AspireC4's generated files or addresses its dashboard
 resources by name:
 
 - the architecture model moved from `./likec4/gen/` to `./.aspirec4/likec4/`;

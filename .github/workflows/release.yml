@@ -25,9 +25,23 @@ jobs:
     permissions:
       contents: read
 
+  # The ER viewer in a real browser, and the local CLI runtimes WithLocalCLI() supports; neither runs in
+  # the composite release action's test pass.
+  erd:
+    name: ER viewer
+    uses: ./.github/workflows/erd.yml
+    permissions:
+      contents: read
+
+  e2e-cli:
+    name: Local CLI runtimes
+    uses: ./.github/workflows/e2e-cli.yml
+    permissions:
+      contents: read
+
   release:
     name: Release packages
-    needs: apphosts
+    needs: [apphosts, erd, e2e-cli]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:

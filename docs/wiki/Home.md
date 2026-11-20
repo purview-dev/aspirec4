@@ -5,10 +5,10 @@ This wiki is the project documentation hub for `AspireC4.Hosting`, an [Aspire](h
 AspireC4 turns your distributed application into a living architecture diagram. On startup it builds a `.c4` model file from the Aspire resource graph, starts the official LikeC4 server as a sidecar, and keeps the diagram refreshed as resources start, stop, and change state at runtime.
 
 > [!TIP]
-> **Upgrading from 13.5?** 13.6 moved all generated output beneath `./.aspirec4/` and changed the
-> dashboard names when a second diagram is registered. If you need the pre-13.6 layout unchanged, turn
-> on **legacy mode** with `WithLegacyLayout()` or `"AspireC4": { "UseLegacyLayout": true }`.
-> The [Migration Guide](Migration.md) has the full before/after and the opt-out details.
+> **Upgrading?** 17.0 adds Aspire 17 support and renames a few TypeScript binding calls to match C#;
+> C# AppHosts need no code change. From an older release, generated output also moved beneath
+> `./.aspirec4/`, with **legacy mode** (`WithLegacyLayout()`) to keep the old layout. The
+> [Migration Guide](Migration.md) has every change, newest first.
 
 ## Start here
 
@@ -20,7 +20,7 @@ its owner instead of restating it.
 | **Using AspireC4** | [Requirements](Requirements.md) — the SDK, runtime, Aspire and container requirements, and why · [Getting Started](Getting-Started.md) — install and first run · [Migration Guide](Migration.md) — breaking changes and how to upgrade |
 | **AppHost languages** | [Overview](apphosts/README.md) — C#, TypeScript, Go and Python AppHosts: one API, and what differs · [TypeScript](apphosts/TypeScript.md) · [Go](apphosts/Go.md) · [Python](apphosts/Python.md) |
 | **Diagrams** | [Generated Output](Generated-Output.md) — what is written where, and extending the model · [Dashboard Integration](Dashboard-Integration.md) · [Entity Framework Core ER Diagrams](Entity-Framework-Diagrams.md) |
-| **Configuration** | [Options](configuration/README.md) · [Customizing Resources](configuration/Customizing-Resources.md) · [ER Diagram Styling](configuration/ER-Diagram-Styling.md) · [Local CLI Runtimes](configuration/Local-CLI.md) · [Source Generator Validation](configuration/Source-Generator.md) · [Advanced Configuration](configuration/Advanced.md) |
+| **Configuration** | [Options](configuration/README.md) · [Customizing Resources](configuration/Customizing-Resources.md) · [ER Diagram Styling](configuration/ER-Diagram-Styling.md) · [Local CLI Runtimes](configuration/Local-CLI.md) · [Source Generator Validation](configuration/Source-Generator.md) · [Advanced Configuration](configuration/Advanced.md) · [Logging and Diagnostics](configuration/Logging.md) — where messages go and their event ids |
 | **Working on AspireC4** | [Contributing](contributing/README.md) · [Toolchain and support matrix](contributing/Toolchain.md) — how this repository is built · [Release Flow](contributing/Release-Flow.md) |
 
 ## Screenshots

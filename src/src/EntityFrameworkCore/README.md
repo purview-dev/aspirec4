@@ -213,9 +213,11 @@ builder.AddAspireC4()
            .WithLegend());
 ```
 
-The interactive viewer applies all of it, and Mermaid, d2 and DBML what their formats allow. See
+The interactive viewer applies all of it, and Mermaid, d2 and DBML what their formats allow. TypeScript,
+Go and Python AppHosts call the same options on their `withEntityFrameworkDiagram` callback, apart from
+the per-element callbacks and the light-and-dark palette. See
 [ER Diagram Styling](https://purview.dev/docs/aspirec4/configuration/er-diagram-styling/) for every
-option and the per-renderer mapping.
+option, the per-renderer mapping and what each language can call.
 
 ## Without a container runtime
 

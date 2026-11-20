@@ -42,12 +42,12 @@ Every property has a matching fluent `With*` method.
 | `OutputDirectory` | `"./.aspirec4/likec4/"` | where the generated `.c4` file is written |
 | `FileName` | `"model.gen"` | file name, without extension |
 | `ProjectDirectory` | `null` | an existing hand-authored LikeC4 project to generate into and serve — `WithLikeC4ProjectFolder(path)` |
-| `UseLegacyLayout` | `false` | restores the pre-13.6 paths (`./likec4/gen/`, `./erd/gen/`) and flat dashboard names. A compatibility shim |
+| `UseLegacyLayout` | `false` | restores the original paths (`./likec4/gen/`, `./erd/gen/`) and flat dashboard names. A compatibility shim |
 | `GenerateConfigFile` | `true` | emit a `likec4.config.json` into the output directory |
 
 ## Legacy layout
 
-`UseLegacyLayout` / `WithLegacyLayout()` turns on **legacy mode**: the whole pre-13.6 layout, not just
+`UseLegacyLayout` / `WithLegacyLayout()` turns on **legacy mode**: the whole original layout, not just
 the architecture diagram's path.
 
 - Architecture output: `./likec4/gen/` instead of `./.aspirec4/likec4/`.
@@ -82,7 +82,10 @@ anything that addresses the `aspirec4` resource by name.
 | `FormatGeneratedFile` | `false` | run `npx likec4 format --files <file>` after writing. **Failures are ignored** |
 
 `CheckLatestImageVersion` exists because `latest` does not tell you what it is: a feature gated on
-LikeC4 v1.57 cannot be configured correctly without resolving the actual version first.
+LikeC4 v1.57 cannot be configured correctly without resolving the actual version first. The probe
+pulls the image (`--pull always`, like the server) and is capped by `ExternalProcessTimeoutSeconds`;
+when it fails, the tag is used as-is, HMR falls back to the fixed port, and the diagram's Console tab
+says why. Pin `ContainerImageTag` to skip it.
 
 ## The dashboard
 

@@ -191,3 +191,4 @@ Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfTable.Documentation.get -> 
 Aspire.Hosting.AspireC4.EntityFrameworkCore.Models.EfTable.Documentation.init -> void
 override Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdColour.ToString() -> string!
 static Aspire.Hosting.AspireC4.EntityFrameworkCore.ErdColour.IsValid(string? value) -> bool
+Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions.WithContextPaletteColours(params string![]! colours) -> Aspire.Hosting.AspireC4.EntityFrameworkCore.AspireC4EfDiagramOptions!

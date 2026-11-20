@@ -24,7 +24,7 @@ The parent runs nothing; it exists so the diagrams read as one feature rather th
 
 The grouping decision is made when the builder runs. Setting `HideFromDashboard` through configuration rather than the callback therefore leaves the parent in place.
 
-Grouping and the `-likec4` rename arrived in 13.6. `WithLegacyLayout()` keeps the flat `aspirec4` / `aspirec4-er` pair for an upgrade that changes nothing — see [Migration](Migration.md).
+Grouping and the `-likec4` rename replaced the original flat rows. `WithLegacyLayout()` keeps the flat `aspirec4` / `aspirec4-er` pair for an upgrade that changes nothing — see [Migration](Migration.md).
 
 ## Hiding the sidecar
 

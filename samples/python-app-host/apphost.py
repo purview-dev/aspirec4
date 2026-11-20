@@ -14,6 +14,7 @@ from pathlib import Path
 from aspire_app import (
     AspireC4DiagramOptions,
     AspireC4EfDiagramOptions,
+    ErdElementStyle,
     LikeC4NodeDetailsAnnotation,
     LikeC4RelationshipDetailsAnnotation,
     PgWebContainerResource,
@@ -91,7 +92,27 @@ def server_details(opts: LikeC4NodeDetailsAnnotation) -> None:
 
 
 def er_diagram(opts: AspireC4EfDiagramOptions) -> None:
+    # The styling is the shared part of the C# sample's (SampleErdStyling.WithSharedSampleStyling), which
+    # the AppHost contract asserts for every sample.
     opts.title = "AspireC4 Sample Schema"
+    (
+        opts.with_table_style("Order*", order_table_style)
+        .with_type_style("decimal", decimal_type_style)
+        .with_context_palette(["#2563eb", "#16a34a", "#d97706", "#9333ea", "#e11d48", "#0d9488"])
+        .with_layout("Right", layer_spacing=160)
+        .with_edge_style("SmoothStep")
+        .with_animation("Slow")
+        .with_legend()
+        .with_descriptions()
+    )
+
+
+def order_table_style(style: ErdElementStyle) -> None:
+    style.with_accent("#dc2626", dark="#f87171").with_badge("SALES")
+
+
+def decimal_type_style(style: ErdElementStyle) -> None:
+    style.with_accent("#16a34a")
 
 
 def data_service_details(opts: LikeC4NodeDetailsAnnotation) -> None:

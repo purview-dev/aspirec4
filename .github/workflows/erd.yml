@@ -1,0 +1,74 @@
+name: ER viewer
+
+# Drives the interactive ER viewer and the Mermaid preview in a real Chromium and asserts they render,
+# lay out, search and apply the presentation (scripts/erd-viewer-check.mts, scripts/erd-mermaid-check.mts).
+#
+# `just test` cannot cover the viewer: it is JavaScript that only runs in a browser. The model it is
+# checked against is the sample's own, written by the ER diagram integration tests to the same path
+# `just erd-check` reads by default. pr.yml and release.yml both call this, and release.yml publishes
+# nothing until it passes.
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  viewer:
+    name: Interactive viewer and Mermaid preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      DOTNET_NOLOGO: "true"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+      ASPIRE_CLI_TELEMETRY_OPTOUT: "true"
+      ERD_MODEL: src/src/TestAppHost/.aspirec4/erd/schema.gen.json
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Install the JavaScript dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install Chromium for Playwright
+        run: bunx playwright install --with-deps chromium
+
+      # Starts the sample AppHost, which writes the ER model the viewer is checked against. Only the ER
+      # diagram tests: the full suite is the shared build's job, and this one needs the model, not a verdict.
+      - name: Generate the sample ER model
+        run: >-
+          dotnet test --project src/tests/AspireC4.IntegrationTests --configuration Release
+          --framework net11.0 --treenode-filter "/*/*/EntityFrameworkDiagramTests/*"
+
+      - name: Check the model was written
+        run: test -s "$ERD_MODEL" || { echo "::error::No ER model at $ERD_MODEL"; exit 1; }
+
+      # The same commands as `just erd-check` and `just erd-mermaid-check`, without installing just.
+      - name: Check the interactive viewer
+        run: |
+          bun scripts/erd-vendor.mts artifacts/erd-viewer-check
+          bun scripts/erd-viewer-check.mts "$ERD_MODEL"
+
+      - name: Check the Mermaid preview
+        run: |
+          bun scripts/erd-vendor.mts artifacts/erd-mermaid-check
+          bun scripts/erd-mermaid-check.mts ""
+
+      - name: Upload the viewer artefacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: erd-viewer-check
+          path: |
+            artifacts/erd-viewer-check
+            artifacts/erd-mermaid-check
+          if-no-files-found: ignore

@@ -275,7 +275,7 @@ aspirec4                 # parent row, added only when there is more than one di
 ```
 
 The ER diagram row carries an **Images** property with the resolved export path and an **Open Diagram
-Images** command that opens the folder. Grouping and the `-likec4` rename arrived in 13.6;
+Images** command that opens the folder. Grouping and the `-likec4` rename replaced the original flat rows;
 `WithLegacyLayout()` keeps the flat `aspirec4` / `aspirec4-er` pair — see [Migration](Migration.md).
 
 ## Troubleshooting

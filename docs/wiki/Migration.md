@@ -1,10 +1,27 @@
 # Migration Guide
 
-## Polyglot API names now match C#
+## 17.0 — Aspire 17, and polyglot API names that match C\#
+
+17.0 adds support for **Aspire 17** beside the Aspire 13 line. The Aspire minimum is unchanged, so an
+existing AppHost keeps working on Aspire 13 with no code change; [Requirements](Requirements.md#aspire)
+has both project shapes and when to use each.
 
 > [!IMPORTANT]
-> A **breaking change for TypeScript AppHosts**. C# AppHosts are unaffected: no C# method was renamed
-> or removed.
+> **C# AppHosts:** no C# API was renamed or removed. Read
+> [Check your connection references](#c-apphosts-check-your-connection-references) and
+> [Behaviour changes](#behaviour-changes); nothing else needs doing.
+>
+> **TypeScript AppHosts:** several binding names changed. Rename the calls below and run `aspire restore`.
+
+### Moving a C# AppHost to Aspire 17
+
+Optional — only when you upgrade Aspire itself. Aspire 17 obsoletes `Aspire.AppHost.Sdk` (`ASPIRE012`):
+the AppHost becomes a plain `Microsoft.NET.Sdk` project that references `Aspire.Hosting.AppHost`, and
+projects are added with `AddDotnetProject(name, path)`, with `AddProject<>` now obsolete. AspireC4 reads
+both kinds of project resource, so its calls do not change. See
+[Requirements](Requirements.md#aspire) for the project file.
+
+### Polyglot API names now match C\#
 
 The TypeScript, Go and Python bindings now use the C# method names, so one sample reads the same in
 every language. Rename these calls in `apphost.mts`, then run `aspire restore`:
@@ -21,16 +38,32 @@ every language. Rename these calls in `apphost.mts`, then run `aspire restore`:
 never worked from TypeScript, which cannot pass a C# type argument; the new pair takes the type's full
 name, such as `Aspire.Hosting.Azure.AzureEnvironmentResource`.
 
-**C# AppHosts: check your connection references.** `WithLikeC4Reference(db, opts => ...)` never called
+### C# AppHosts: check your connection references
+
+`WithLikeC4Reference(db, opts => ...)` never called
 Aspire's `WithReference`: with only a target and a callback, C# binds it to the relationship-only
 overload, and the connection-string overload is chosen only when a connection argument
 (`connectionName`, `optional`, `skipAspireReference`) is passed. Where you meant the connection, switch
 to `WithLikeC4ConnectionReference`, which always adds it.
 
-Two additions came with it:
+### Behaviour changes
 
-- **`WithServerLikeC4Details`** describes the LikeC4 server node without a resource-builder callback,
-  which Go and Python cannot use. `ConfigureServer` still works in C# and TypeScript.
+- **`WithServerLikeC4Details`** (new) describes the LikeC4 server node without a resource-builder
+  callback, which Go and Python cannot use. `ConfigureServer` still works in C# and TypeScript.
+- **ER diagram options in TypeScript, Go and Python.** The styling, layout, viewer, context and image
+  export methods are now on the options object the polyglot `withEntityFrameworkDiagram` callback
+  receives. A few stay C#-only; see
+  [ER Diagram Styling](configuration/ER-Diagram-Styling.md#from-typescript-go-and-python).
+- **The real LikeC4 version for `latest`.** `CheckLatestImageVersion`, on by default, now runs a one-shot
+  container at startup to ask the `latest` image which version it is. The dashboard shows that version
+  instead of `latest`, and LikeC4 1.57 or later gets its configurable HMR port where it used to fall back
+  to the fixed one. This adds the time of a `docker run --pull always` to startup. Pin
+  `ContainerImageTag`, or set `CheckLatestImageVersion` to `false`, to skip it; see
+  [Generated Output](Generated-Output.md).
+- **Background failures are reported.** A diagram that fails to regenerate, export its images or keep
+  watching resources now says so on its Console tab in the dashboard, and the ER diagram's row turns
+  **Failed** until the next successful write, instead of silently going stale. See
+  [Logging and Diagnostics](configuration/Logging.md).
 - **The Azure provisioning environment is no longer drawn.** `AzureEnvironmentResource` is excluded by
   default (`AspireC4DiagramOptions.ExcludedResourceTypeNames`), because it is infrastructure and its
   fallback `system` kind collides with the `system` element kind most LikeC4 projects declare. Bring it

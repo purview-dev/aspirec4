@@ -123,6 +123,25 @@ public sealed class AspireC4HostTests(Fixtures.TestAppHostFixture fixture)
 	}
 
 	[Test]
+	public async Task StartAsync_WithTheLatestTag_ShowsTheVersionTheContainerReports(
+		CancellationToken cancellationToken
+	)
+	{
+		// TestAppHost pins no tag, so the server runs "latest" — which says nothing about the version, and
+		// used to be shown as exactly that. CheckLatestImageVersion asks the image itself.
+		// Arrange
+		// (app started by the shared fixture)
+
+		// Act
+		var version = await fixture.GetSnapshotPropertyAsync(AspireC4ResourceName, "LikeC4 Version", cancellationToken);
+
+		// Assert
+		await Assert.That(version).IsNotNull();
+		await Assert.That(version).IsNotEqualTo(LikeC4ServerResource.DefaultTag);
+		await Assert.That(System.Version.TryParse(version, out _)).IsTrue().Because($"'{version}' is not a version");
+	}
+
+	[Test]
 	[Timeout(120_000)]
 	public async Task StartAsync_WithEntityFrameworkDiagram_HidesTheViewerSidecarFromTheDashboard(
 		CancellationToken cancellationToken

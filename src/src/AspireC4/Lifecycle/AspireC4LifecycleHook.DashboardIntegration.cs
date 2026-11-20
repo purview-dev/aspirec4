@@ -135,7 +135,7 @@ sealed partial class AspireC4LifecycleHook
 #pragma warning disable CA1031
 		catch (Exception ex)
 		{
-			telemetry.StateWatcherFailed(ex.Message);
+			ReportWatcherFailed("diagram URL injection", ex);
 		}
 #pragma warning restore CA1031
 	}
@@ -165,7 +165,7 @@ sealed partial class AspireC4LifecycleHook
 #pragma warning disable CA1031
 		catch (Exception ex)
 		{
-			telemetry.StateWatcherFailed(ex.Message);
+			ReportWatcherFailed("server visibility", ex);
 		}
 #pragma warning restore CA1031
 	}
@@ -207,7 +207,7 @@ sealed partial class AspireC4LifecycleHook
 #pragma warning disable CA1031
 		catch (Exception ex)
 		{
-			telemetry.StateWatcherFailed(ex.Message);
+			ReportWatcherFailed("server log forwarding", ex);
 		}
 #pragma warning restore CA1031
 	}
@@ -285,7 +285,7 @@ sealed partial class AspireC4LifecycleHook
 #pragma warning disable CA1031
 		catch (Exception ex)
 		{
-			telemetry.StateWatcherFailed(ex.Message);
+			ReportWatcherFailed("server state forwarding", ex);
 		}
 #pragma warning restore CA1031
 	}
@@ -351,7 +351,7 @@ sealed partial class AspireC4LifecycleHook
 #pragma warning disable CA1031 // intentional: watcher must not crash the host process
 		catch (Exception ex)
 		{
-			telemetry.StateWatcherFailed(ex.Message);
+			ReportWatcherFailed("resource states", ex);
 		}
 #pragma warning restore CA1031
 	}
@@ -379,6 +379,14 @@ sealed partial class AspireC4LifecycleHook
 				{
 					// Debounced — a newer state change superseded this one.
 				}
+#pragma warning disable CA1031 // intentional: a failed regeneration must not become an unobserved task exception
+				catch (Exception ex)
+				{
+					// The next state change schedules another attempt, so this is reported, not retried.
+					telemetry.DiagramRegenerationFailed(ex);
+					ReportToDashboard("AspireC4 could not regenerate the architecture diagram", ex);
+				}
+#pragma warning restore CA1031
 			},
 			CancellationToken.None
 		);

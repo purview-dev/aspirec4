@@ -426,6 +426,7 @@ public sealed class ImageExportTests
 			modelBody: "stamp",
 			localCLI: null,
 			Lifecycle.IAspireC4LifecycleHookTelemetry.Mock(),
+			resourceLogger: null,
 			cancellationToken
 		);
 
@@ -465,6 +466,7 @@ public sealed class ImageExportTests
 			modelBody: "stamp",
 			localCLI: null,
 			Lifecycle.IAspireC4LifecycleHookTelemetry.Mock(),
+			resourceLogger: null,
 			cancellationToken
 		);
 

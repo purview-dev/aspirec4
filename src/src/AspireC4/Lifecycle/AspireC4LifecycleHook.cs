@@ -77,6 +77,7 @@ sealed partial class AspireC4LifecycleHook(
 			async (evt, ct) =>
 			{
 				var aspirec4Resource = evt.Model.Resources.OfType<AspireC4Resource>().FirstOrDefault();
+				_diagramResource = aspirec4Resource;
 				var serverResource = aspirec4Resource?.InnerResource as LikeC4ServerResource;
 				var localServerResource = aspirec4Resource?.InnerResource as LikeC4LocalServerResource;
 
@@ -96,11 +97,10 @@ sealed partial class AspireC4LifecycleHook(
 				{
 					SetupContainerBindMount(evt.Model, serverResource);
 
-					// Always record the effective tag immediately so the version property is
-					// visible in the dashboard even when using "latest" or when the docker run
-					// version check is disabled.
-					var effectiveTag = options.Value.ContainerImageTag ?? LikeC4ServerResource.DefaultTag;
-					_resolvedLikeC4Version = effectiveTag;
+					// Recorded before the first write so the dashboard shows the version from the outset:
+					// the probed version for "latest", or the tag itself when it is pinned, the check is off,
+					// or the probe fails.
+					await ResolveContainerVersionAsync(ct);
 
 					await WriteC4FileAsync(evt.Model, ct);
 				}

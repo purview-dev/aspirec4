@@ -1,0 +1,33 @@
+name: Local CLI runtimes
+
+# Runs the C# integration suite with the LikeC4 server on each local CLI runtime that WithLocalCLI()
+# supports (npm, pnpm, yarn, bun, deno), each inside its own Docker image (tests/Docker/Dockerfile.e2e-cli),
+# exactly as `just test-e2e-<runtime>` does locally.
+#
+# Slow — five Docker-in-Docker builds — so it gates releases rather than every pull request: release.yml
+# calls it and publishes nothing until it passes. Run it on demand from the Actions tab before merging a
+# change to the CLI runtime support.
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  runtime:
+    name: LikeC4 on ${{ matrix.runtime }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        runtime: [npm, pnpm, yarn, bun, deno]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: extractions/setup-just@v2
+
+      - name: Run the integration suite on ${{ matrix.runtime }}
+        run: just test-e2e-${{ matrix.runtime }} Release

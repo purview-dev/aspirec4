@@ -14,7 +14,7 @@ sealed partial class AspireC4LifecycleHook
 	// produce the same value, so the race is harmless.
 	IReadOnlyDictionary<string, IReadOnlyList<LikeC4Metadata>>? _resourceSourceMetadata;
 
-	async Task WriteC4FileAsync(DistributedApplicationModel appModel, CancellationToken cancellationToken)
+	internal async Task WriteC4FileAsync(DistributedApplicationModel appModel, CancellationToken cancellationToken)
 	{
 		var opts = options.Value;
 		var appHostDirectory = workspaceOptions.Value.ResolveBaseDirectory();
@@ -74,15 +74,15 @@ sealed partial class AspireC4LifecycleHook
 		// application would rewrite the file and touch the working tree.
 		var newRawBody = StripHeader(dsl);
 		var changed = !string.Equals(_lastRawBody, newRawBody, StringComparison.Ordinal);
+		var written = false;
 		if (changed)
 		{
 			_lastRawBody = newRawBody;
 
+			written = await GeneratedOutput.WriteIfChangedAsync(outputPath, dsl, cancellationToken);
+
 			// Format the generated file in-place (best-effort) so the on-disk file is human-readable.
-			if (
-				await GeneratedOutput.WriteIfChangedAsync(outputPath, dsl, cancellationToken)
-				&& opts.FormatGeneratedFile
-			)
+			if (written && opts.FormatGeneratedFile)
 			{
 				await RunFormatAsync(outputPath, outputDir, cancellationToken);
 			}
@@ -96,6 +96,10 @@ sealed partial class AspireC4LifecycleHook
 			var absoluteSource = Path.GetFullPath(sourcePath);
 			if (!File.Exists(absoluteSource))
 			{
+				// Most likely a typo in the path, which would otherwise look exactly like a file that
+				// LikeC4 read and found nothing in.
+				telemetry.AdditionalDSLFileMissing(absoluteSource);
+				ReportToDashboard($"AspireC4 could not find the additional DSL file '{absoluteSource}'");
 				continue;
 			}
 
@@ -120,7 +124,10 @@ sealed partial class AspireC4LifecycleHook
 			await WriteGitIgnoreAsync(outputDir, generatedFileNames, cancellationToken);
 		}
 
-		telemetry.LikeC4ModelWritten(outputPath);
+		if (written)
+		{
+			telemetry.LikeC4ModelWritten(outputPath);
+		}
 
 		// Gated on the same comparison as the write itself: exporting is expensive enough that it is
 		// worth doing only when there is a new model to render. Fire-and-forget, because the export
@@ -176,7 +183,7 @@ sealed partial class AspireC4LifecycleHook
 	[System.Diagnostics.CodeAnalysis.SuppressMessage(
 		"Design",
 		"CA1031:Do not catch general exception types",
-		Justification = "Formatting is non-blocking; failures are silently ignored"
+		Justification = "Formatting is best-effort; failures are reported via telemetry and never block regeneration"
 	)]
 	async Task RunFormatAsync(string outputPath, string outputDir, CancellationToken cancellationToken)
 	{
@@ -206,31 +213,36 @@ sealed partial class AspireC4LifecycleHook
 			if (process is null)
 				return;
 
-			using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-			cts.CancelAfter(TimeSpan.FromSeconds(opts.ExternalProcessTimeoutSeconds));
-
-			try
-			{
-				await process.WaitForExitAsync(cts.Token);
-			}
-			catch (OperationCanceledException)
-			{
-				try
-				{
-					process.Kill(entireProcessTree: true);
-				}
-				catch { }
-
-				throw;
-			}
+			// Both streams are redirected, so both are drained: one left unread fills its pipe and blocks
+			// the formatter until the timeout kills it.
+			var (_, error) = await ProcessOutput.WaitAsync(
+				process,
+				TimeSpan.FromSeconds(opts.ExternalProcessTimeoutSeconds),
+				cancellationToken
+			);
 
 			if (process.ExitCode == 0)
+			{
 				telemetry.LikeC4FormatApplied();
+			}
+			else
+			{
+				// The unformatted file is still valid LikeC4, so this is worth a warning, not a failure.
+				telemetry.FormatterExited(process.ExitCode, error.Trim());
+				ReportToDashboard(
+					$"AspireC4 could not format the generated model (exit code {process.ExitCode}): {error.Trim()}"
+				);
+			}
+		}
+		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+		{
+			// Shutdown.
 		}
 		catch (Exception ex)
 		{
 			// Formatting is best-effort; never block startup or regeneration.
 			telemetry.FailedToRunFormatter(ex);
+			ReportToDashboard("AspireC4 could not run the formatter on the generated model", ex);
 		}
 	}
 

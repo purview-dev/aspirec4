@@ -14,16 +14,18 @@ namespace Aspire.Hosting.AspireC4.EntityFrameworkCore.Lifecycle;
 /// </remarks>
 static partial class ErdLog
 {
-	[LoggerMessage(Level = LogLevel.Information, Message = "Wrote {Path}")]
+	[LoggerMessage(EventId = 2001, Level = LogLevel.Information, Message = "Wrote {Path}")]
 	public static partial void Wrote(ILogger logger, string path);
 
 	[LoggerMessage(
+		EventId = 2002,
 		Level = LogLevel.Information,
 		Message = "Generated {Renderer} ER diagram: {Contexts} context(s), {Tables} table(s)."
 	)]
 	public static partial void Generated(ILogger logger, ErdRenderer renderer, int contexts, int tables);
 
 	[LoggerMessage(
+		EventId = 2003,
 		Level = LogLevel.Information,
 		Message = "{Approximate} of {Total} context(s) were recovered from assembly metadata rather than "
 			+ "a source-generated descriptor, so configuration applied only in OnModelCreating is not "
@@ -32,10 +34,11 @@ static partial class ErdLog
 	)]
 	public static partial void ApproximateContexts(ILogger logger, int approximate, int total);
 
-	[LoggerMessage(Level = LogLevel.Information, Message = "ER diagram unchanged; nothing written.")]
+	[LoggerMessage(EventId = 2004, Level = LogLevel.Information, Message = "ER diagram unchanged; nothing written.")]
 	public static partial void Unchanged(ILogger logger);
 
 	[LoggerMessage(
+		EventId = 2005,
 		Level = LogLevel.Information,
 		Message = "{Path} was not written by AspireC4, so it was left alone; the generated ER diagram files "
 			+ "may show up in git. Add them to it, or remove it to let AspireC4 manage the file."
@@ -43,16 +46,18 @@ static partial class ErdLog
 	public static partial void GitIgnoreFileKept(ILogger logger, string path);
 
 	[LoggerMessage(
+		EventId = 2006,
 		Level = LogLevel.Warning,
 		Message = "No Entity Framework Core models were found. Ensure at least one project resource that "
 			+ "owns a DbContext has been built at least once."
 	)]
 	public static partial void NoModelsFound(ILogger logger);
 
-	[LoggerMessage(Level = LogLevel.Information, Message = "Wrote {Count} viewer dependency file(s).")]
+	[LoggerMessage(EventId = 2007, Level = LogLevel.Information, Message = "Wrote {Count} viewer dependency file(s).")]
 	public static partial void ViewerDependenciesWritten(ILogger logger, int count);
 
 	[LoggerMessage(
+		EventId = 2008,
 		Level = LogLevel.Warning,
 		Message = "No Entity Framework Core models were found for project {ProjectPath} "
 			+ "(output directory: {OutputDirectory}, {AssembliesScanned} assembly(ies) read, "
@@ -71,22 +76,25 @@ static partial class ErdLog
 	);
 
 	[LoggerMessage(
+		EventId = 2009,
 		Level = LogLevel.Warning,
 		Message = "No Entity Framework Core models were found on this pass; keeping the diagram already "
 			+ "written to {OutputDirectory} rather than replacing it with an empty one."
 	)]
 	public static partial void NoModelsFoundKeepingExisting(ILogger logger, string outputDirectory);
 
-	[LoggerMessage(Level = LogLevel.Information, Message = "Exported {Path}")]
+	[LoggerMessage(EventId = 2010, Level = LogLevel.Information, Message = "Exported {Path}")]
 	public static partial void ImageExported(ILogger logger, string path);
 
 	[LoggerMessage(
+		EventId = 2011,
 		Level = LogLevel.Information,
 		Message = "The images in {OutputDirectory} already match this diagram; nothing was rendered."
 	)]
 	public static partial void ImagesUnchanged(ILogger logger, string outputDirectory);
 
 	[LoggerMessage(
+		EventId = 2012,
 		Level = LogLevel.Information,
 		Message = "Rendering the ER diagram through the viewer with {Image}. The first run pulls the "
 			+ "image, so it takes considerably longer than later ones."
@@ -94,6 +102,7 @@ static partial class ErdLog
 	public static partial void ViewerImageExportStarted(ILogger logger, string image);
 
 	[LoggerMessage(
+		EventId = 2013,
 		Level = LogLevel.Warning,
 		Message = "Viewer-fidelity export only applies to the {Interactive} renderer; {Renderer} has no "
 			+ "viewer to render. Exporting through d2 instead."
@@ -105,10 +114,34 @@ static partial class ErdLog
 	);
 
 	[LoggerMessage(
+		EventId = 2014,
 		Level = LogLevel.Warning,
 		Message = "Could not export the ER diagram as an image with '{Command}': {Reason}. The diagram "
 			+ "itself is unaffected. Image export needs either a container runtime or a local d2 binary; "
 			+ "call WithoutImageExport() to stop trying."
 	)]
 	public static partial void ImageExportFailed(ILogger logger, string command, string reason);
+
+	[LoggerMessage(
+		EventId = 2015,
+		Level = LogLevel.Warning,
+		Message = "AspireC4 could not complete '{Task}' for the ER diagram: {Error}. The diagram already "
+			+ "written is unaffected."
+	)]
+	public static partial void BackgroundTaskFailed(ILogger logger, string task, string error, Exception exception);
+
+	[LoggerMessage(
+		EventId = 2016,
+		Level = LogLevel.Information,
+		Message = "Read {Contexts} context(s) from {ProjectPath} (model dump: {DumpStatus}, "
+			+ "{DescriptorsFound} descriptor(s) found, {Approximate} recovered from metadata)."
+	)]
+	public static partial void ProjectModelLoaded(
+		ILogger logger,
+		string projectPath,
+		int contexts,
+		EfModelDumpStatus dumpStatus,
+		int descriptorsFound,
+		int approximate
+	);
 }
