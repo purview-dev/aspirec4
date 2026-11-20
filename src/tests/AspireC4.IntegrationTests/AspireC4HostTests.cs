@@ -51,6 +51,25 @@ public sealed class AspireC4HostTests(Fixtures.TestAppHostFixture fixture)
 	}
 
 	[Test]
+	public async Task StartAsync_WhenAppStarts_C4FileDescribesWhereEachResourceComesFrom(
+		CancellationToken cancellationToken
+	)
+	{
+		// Arrange
+		// (app started by the shared fixture; data-service is AddProject on Aspire 13 and
+		// AddDotnetProject on 17, so both lines prove the project path is found)
+
+		// Act
+		var content = await File.ReadAllTextAsync(fixture.ModelPath, cancellationToken);
+
+		// Assert
+		await Assert.That(content).Contains("project-path '../TestAppHost.DataService/TestAppHost.DataService.csproj'");
+		await Assert.That(content).Contains("dotnet-target-framework 'net10.0'");
+		await Assert.That(content).Contains("package-manager 'bun@1.4.2'");
+		await Assert.That(content).Contains("container-image 'docker.io/library/redis:");
+	}
+
+	[Test]
 	public async Task StartAsync_WhenAppStarts_C4FileContainsDSLStructure(CancellationToken cancellationToken)
 	{
 		// Arrange

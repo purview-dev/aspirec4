@@ -17,6 +17,15 @@ public static class D2ModelBuilder
 		ArgumentNullException.ThrowIfNull(model);
 		ArgumentNullException.ThrowIfNull(options);
 
+		return Build(model, options, ErdPresentation.Build(model, options));
+	}
+
+	internal static D2Model Build(EfModel model, AspireC4EfDiagramOptions options, ErdPresentation presentation)
+	{
+		ArgumentNullException.ThrowIfNull(model);
+		ArgumentNullException.ThrowIfNull(options);
+		ArgumentNullException.ThrowIfNull(presentation);
+
 		if (model.Contexts.Count == 0)
 		{
 			return D2Model.Empty;
@@ -43,6 +52,8 @@ public static class D2ModelBuilder
 						Label = table.Name,
 						Container = container,
 						Columns = [.. table.Columns.Select(c => BuildColumn(c, options))],
+						Style = presentation.TableStyle(table.Name),
+						Tooltip = Tooltip(table, options, presentation),
 					}
 				);
 
@@ -50,7 +61,24 @@ public static class D2ModelBuilder
 			}
 		}
 
-		return new D2Model { Tables = tables, Edges = BuildEdges(model, pathsByTableName) };
+		return new D2Model { Tables = tables, Edges = BuildEdges(model, pathsByTableName, presentation) };
+	}
+
+	/// <summary>
+	/// The table's description and its style tooltip, joined. d2 has no room for a description column,
+	/// so the table's own description is what reaches the diagram.
+	/// </summary>
+	static string? Tooltip(EfTable table, AspireC4EfDiagramOptions options, ErdPresentation presentation)
+	{
+		var parts = new[]
+		{
+			options.ShowDescriptions ? presentation.TableDescription(table.Name) : null,
+			presentation.TableStyle(table.Name)?.Tooltip,
+		}.Where(p => !string.IsNullOrWhiteSpace(p));
+
+		var tooltip = string.Join(" — ", parts);
+
+		return tooltip.Length == 0 ? null : tooltip;
 	}
 
 	static string? BuildContainer(
@@ -118,7 +146,11 @@ public static class D2ModelBuilder
 		return type;
 	}
 
-	static List<D2Edge> BuildEdges(EfModel model, Dictionary<string, string> pathsByTableName)
+	static List<D2Edge> BuildEdges(
+		EfModel model,
+		Dictionary<string, string> pathsByTableName,
+		ErdPresentation presentation
+	)
 	{
 		List<D2Edge> edges = [];
 		HashSet<string> seen = [with(StringComparer.Ordinal)];
@@ -155,6 +187,7 @@ public static class D2ModelBuilder
 							// The edge is attached to the column holding the foreign key, so it runs from
 							// the dependent and its label reads in that order.
 							Label = EfRelationshipName.Label(foreignKey, EfRelationshipDirection.DependentToPrincipal),
+							Style = presentation.RelationshipStyle(table, foreignKey),
 						};
 
 						// Composite keys and multiple navigations can describe the same column pair.

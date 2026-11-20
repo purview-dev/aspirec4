@@ -15,6 +15,7 @@
 - **Configuration**
   - [Options](configuration/README.md)
   - [Customizing Resources](configuration/Customizing-Resources.md)
+  - [ER Diagram Styling](configuration/ER-Diagram-Styling.md)
   - [Local CLI Runtimes](configuration/Local-CLI.md)
   - [Source Generator Validation](configuration/Source-Generator.md)
   - [Advanced Configuration](configuration/Advanced.md)

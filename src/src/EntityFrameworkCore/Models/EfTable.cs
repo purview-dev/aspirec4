@@ -30,4 +30,16 @@ public sealed record EfTable
 	/// any other. Renderers use it to de-emphasise tables that carry no data of their own.
 	/// </remarks>
 	public bool IsJoinEntity { get; init; }
+
+	/// <summary>The table comment from <c>[Comment]</c> on the entity or <c>HasComment</c>, when present.</summary>
+	public string? Comment { get; init; }
+
+	/// <summary>
+	/// The description declared on the entity type with <c>[Description]</c>,
+	/// <c>[Display(Description = …)]</c> or, failing both, <c>[DisplayName]</c>.
+	/// </summary>
+	public string? Description { get; init; }
+
+	/// <summary>The entity type's XML documentation <c>&lt;summary&gt;</c>, as plain text.</summary>
+	public string? Documentation { get; init; }
 }

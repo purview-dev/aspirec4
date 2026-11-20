@@ -1,15 +1,28 @@
 using System.Diagnostics;
 using Aspire.Hosting.AspireC4.LikeC4;
 using Aspire.Hosting.AspireC4.LikeC4.Generators;
+using Aspire.Hosting.AspireC4.LikeC4.Models;
 using Aspire.Hosting.AspireC4.LikeC4.Runtime;
 
 namespace Aspire.Hosting.AspireC4.Lifecycle;
 
 sealed partial class AspireC4LifecycleHook
 {
+	// Project paths, runtime versions and container images, keyed by resource name. The app model is fixed
+	// once the application starts, and reading it touches project files, so it is read on the first
+	// generation and reused by every regeneration a state change triggers. Two concurrent first reads
+	// produce the same value, so the race is harmless.
+	IReadOnlyDictionary<string, IReadOnlyList<LikeC4Metadata>>? _resourceSourceMetadata;
+
 	async Task WriteC4FileAsync(DistributedApplicationModel appModel, CancellationToken cancellationToken)
 	{
 		var opts = options.Value;
+		var appHostDirectory = workspaceOptions.Value.ResolveBaseDirectory();
+
+		if (opts.AutoIncludeAspireMetadata.HasFlag(AspireMetadataInclusion.Metadata))
+		{
+			_resourceSourceMetadata ??= ResourceSourceMetadata.ReadAll(appModel.Resources, appHostDirectory);
+		}
 
 		telemetry.GeneratingLikeC4Model(appModel.Resources.Count, [.. appModel.Resources.Select(m => m.Name)]);
 
@@ -39,11 +52,12 @@ sealed partial class AspireC4LifecycleHook
 			opts.StateTagMap,
 			resourceSnapshotUrls,
 			opts.ExcludedResourceTypes.Count > 0 ? opts.ExcludedResourceTypes : null,
-			opts.ExcludedResourceTypeNames.Count > 0 ? opts.ExcludedResourceTypeNames : null
+			opts.ExcludedResourceTypeNames.Count > 0 ? opts.ExcludedResourceTypeNames : null,
+			_resourceSourceMetadata,
+			opts.TechnologyOverrides.Count > 0 ? opts.TechnologyOverrides : null
 		);
 		var dsl = LikeC4DSLGenerator.Generate(model, opts);
 
-		var appHostDirectory = workspaceOptions.Value.ResolveBaseDirectory();
 		var (outputDir, serveDir) = LikeC4ProjectLayout.Resolve(appHostDirectory, opts);
 		Directory.CreateDirectory(outputDir);
 

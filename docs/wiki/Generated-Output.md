@@ -197,9 +197,98 @@ When `FormatGeneratedFile` is `true`, AspireC4 runs `npx likec4 format --files <
 
 Set `WithoutConfigFileGeneration()` (or `GenerateConfigFile = false`) to manage `likec4.config.json` manually, for example when the output directory is already part of a hand-curated LikeC4 project.
 
-## Icons
+## Technology and icons
 
-- **Auto icons** (`AutoIconsEnabled`, default `true`): icons are inferred from the resource type and name using the bundled icon manifest.
+Each element shows a technology label and an icon. Where you set neither, AspireC4 works them out
+from what the resource is.
+
+### How a technology is recognised
+
+AspireC4 first checks your own [technology overrides](#overriding-it), then a catalogue of known
+technologies. The first match wins:
+
+1. **The app's framework, read from its project.** A JavaScript app's `package.json`, or a Python
+   app's `pyproject.toml` or `requirements.txt`, in its working directory. A meta-framework beats what
+   it builds on, so an Astro site using Vite reads as **Astro**, a Next.js app as **Next.js** rather
+   than React, and a plain Vite app as **Vite**. Recognised frameworks: Astro, Next.js, Nuxt, SvelteKit,
+   Remix, Gatsby, Docusaurus, Eleventy, Qwik, Angular, NestJS, Hono, Fastify, Express, Koa, SolidJS,
+   Vue, React, Svelte and Vite; for Python, Django, FastAPI, Flask, Streamlit and Gradio. An app run by
+   `bun` or `deno` with no known framework reads as Bun or Deno.
+
+   A **.NET project** is read the same way: its MSBuild SDK, NuGet packages and framework references,
+   from the restore output (`obj/project.assets.json`) and the project file, or from a file-based app's
+   `#:sdk` and `#:package` directives. In priority order it reads as **Azure Functions**, **Orleans**,
+   **YARP**, **ASP.NET Core gRPC**, **Blazor WebAssembly**, **ASP.NET Core** (the Web SDK or a
+   `Microsoft.AspNetCore.App` framework reference) or **.NET Worker Service**, all with the .NET icon.
+   Only the project's own references count, not ones it inherits. A project that is none of these still
+   reads as **.NET**.
+
+   A **package-manager installer** resource runs the package manager, not the app, so it is named by its
+   command: **npm**, **pnpm**, **Yarn**, **Bun**, **Deno**, **pip**, **Poetry** or **uv**.
+2. **The resource's type.** Aspire's and the community toolkit's types are matched across their base
+   classes, and by the resource type the dashboard reports. Azure services are named as Azure names
+   them: `AzureStorageResource` is **Azure Storage**, with the storage-account icon, and its blob,
+   queue and table children each have their own. When an Azure resource runs locally, the label says
+   what is running it: **Azure Storage (Azurite)**, **Azure Cosmos DB (emulator)**, or **Azure
+   Database for PostgreSQL (container)** after `RunAsContainer()`. The icon stays the Azure service's.
+3. **The container image.** For example, `mcr.microsoft.com/mssql/server` is SQL Server, `pgvector/pgvector`
+   is PostgreSQL (pgvector), `confluentinc/confluent-local` is Apache Kafka, and `datalust/seq` is Seq.
+   The registry, the `library/` namespace, the tag and any digest are ignored. An image name with no
+   path, such as `postgres`, also matches any namespace that holds it, such as `bitnami/postgres`.
+
+A recognised technology always uses its curated icon, or none when LikeC4 has no icon for it (Seq,
+Keycloak, Valkey, Ollama, MinIO, Mailpit). It never falls back to guessing, because a confident wrong
+icon, such as Seq drawn as Sequelize, is worse than none.
+
+Anything not in the catalogue falls back to **fuzzy matching**: the resource's type and name are
+scored against icon names in the bundled manifest. A .NET project with no recognised flavour shows
+**.NET**, and a container shows its image name.
+
+### Overriding it
+
+When the catalogue gets a resource wrong or does not know it, correct it in one of two places.
+
+**For the whole AppHost**, add a technology override to the options. An override names the label,
+and optionally the icon, for every resource it matches. Overrides are checked before the catalogue:
+
+```csharp
+builder.AddAspireC4(configure: options => options
+    // A dependency of the resource's own project: npm, Python, or a .NET package, framework reference or SDK.
+    .WithPackageTechnology("@tanstack/react-start", "TanStack Start", "tech:react")
+    .WithPackageTechnology("MassTransit", "MassTransit")
+    // A resource type or any subclass: a full name, a short name, or the type itself.
+    .WithResourceTypeTechnology("Acme.Hosting.WidgetResource", "Widget", "@/icons/widget.svg")
+    .WithResourceTypeTechnology<KeycloakResource>("Keycloak (identity)")
+    // A container image; the registry, tag and digest are ignored.
+    .WithContainerImageTechnology("acme/billing-engine", "Billing Engine", "tech:java"));
+```
+
+- Package rules are checked first, then resource-type rules, then container-image rules. Within each
+  kind, the first one you registered wins. An installer is never matched by a package rule.
+- A resource-type name with a dot is a full name and must match exactly. A short name matches the
+  class name with or without its `Resource` suffix. The resource type the dashboard reports, such as
+  `Azure.SqlServer`, is matched too.
+- Image patterns follow the catalogue's rules. A pattern with a slash must match the whole path. One
+  without, such as `widget`, matches that image in any namespace.
+- An override's label is shown exactly as you wrote it. An Azure emulator suffix is not added.
+- An override with an icon always uses it, even with auto icons off. One without an icon has it
+  matched from its label, so `WithContainerImageTechnology("acme/cache", "Redis")` gets the Redis icon.
+- From a TypeScript, Go or Python AppHost the same methods are `withPackageTechnology`,
+  `withResourceTypeTechnology` (by name) and `withContainerImageTechnology`.
+
+**For one resource**, use its details. They win over every override:
+
+- `WithLikeC4Details(d => d.WithTechnology("…"))` sets the label. A label you set is also used to
+  pick the icon, so `WithTechnology("Azure Postgres")` still matches an Azure icon.
+- `WithLikeC4Details(d => d.WithIcon("tech:…"))` sets the icon outright.
+
+A **custom icon resolver** (below) runs before overrides and the catalogue, but it only picks the icon.
+
+### Icon settings
+
+- **Auto icons** (`AutoIconsEnabled`, default `true`): turns the recognition and matching above on or
+  off; `WithAutoIcon(false)` turns it off for one element.
+- **Technology overrides** (`TechnologyOverrides`): the application-wide rules [above](#overriding-it).
 - **Custom resolvers** (`IconResolvers`): evaluated in registration order before built-in inference; the first non-`null` result wins. Each resolver receives an `IconResolverContext` exposing the visible `Resource` and the `HiddenOriginal` Azure resource (when a local surrogate was created via `RunAsContainer()`).
 - **GraphViz `dot`** (`UseDotIfAvailable`, default `true`): when `dot` is on `PATH`, LikeC4 uses it for more accurate inference (e.g. database icons) and can infer icons from container/component relationships.
 

@@ -191,5 +191,7 @@ Supported, with their own fluent API. The source-generator validation described 
 
 `purview-aspirec4-configuration` for the full options reference,
 `purview-aspirec4-resources` for per-resource labels, relationships and grouping,
+`purview-aspirec4-enrichment` for turning an existing AppHost's first diagram (inline or
+Purview.Aspire.ResourceKit) into a curated one,
 `purview-aspirec4-validation` for the registry and the `ASPIREC4xxx` diagnostics, and
 `purview-aspirec4-entityframework` for the Entity Framework Core ER diagram.

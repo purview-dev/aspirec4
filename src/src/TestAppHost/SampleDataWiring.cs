@@ -39,7 +39,12 @@ static class SampleDataWiring
 		ArgumentNullException.ThrowIfNull(builder);
 		ArgumentNullException.ThrowIfNull(c4);
 
-		c4.WithEntityFrameworkDiagram(configure: static options => options.Title = "AspireC4 Sample Schema");
+		// Styled, laid out and described by SampleErdStyling: one example of each option.
+		c4.WithEntityFrameworkDiagram(configure: static options =>
+		{
+			options.Title = "AspireC4 Sample Schema";
+			options.WithSampleStyling();
+		});
 
 #if ASPIRE13
 		var dataService = builder.AddProject<Projects.TestAppHost_DataService>("data-service");

@@ -14,6 +14,14 @@ sealed class TableShape
 	public List<ForeignKeyShape> ForeignKeys { get; } = [];
 
 	public bool IsJoinEntity { get; set; }
+
+	public string? Comment { get; set; }
+
+	/// <summary>From <c>[Description]</c>, <c>[Display(Description = …)]</c> or <c>[DisplayName]</c>.</summary>
+	public string? Description { get; set; }
+
+	/// <summary>The XML documentation summary, as plain text.</summary>
+	public string? Documentation { get; set; }
 }
 
 /// <summary>A column under construction during analysis.</summary>
@@ -54,6 +62,12 @@ sealed class ColumnShape
 	public int? MaxLength { get; set; }
 
 	public string? Comment { get; set; }
+
+	/// <summary>From <c>[Description]</c>, <c>[Display(Description = …)]</c> or <c>[DisplayName]</c>.</summary>
+	public string? Description { get; set; }
+
+	/// <summary>The XML documentation summary, as plain text.</summary>
+	public string? Documentation { get; set; }
 }
 
 /// <summary>A foreign key under construction during analysis.</summary>

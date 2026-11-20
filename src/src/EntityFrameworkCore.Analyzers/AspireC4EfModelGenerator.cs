@@ -205,7 +205,10 @@ public sealed class AspireC4EfModelGenerator : IIncrementalGenerator
 				.Text("name", table.Name)
 				.Text("clrTypeName", table.ClrTypeName)
 				.Text("schema", table.Schema)
-				.Bool("isJoinEntity", table.IsJoinEntity);
+				.Bool("isJoinEntity", table.IsJoinEntity)
+				.Text("comment", table.Comment)
+				.Text("description", table.Description)
+				.Text("documentation", table.Documentation);
 
 			writer.Array("columns", table.Columns, static (w, column) =>
 				w.StartObject()
@@ -222,6 +225,8 @@ public sealed class AspireC4EfModelGenerator : IIncrementalGenerator
 					.Bool("isForeignKey", column.IsForeignKey)
 					.Number("maxLength", column.MaxLength)
 					.Text("comment", column.Comment)
+					.Text("description", column.Description)
+					.Text("documentation", column.Documentation)
 					.EndObject()
 			);
 

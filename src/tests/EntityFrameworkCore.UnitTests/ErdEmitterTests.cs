@@ -11,7 +11,7 @@ namespace Aspire.Hosting.AspireC4.EntityFrameworkCore;
 /// These assert on whole emitted bodies rather than fragments, so an ordering change is a test
 /// failure rather than something that silently churns the generated files.
 /// </remarks>
-public sealed class ErdEmitterTests
+public sealed partial class ErdEmitterTests
 {
 	// Helpers
 

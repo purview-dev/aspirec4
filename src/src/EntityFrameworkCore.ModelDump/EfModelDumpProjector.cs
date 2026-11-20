@@ -125,6 +125,11 @@ static class EfModelDumpProjector
 					IsForeignKey = foreignKeyProperties.Contains(property),
 					MaxLength = property.GetMaxLength(),
 					Comment = property.GetComment(),
+					Description = property.PropertyInfo is { } info ? DescriptionAttribute(info) : null,
+					// The declaring type, so an inherited audit column carries the base entity's summary.
+					Documentation = property.PropertyInfo is { DeclaringType: { } declaring } member
+						? XmlDocumentationText.PropertySummary(declaring, member.Name)
+						: null,
 				}
 			);
 		}
@@ -137,6 +142,9 @@ static class EfModelDumpProjector
 			ClrTypeName = entityType.ClrType.FullName ?? entityType.ClrType.Name,
 			Schema = entityType.GetSchema(),
 			IsJoinEntity = keyColumns.Count > 1 && keyColumns.TrueForAll(c => c.IsForeignKey),
+			Comment = entityType.GetComment(),
+			Description = DescriptionAttribute(entityType.ClrType),
+			Documentation = XmlDocumentationText.TypeSummary(entityType.ClrType),
 			Columns = columns,
 			ForeignKeys =
 			[
@@ -285,6 +293,50 @@ static class EfModelDumpProjector
 				IsNullable = true,
 			}
 		);
+
+	/// <summary>
+	/// The description a member declares for display: <c>[Description]</c>, then
+	/// <c>[Display(Description = …)]</c>, then <c>[DisplayName]</c> — the order the analyzer and the
+	/// metadata reader use.
+	/// </summary>
+	/// <remarks>
+	/// Matched by attribute name rather than by type, as the other two discovery paths do, so a
+	/// look-alike attribute of the project's own is read the same way by all three.
+	/// </remarks>
+	static string? DescriptionAttribute(MemberInfo member)
+	{
+		string? description = null;
+		string? display = null;
+		string? displayName = null;
+
+		foreach (var attribute in member.GetCustomAttributesData())
+		{
+			switch (attribute.AttributeType.Name)
+			{
+				case "DescriptionAttribute":
+					description ??= FirstString(attribute);
+					break;
+
+				case "DisplayAttribute":
+					display ??=
+						attribute.NamedArguments.FirstOrDefault(a => a.MemberName == "Description").TypedValue.Value
+						as string;
+					break;
+
+				case "DisplayNameAttribute":
+					displayName ??= FirstString(attribute);
+					break;
+
+				default:
+					break;
+			}
+		}
+
+		return description ?? display ?? displayName;
+
+		static string? FirstString(CustomAttributeData attribute) =>
+			attribute.ConstructorArguments.Count > 0 ? attribute.ConstructorArguments[0].Value as string : null;
+	}
 
 	/// <summary>The CLR type EF actually stores — the converted type for a value object.</summary>
 	static Type ProviderType(IProperty property) =>
@@ -498,6 +550,12 @@ static class EfModelDumpProjector
 
 		public bool IsJoinEntity { get; init; }
 
+		public string? Comment { get; init; }
+
+		public string? Description { get; init; }
+
+		public string? Documentation { get; init; }
+
 		public List<DumpColumn> Columns { get; init; } = [];
 
 		public List<DumpForeignKey> ForeignKeys { get; init; } = [];
@@ -532,6 +590,10 @@ static class EfModelDumpProjector
 		public int? MaxLength { get; init; }
 
 		public string? Comment { get; init; }
+
+		public string? Description { get; init; }
+
+		public string? Documentation { get; init; }
 	}
 
 	sealed class DumpForeignKey

@@ -1,4 +1,4 @@
-﻿namespace Aspire.Hosting.AspireC4.LikeC4;
+namespace Aspire.Hosting.AspireC4.LikeC4;
 
 sealed partial class IconInferenceTests
 {
@@ -21,18 +21,16 @@ sealed partial class IconInferenceTests
 					),
 				"azure:cache-redis"
 			),
-			// Note: query tokens ["sql", "server"] score equally against both "sql-server" and
-			// "arc-sql-server" icons. "arc-sql-server" appears first in the manifest, so it wins
-			// the tie. To pin the more specific icon in a real app, use .WithLikeC4Details(icon:).
-
-			new(() => (CreateSnapshotResource("sqlserver", "Azure.SqlServer"), null), "azure:arc-sql-server"),
+			// Recognised by TechnologyCatalog rather than scored: the tokens ["sql", "server"] tie between
+			// "sql-server" and "arc-sql-server" (Azure Arc's hybrid SQL), and the tie used to go to Arc.
+			new(() => (CreateSnapshotResource("sqlserver", "Azure.SqlServer"), null), "azure:sql-server"),
 			new(
 				() =>
 					(
 						CreateContainerResource("azure-sql"),
 						AddHiddenSnapshot<AzureSqlServerResource>(new("azure-sql"), "AzureSqlServer")
 					),
-				"azure:arc-sql-server"
+				"azure:sql-server"
 			),
 			new(
 				() => (CreateSnapshotResource("postgres", "Azure.PostgresFlexibleServer"), null),

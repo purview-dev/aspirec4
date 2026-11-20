@@ -20,7 +20,7 @@ its owner instead of restating it.
 | **Using AspireC4** | [Requirements](Requirements.md) — the SDK, runtime, Aspire and container requirements, and why · [Getting Started](Getting-Started.md) — install and first run · [Migration Guide](Migration.md) — breaking changes and how to upgrade |
 | **AppHost languages** | [Overview](apphosts/README.md) — C#, TypeScript, Go and Python AppHosts: one API, and what differs · [TypeScript](apphosts/TypeScript.md) · [Go](apphosts/Go.md) · [Python](apphosts/Python.md) |
 | **Diagrams** | [Generated Output](Generated-Output.md) — what is written where, and extending the model · [Dashboard Integration](Dashboard-Integration.md) · [Entity Framework Core ER Diagrams](Entity-Framework-Diagrams.md) |
-| **Configuration** | [Options](configuration/README.md) · [Customizing Resources](configuration/Customizing-Resources.md) · [Local CLI Runtimes](configuration/Local-CLI.md) · [Source Generator Validation](configuration/Source-Generator.md) · [Advanced Configuration](configuration/Advanced.md) |
+| **Configuration** | [Options](configuration/README.md) · [Customizing Resources](configuration/Customizing-Resources.md) · [ER Diagram Styling](configuration/ER-Diagram-Styling.md) · [Local CLI Runtimes](configuration/Local-CLI.md) · [Source Generator Validation](configuration/Source-Generator.md) · [Advanced Configuration](configuration/Advanced.md) |
 | **Working on AspireC4** | [Contributing](contributing/README.md) · [Toolchain and support matrix](contributing/Toolchain.md) — how this repository is built · [Release Flow](contributing/Release-Flow.md) |
 
 ## Screenshots

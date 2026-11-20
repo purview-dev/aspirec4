@@ -19,6 +19,15 @@ public static class DbmlGenerator
 		ArgumentNullException.ThrowIfNull(model);
 		ArgumentNullException.ThrowIfNull(options);
 
+		return Generate(model, options, ErdPresentation.Build(model, options));
+	}
+
+	internal static string Generate(EfModel model, AspireC4EfDiagramOptions options, ErdPresentation presentation)
+	{
+		ArgumentNullException.ThrowIfNull(model);
+		ArgumentNullException.ThrowIfNull(options);
+		ArgumentNullException.ThrowIfNull(presentation);
+
 		StringBuilder sb = new(512);
 
 		WriteHeader(sb, options);
@@ -27,7 +36,7 @@ public static class DbmlGenerator
 		{
 			foreach (var table in context.Tables)
 			{
-				WriteTable(sb, context, table, options);
+				WriteTable(sb, context, table, options, presentation);
 			}
 		}
 
@@ -55,24 +64,46 @@ public static class DbmlGenerator
 		}
 	}
 
-	static void WriteTable(StringBuilder sb, EfContext context, EfTable table, AspireC4EfDiagramOptions options)
+	static void WriteTable(
+		StringBuilder sb,
+		EfContext context,
+		EfTable table,
+		AspireC4EfDiagramOptions options,
+		ErdPresentation presentation
+	)
 	{
-		sb.Append("Table ").Append(QualifiedName(context, table, options)).AppendLine(" {");
+		sb.Append("Table ").Append(QualifiedName(context, table, options));
+
+		// DBML's one table colour is the header's, which is what an accent is on every other renderer.
+		if (presentation.TableStyle(table.Name)?.Accent?.Hex is { } accent)
+		{
+			sb.Append(" [headercolor: ").Append(accent).Append(']');
+		}
+
+		sb.AppendLine(" {");
 
 		foreach (var column in table.Columns)
 		{
-			WriteColumn(sb, column, options);
+			WriteColumn(
+				sb,
+				column,
+				options,
+				options.ShowDescriptions ? presentation.ColumnDescription(table.Name, column.Name) : null
+			);
 		}
 
 		// The owning context is recorded as a note so the grouping survives a round-trip through
-		// tools that have no concept of it.
+		// tools that have no concept of it. A description leads it, being what a reader wants first.
+		var origin = $"{context.Name} ({table.ClrTypeName})";
+		var description = options.ShowDescriptions ? presentation.TableDescription(table.Name) : null;
+
 		sb.AppendLine();
-		sb.Append("\tNote: ").AppendLine(Quote($"{context.Name} ({table.ClrTypeName})"));
+		sb.Append("\tNote: ").AppendLine(Quote(description is null ? origin : $"{description} — {origin}"));
 		sb.AppendLine("}");
 		sb.AppendLine();
 	}
 
-	static void WriteColumn(StringBuilder sb, EfColumn column, AspireC4EfDiagramOptions options)
+	static void WriteColumn(StringBuilder sb, EfColumn column, AspireC4EfDiagramOptions options, string? description)
 	{
 		sb.Append('\t').Append(Identifier(column.Name)).Append(' ').Append(StoreType(column, options));
 
@@ -105,6 +136,12 @@ public static class DbmlGenerator
 		if (!string.IsNullOrWhiteSpace(column.Comment))
 		{
 			notes.Add(column.Comment);
+		}
+
+		// The description is often the comment itself, when that is the only source a column has.
+		if (description is not null && !notes.Contains(description, StringComparer.Ordinal))
+		{
+			notes.Add(description);
 		}
 
 		if (notes.Count > 0)

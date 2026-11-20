@@ -1,6 +1,7 @@
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.AspireC4.LikeC4;
 using Aspire.Hosting.AspireC4.LikeC4.Annotations;
+using Aspire.Hosting.AspireC4.LikeC4.Models;
 
 namespace Aspire.Hosting.AspireC4;
 
@@ -146,6 +147,66 @@ partial class ModelBuilderTests
 		// Assert
 		await Assert.That(aspireNameEntries).Count().IsEqualTo(1);
 		await Assert.That(aspireNameEntries[0].Value).IsEqualTo("custom-override");
+	}
+
+	[Test]
+	public async Task Build_AutoMetadata_SourceMetadata_IsAddedAfterTheAspireName()
+	{
+		// Arrange
+		var resource = CreateContainerResource("sql");
+		Dictionary<string, IReadOnlyList<LikeC4Metadata>> source = new()
+		{
+			["sql"] = [new("container-image", "mcr.microsoft.com/mssql/server:2025-latest")],
+		};
+
+		// Act
+		var model = ModelBuilder.Build([resource], resourceSourceMetadata: source);
+
+		// Assert
+		await Assert
+			.That(model.Elements[0].Metadata.Select(m => m.Key))
+			.IsEquivalentTo(["aspire-name", "container-image"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[Test]
+	public async Task Build_AutoMetadata_SourceMetadata_UserKeyWins()
+	{
+		// Arrange
+		var resource = CreateProjectResource("api");
+		resource.Annotations.Add(new LikeC4NodeDetailsAnnotation("API").WithMetadata("project-path", "src/Api"));
+		Dictionary<string, IReadOnlyList<LikeC4Metadata>> source = new()
+		{
+			["api"] = [new("project-path", "../Api/Api.csproj")],
+		};
+
+		// Act
+		var model = ModelBuilder.Build([resource], resourceSourceMetadata: source);
+
+		// Assert
+		var entries = model.Elements[0].Metadata.Where(m => m.Key == "project-path").ToList();
+		await Assert.That(entries).Count().IsEqualTo(1);
+		await Assert.That(entries[0].Value).IsEqualTo("src/Api");
+	}
+
+	[Test]
+	public async Task Build_AutoMetadata_LinksOnly_OmitsSourceMetadata()
+	{
+		// Arrange
+		var resource = CreateContainerResource("sql");
+		Dictionary<string, IReadOnlyList<LikeC4Metadata>> source = new()
+		{
+			["sql"] = [new("container-image", "redis:8.0")],
+		};
+
+		// Act
+		var model = ModelBuilder.Build(
+			[resource],
+			aspireMetadataInclusion: AspireMetadataInclusion.Links,
+			resourceSourceMetadata: source
+		);
+
+		// Assert
+		await Assert.That(model.Elements[0].Metadata).IsEmpty();
 	}
 
 	[Test]

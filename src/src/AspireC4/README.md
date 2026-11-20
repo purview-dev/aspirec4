@@ -20,7 +20,7 @@ the Aspire dashboard.
 - Optional: a local Node.js CLI runtime (`npx`, `pnpm`, `yarn`, `bun` or `deno`) if you call
   `.WithLocalCLI()` instead.
 
-The [requirements page](https://github.com/purview-dev/aspirec4/blob/main/docs/wiki/Requirements.md)
+The [requirements page](https://purview.dev/docs/aspirec4/requirements/)
 has the detail behind each of these.
 
 Container image exports verify bind sharing through `Purview.Containers.Environment`, using
@@ -94,7 +94,8 @@ builder.AddAspireC4(configure: options => options
 | `DisableHMR` | `false` | Disable Hot Module Replacement |
 | `HMRPort` | `null` | Fixed HMR port. Allocated dynamically by default |
 | `ContainerImageTag` | `null` (`latest`) | Pin the `ghcr.io/likec4/likec4` image tag |
-| `AutoIconsEnabled` | `true` | Infer LikeC4 icons from resource type and name |
+| `AutoIconsEnabled` | `true` | Recognise each resource's technology and icon from its framework (including a .NET project's flavour), Aspire type or container image, and fuzzy-match the rest. See [Technology and icons](https://purview.dev/docs/aspirec4/generated-output/#technology-and-icons) |
+| `TechnologyOverrides` | `[]` | App-wide rules that name the technology and icon by package, resource type or container image, before the built-in catalogue: `WithPackageTechnology`, `WithResourceTypeTechnology`, `WithContainerImageTechnology`. See [Overriding it](https://purview.dev/docs/aspirec4/generated-output/#overriding-it) |
 | `HideFromDashboard` | `false` | Hide the LikeC4 sidecar from the dashboard |
 | `IncludeAspireDashboardLinks` | `true` | Link diagram elements back to the Aspire dashboard |
 | `ExportImages` | `true` | Export every view as an image to `./.aspirec4/images/` when the model changes |
@@ -118,9 +119,9 @@ touches nothing.
 
 Hand-written `.c4` files — people, external systems, `extend` blocks for generated elements, extra
 views — go in a `likec4-extensions/` folder beside the AppHost, which is included automatically. See
-[Source control](https://github.com/purview-dev/aspirec4/blob/main/docs/wiki/Generated-Output.md#source-control)
+[Source control](https://purview.dev/docs/aspirec4/generated-output/#source-control)
 and
-[Extending the generated model](https://github.com/purview-dev/aspirec4/blob/main/docs/wiki/Generated-Output.md#extending-the-generated-model).
+[Extending the generated model](https://purview.dev/docs/aspirec4/generated-output/#extending-the-generated-model).
 
 ### Use your own LikeC4 project
 
@@ -153,6 +154,11 @@ builder.AddProject<Projects.Api>("api")
 builder.AddContainer("debug-tools", "busybox")
     .ExcludeFromLikeC4();
 ```
+
+Each element also records where it comes from, with no code: a local .NET, Node, Bun, Python or Go
+project gets its `project-path` (relative to the AppHost) and its runtime version, and a container gets its
+full `container-image` reference and tag. See
+[where each resource comes from](https://purview.dev/docs/aspirec4/configuration/customizing-resources/#where-each-resource-comes-from).
 
 ## Compile-time validation
 

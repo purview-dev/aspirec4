@@ -55,7 +55,7 @@ static class EfModelAnalyser
 		foreach (var pair in entities)
 		{
 			cancellationToken.ThrowIfCancellationRequested();
-			var table = BuildTable(pair.Key, pair.Value, fluent, entities, diagnostics);
+			var table = BuildTable(pair.Key, pair.Value, fluent, entities, diagnostics, cancellationToken);
 
 			tables.Add(table);
 			tableByEntity[pair.Key] = table;
@@ -171,7 +171,8 @@ static class EfModelAnalyser
 		string defaultName,
 		FluentConfiguration fluent,
 		Dictionary<INamedTypeSymbol, string> entities,
-		List<(DiagnosticDescriptor, string)> diagnostics
+		List<(DiagnosticDescriptor, string)> diagnostics,
+		CancellationToken cancellationToken
 	)
 	{
 		fluent.Entities.TryGetValue(entity.ToDisplayString(), out var config);
@@ -181,6 +182,9 @@ static class EfModelAnalyser
 			ClrTypeName = entity.ToDisplayString(),
 			Name = config?.TableName ?? GetAttributeString(entity, EfTypes.Attributes.Table, 0) ?? defaultName,
 			Schema = config?.Schema ?? GetAttributeNamedString(entity, EfTypes.Attributes.Table, "Schema"),
+			Comment = config?.Comment ?? GetAttributeString(entity, EfTypes.Attributes.Comment, 0),
+			Description = DescriptionAttribute(entity),
+			Documentation = Documentation.OfType(entity, cancellationToken),
 		};
 
 		var uniqueFromIndexes = ReadUniqueIndexProperties(entity);
@@ -209,7 +213,8 @@ static class EfModelAnalyser
 						StoreTypeMap.IsNullable(property.Type),
 						0,
 						property.Name,
-						StoreTypeMap.Unwrap(property.Type).Name
+						StoreTypeMap.Unwrap(property.Type).Name,
+						cancellationToken
 					);
 
 					continue;
@@ -220,6 +225,7 @@ static class EfModelAnalyser
 							property,
 							config,
 							uniqueFromIndexes,
+							cancellationToken,
 							StoreTypeMap.Json,
 							(StoreTypeMap.Unwrap(property.Type).Name, EfTypes.DomainTypeKinds.ComplexValueObject)
 						)
@@ -237,7 +243,14 @@ static class EfModelAnalyser
 			if (ScalarCollectionElement(property.Type) is { } element)
 			{
 				table.Columns.Add(
-					BuildColumn(property, config, uniqueFromIndexes, StoreTypeMap.Json, CollectionDomainType(element))
+					BuildColumn(
+						property,
+						config,
+						uniqueFromIndexes,
+						cancellationToken,
+						StoreTypeMap.Json,
+						CollectionDomainType(element)
+					)
 				);
 
 				continue;
@@ -255,7 +268,7 @@ static class EfModelAnalyser
 				continue;
 			}
 
-			table.Columns.Add(BuildColumn(property, config, uniqueFromIndexes));
+			table.Columns.Add(BuildColumn(property, config, uniqueFromIndexes, cancellationToken));
 		}
 
 		ApplyPrimaryKeys(entity, table, config);
@@ -278,6 +291,7 @@ static class EfModelAnalyser
 	/// <param name="property">The mapped property.</param>
 	/// <param name="config">Its entity's fluent configuration, when there is any.</param>
 	/// <param name="uniqueFromIndexes">Properties a unique index covers.</param>
+	/// <param name="cancellationToken">Cancels reading the property's documentation.</param>
 	/// <param name="inferredStoreType">
 	/// The store type to show when nothing is configured, for a column whose CLR type does not say — a
 	/// JSON-mapped value object or a collection. Configuration still wins.
@@ -287,6 +301,7 @@ static class EfModelAnalyser
 		IPropertySymbol property,
 		EntityConfiguration? config,
 		HashSet<string> uniqueFromIndexes,
+		CancellationToken cancellationToken,
 		string? inferredStoreType = null,
 		(string? Name, string? Kind)? domain = null
 	)
@@ -327,8 +342,24 @@ static class EfModelAnalyser
 				uniqueFromIndexes.Contains(property.Name) || config?.UniqueProperties.Contains(property.Name) == true,
 			MaxLength = maxLength,
 			Comment = fluentProperty?.Comment ?? GetAttributeString(property, EfTypes.Attributes.Comment, 0),
+			Description = DescriptionAttribute(property),
+			Documentation = Documentation.OfProperty(property, cancellationToken),
 		};
 	}
+
+	/// <summary>
+	/// The description a symbol declares for display: <c>[Description]</c>, then
+	/// <c>[Display(Description = …)]</c>, then <c>[DisplayName]</c>.
+	/// </summary>
+	/// <remarks>
+	/// Matched by name, like every other attribute here, so the service project needs no particular
+	/// package for it: <c>DescriptionAttribute</c> and <c>DisplayNameAttribute</c> are in the BCL and
+	/// <c>DisplayAttribute</c> in its data annotations.
+	/// </remarks>
+	static string? DescriptionAttribute(ISymbol symbol) =>
+		GetAttributeString(symbol, EfTypes.Attributes.Description, 0)
+		?? GetAttributeNamedString(symbol, EfTypes.Attributes.Display, "Description")
+		?? GetAttributeString(symbol, EfTypes.Attributes.DisplayName, 0);
 
 	/// <summary>How deep nested complex value objects are flattened before the walk stops.</summary>
 	const int MaxComplexDepth = 4;
@@ -353,7 +384,8 @@ static class EfModelAnalyser
 		bool nullable,
 		int depth,
 		string ownerProperty,
-		string ownerType
+		string ownerType,
+		CancellationToken cancellationToken
 	)
 	{
 		if (depth > MaxComplexDepth || StoreTypeMap.Unwrap(complexType) is not INamedTypeSymbol named)
@@ -379,7 +411,16 @@ static class EfModelAnalyser
 
 			if (mapping == ComplexMapping.Flattened)
 			{
-				AddComplexColumns(table, path, member.Type, memberNullable, depth + 1, ownerProperty, ownerType);
+				AddComplexColumns(
+					table,
+					path,
+					member.Type,
+					memberNullable,
+					depth + 1,
+					ownerProperty,
+					ownerType,
+					cancellationToken
+				);
 
 				continue;
 			}
@@ -422,6 +463,8 @@ static class EfModelAnalyser
 					MaxLength = GetAttributeInt(member, EfTypes.Attributes.MaxLength, 0)
 						?? GetAttributeInt(member, EfTypes.Attributes.StringLength, 0),
 					Comment = GetAttributeString(member, EfTypes.Attributes.Comment, 0),
+					Description = DescriptionAttribute(member),
+					Documentation = Documentation.OfProperty(member, cancellationToken),
 				}
 			);
 		}

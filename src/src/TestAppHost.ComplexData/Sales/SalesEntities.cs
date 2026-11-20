@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
@@ -19,10 +20,13 @@ public sealed class Customer
 {
 	public int Id { get; set; }
 
+	/// <summary>Exercises a description from <c>[Display(Description = …)]</c>, which wins over this summary.</summary>
 	[Required]
 	[MaxLength(200)]
+	[Display(Description = "Where order confirmations are sent")]
 	public string Email { get; set; } = string.Empty;
 
+	/// <summary>The name shown to staff, when the customer gave one.</summary>
 	[MaxLength(120)]
 	public string? DisplayName { get; set; }
 
@@ -54,6 +58,7 @@ public sealed class Category
 
 /// <summary>Table and column names come from attributes rather than convention.</summary>
 [Table("products", Schema = "catalogue")]
+[Description("Something the shop sells")]
 public sealed class Product
 {
 	[Column("product_id")]

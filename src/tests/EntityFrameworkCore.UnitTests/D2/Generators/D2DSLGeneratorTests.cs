@@ -2,7 +2,7 @@ using Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Models;
 
 namespace Aspire.Hosting.AspireC4.EntityFrameworkCore.D2.Generators;
 
-public sealed class D2DSLGeneratorTests
+public sealed partial class D2DSLGeneratorTests
 {
 	// Helpers
 

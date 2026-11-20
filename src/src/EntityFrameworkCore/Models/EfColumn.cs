@@ -67,4 +67,24 @@ public sealed record EfColumn
 	/// </summary>
 	/// <remarks>Mermaid renders attribute comments natively; DBML carries them as a column note.</remarks>
 	public string? Comment { get; init; }
+
+	/// <summary>
+	/// The description declared on the backing property with <c>[Description]</c>,
+	/// <c>[Display(Description = …)]</c> or, failing both, <c>[DisplayName]</c>.
+	/// </summary>
+	/// <remarks>
+	/// Shown only when <c>AspireC4EfDiagramOptions.ShowDescriptions</c> is set, and then only when
+	/// <c>AspireC4EfDiagramOptions.DescriptionSources</c> includes attributes.
+	/// </remarks>
+	public string? Description { get; init; }
+
+	/// <summary>
+	/// The backing property's XML documentation <c>&lt;summary&gt;</c>, as plain text — or, for a
+	/// positional record property, the record's <c>&lt;param&gt;</c> for it.
+	/// </summary>
+	/// <remarks>
+	/// The analyzer reads it from source; the metadata reader and the build-time dump read it from the
+	/// documentation file beside the assembly, so those two need <c>GenerateDocumentationFile</c>.
+	/// </remarks>
+	public string? Documentation { get; init; }
 }

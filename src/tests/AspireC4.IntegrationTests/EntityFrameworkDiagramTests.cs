@@ -75,6 +75,51 @@ public sealed class EntityFrameworkDiagramTests(Fixtures.TestAppHostFixture fixt
 	}
 
 	[Test]
+	public async Task StartAsync_WhenAppStarts_ModelCarriesTheSampleStyling(CancellationToken cancellationToken)
+	{
+		// The sample applies one example of every styling option (SampleErdStyling), so the whole path —
+		// options, rules, callbacks, descriptions read from the built projects — is proven end to end.
+		// Act
+		var presentation = Root(await fixture.ReadErModelAsync(cancellationToken)).GetProperty("presentation");
+		var styles = presentation.GetProperty("styles");
+		var descriptions = presentation.GetProperty("descriptions");
+
+		// Assert — a table rule, a single column, a relationship rule and a column callback.
+		await Assert
+			.That(styles.GetProperty("tables").GetProperty("Orders").GetProperty("badge").GetString())
+			.IsEqualTo("SALES");
+		await Assert
+			.That(
+				styles
+					.GetProperty("columns")
+					.GetProperty("Customers")
+					.GetProperty("email_address")
+					.GetProperty("badge")
+					.GetString()
+			)
+			.IsEqualTo("PII");
+		await Assert
+			.That(styles.GetProperty("relationships").TryGetProperty("Orders.CustomerId->Customers", out _))
+			.IsTrue();
+		await Assert
+			.That(styles.GetProperty("columns").GetProperty("OrderLines").TryGetProperty("ProductId", out _))
+			.IsTrue();
+
+		// Layout and viewer defaults.
+		await Assert.That(presentation.GetProperty("layout").GetProperty("direction").GetString()).IsEqualTo("RIGHT");
+		await Assert.That(presentation.GetProperty("viewer").GetProperty("legend").GetBoolean()).IsTrue();
+		await Assert.That(presentation.GetProperty("viewer").GetProperty("descriptions").GetBoolean()).IsTrue();
+
+		// Descriptions from an attribute, and from a summary the analyzer read out of the sample's source.
+		await Assert
+			.That(descriptions.GetProperty("tables").GetProperty("products").GetString())
+			.IsEqualTo("Something the shop sells");
+		await Assert
+			.That(descriptions.GetProperty("tables").GetProperty("Customers").GetString())
+			.IsEqualTo("A customer, keyed conventionally and uniquely indexed on email.");
+	}
+
+	[Test]
 	public async Task StartAsync_WhenAppStarts_ErDiagramResourceReportsAState(CancellationToken cancellationToken)
 	{
 		// The resource runs no process of its own, so without publishing its own state the dashboard

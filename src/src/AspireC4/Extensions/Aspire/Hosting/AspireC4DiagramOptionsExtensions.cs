@@ -380,6 +380,115 @@ public static class AspireC4DiagramOptionsExtensions
 	}
 
 	/// <summary>
+	/// Names the technology, and optionally the icon, of every resource whose own project depends on
+	/// <paramref name="packageName"/>: an npm package in <c>package.json</c>, a Python package in
+	/// <c>pyproject.toml</c> or <c>requirements.txt</c>, or a .NET project's NuGet package, framework
+	/// reference or MSBuild SDK.
+	/// </summary>
+	/// <param name="options">The diagram options.</param>
+	/// <param name="packageName">The package name, e.g. <c>@tanstack/react-start</c>, <c>litestar</c> or <c>MassTransit</c>.</param>
+	/// <param name="technology">The technology label shown on matched elements.</param>
+	/// <param name="icon">The LikeC4 icon; <see langword="null"/> to match one from <paramref name="technology"/>.</param>
+	/// <returns>The same <see cref="AspireC4DiagramOptions"/> for further configuration.</returns>
+	/// <seealso cref="AspireC4DiagramOptions.TechnologyOverrides"/>
+	[AspireExport]
+	public static AspireC4DiagramOptions WithPackageTechnology(
+		[NotNull] this AspireC4DiagramOptions options,
+		string packageName,
+		string technology,
+		string? icon = null
+	) => AddTechnologyOverride(options, TechnologyOverrideMatch.Package, packageName, technology, icon);
+
+	/// <summary>
+	/// Names the technology, and optionally the icon, of every resource of the type
+	/// <paramref name="typeName"/> or a subclass of it.
+	/// </summary>
+	/// <remarks>
+	/// A full name with its namespace (<c>Acme.Hosting.WidgetResource</c>) matches exactly; a short name
+	/// (<c>WidgetResource</c> or <c>Widget</c>) matches the class name with or without its <c>Resource</c>
+	/// suffix. The resource type the dashboard reports (<c>Azure.SqlServer</c>) matches too. In C#,
+	/// <see cref="WithResourceTypeTechnology{T}"/> is the type-safe equivalent.
+	/// </remarks>
+	/// <param name="options">The diagram options.</param>
+	/// <param name="typeName">The resource type's full or short name.</param>
+	/// <param name="technology">The technology label shown on matched elements.</param>
+	/// <param name="icon">The LikeC4 icon; <see langword="null"/> to match one from <paramref name="technology"/>.</param>
+	/// <returns>The same <see cref="AspireC4DiagramOptions"/> for further configuration.</returns>
+	/// <seealso cref="AspireC4DiagramOptions.TechnologyOverrides"/>
+	[AspireExport(id: "withResourceTypeTechnologyName", MethodName = "withResourceTypeTechnology")]
+	public static AspireC4DiagramOptions WithResourceTypeTechnology(
+		[NotNull] this AspireC4DiagramOptions options,
+		string typeName,
+		string technology,
+		string? icon = null
+	) => AddTechnologyOverride(options, TechnologyOverrideMatch.ResourceType, typeName, technology, icon);
+
+	/// <summary>
+	/// Names the technology, and optionally the icon, of every resource of type <typeparamref name="T"/> or
+	/// a subclass of it.
+	/// </summary>
+	/// <typeparam name="T">The resource type to match.</typeparam>
+	/// <param name="options">The diagram options.</param>
+	/// <param name="technology">The technology label shown on matched elements.</param>
+	/// <param name="icon">The LikeC4 icon; <see langword="null"/> to match one from <paramref name="technology"/>.</param>
+	/// <returns>The same <see cref="AspireC4DiagramOptions"/> for further configuration.</returns>
+	/// <seealso cref="AspireC4DiagramOptions.TechnologyOverrides"/>
+	[AspireExportIgnore(
+		Reason = "Polyglot bindings cannot pass a C# type argument; WithResourceTypeTechnology(string, ...) is exported instead."
+	)]
+	public static AspireC4DiagramOptions WithResourceTypeTechnology<T>(
+		[NotNull] this AspireC4DiagramOptions options,
+		string technology,
+		string? icon = null
+	)
+		where T : IResource =>
+		AddTechnologyOverride(
+			options,
+			TechnologyOverrideMatch.ResourceType,
+			typeof(T).FullName ?? typeof(T).Name,
+			technology,
+			icon
+		);
+
+	/// <summary>
+	/// Names the technology, and optionally the icon, of every resource running the container image
+	/// <paramref name="image"/>.
+	/// </summary>
+	/// <remarks>
+	/// The registry, the <c>library/</c> namespace, the tag and any digest are ignored on both sides, so
+	/// <c>docker.io/acme/widget:2</c> and <c>acme/widget</c> are the same rule. A pattern with a slash must
+	/// match the whole repository path; one without (<c>widget</c>) matches the last segment in any namespace.
+	/// </remarks>
+	/// <param name="options">The diagram options.</param>
+	/// <param name="image">The container image, e.g. <c>acme/widget</c>.</param>
+	/// <param name="technology">The technology label shown on matched elements.</param>
+	/// <param name="icon">The LikeC4 icon; <see langword="null"/> to match one from <paramref name="technology"/>.</param>
+	/// <returns>The same <see cref="AspireC4DiagramOptions"/> for further configuration.</returns>
+	/// <seealso cref="AspireC4DiagramOptions.TechnologyOverrides"/>
+	[AspireExport]
+	public static AspireC4DiagramOptions WithContainerImageTechnology(
+		[NotNull] this AspireC4DiagramOptions options,
+		string image,
+		string technology,
+		string? icon = null
+	) => AddTechnologyOverride(options, TechnologyOverrideMatch.ContainerImage, image, technology, icon);
+
+	static AspireC4DiagramOptions AddTechnologyOverride(
+		AspireC4DiagramOptions options,
+		TechnologyOverrideMatch match,
+		string pattern,
+		string technology,
+		string? icon
+	)
+	{
+		ArgumentException.ThrowIfNullOrWhiteSpace(pattern);
+		ArgumentException.ThrowIfNullOrWhiteSpace(technology);
+
+		options.TechnologyOverrides.Add(new(match, pattern.Trim(), technology.Trim(), icon));
+		return options;
+	}
+
+	/// <summary>
 	/// Adds <typeparamref name="T"/> ([NotNull]this AspireC4DiagramOptions options, and any subclass) to the set of resource types that are
 	/// automatically excluded from the generated LikeC4 diagram.
 	/// </summary>

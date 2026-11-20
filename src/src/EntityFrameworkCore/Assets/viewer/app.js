@@ -38,6 +38,68 @@ const elk = new ELK();
 
 const h = React.createElement;
 
+/*
+ * Presentation: what AspireC4EfDiagramOptions says about how the diagram looks, resolved in the
+ * AppHost and written beside the model's contexts. Every field is optional — a model JSON without a
+ * presentation, which is what the viewer check feeds it, draws exactly as the defaults below.
+ *
+ * Set once, when the model arrives, before anything renders; nothing changes it afterwards.
+ */
+let PRESENTATION = {};
+
+const LAYOUT_DEFAULTS = {
+	direction: "DOWN",
+	nodeSpacing: 72,
+	layerSpacing: 120,
+	contextSpacing: 88,
+	edgeStyle: "default",
+};
+
+const layoutOptions = () => ({ ...LAYOUT_DEFAULTS, ...(PRESENTATION.layout ?? {}) });
+
+/**
+ * A themed colour as CSS. light-dark() resolves against :root's color-scheme, which is exactly what
+ * the theme control sets, so a styled element follows a theme change with no re-render of its own.
+ * The AppHost has already filled each side from the other, so both are always present.
+ */
+const themed = (colour) => {
+	if (!colour?.light && !colour?.dark) return undefined;
+
+	const light = colour.light ?? colour.dark;
+	const dark = colour.dark ?? colour.light;
+
+	return light === dark ? light : `light-dark(${light}, ${dark})`;
+};
+
+const tableStyleOf = (table) => PRESENTATION.styles?.tables?.[table] ?? null;
+const columnStyleOf = (table, column) => PRESENTATION.styles?.columns?.[table]?.[column] ?? null;
+const relationshipStyleOf = (id) => PRESENTATION.styles?.relationships?.[id] ?? null;
+const tableDescriptionOf = (table) => PRESENTATION.descriptions?.tables?.[table] ?? null;
+const columnDescriptionOf = (table, column) => PRESENTATION.descriptions?.columns?.[table]?.[column] ?? null;
+
+const hasDescriptions = () =>
+	Object.keys(PRESENTATION.descriptions?.tables ?? {}).length > 0 ||
+	Object.keys(PRESENTATION.descriptions?.columns ?? {}).length > 0;
+
+/** The dash pattern a line style draws with; "solid" has to say so, or the flow animation's dashes show. */
+const DASHES = { solid: "none", dashed: "8 5", dotted: "2 4" };
+
+/** Which side of a card relationships leave from and arrive at, for each layout direction. */
+const FLOW_SIDES = {
+	DOWN: { in: Position.Top, out: Position.Bottom },
+	UP: { in: Position.Bottom, out: Position.Top },
+	RIGHT: { in: Position.Left, out: Position.Right },
+	LEFT: { in: Position.Right, out: Position.Left },
+};
+
+const flowSides = () => FLOW_SIDES[layoutOptions().direction] ?? FLOW_SIDES.DOWN;
+
+/** Whether relationships already run top to bottom, so a self-loop can share their handles. */
+const verticalDown = () => (layoutOptions().direction ?? "DOWN") === "DOWN";
+
+/** Whether relationships run sideways, so a self-loop hangs below its card rather than beside it. */
+const horizontalFlow = () => ["LEFT", "RIGHT"].includes(layoutOptions().direction);
+
 /** Flattens the descriptor into tables keyed by name, remembering which context each came from. */
 function flatten(model) {
 	const tables = [];
@@ -94,15 +156,28 @@ function buildEdges(tables, colourOf) {
 	const contextOf = new Map(tables.map((t) => [t.name, t.context]));
 	const edges = [];
 
+	const { edgeStyle } = layoutOptions();
+	const down = verticalDown();
+
 	for (const table of tables) {
 		for (const fk of table.foreignKeys ?? []) {
 			if (!known.has(String(fk.principalTable).toLowerCase())) continue;
 
+			// Mirrors ErdPresentation.RelationshipId in the AppHost, which keys the relationship styles.
+			const id = `${table.name}.${fk.columns.join("_")}->${fk.principalTable}`;
+			const self = fk.principalTable === table.name;
+			const styled = relationshipStyleOf(id);
+			const principalAccent = themed(tableStyleOf(fk.principalTable)?.accent);
+
 			edges.push({
-				id: `${table.name}.${fk.columns.join("_")}->${fk.principalTable}`,
+				id,
 				// Edges render below nodes, which would clip a self-loop's arc and label against the
 				// neighbouring card it has to reach around.
-				...(fk.principalTable === table.name ? { type: "selfLoop", zIndex: 5 } : {}),
+				...(self ? { type: "selfLoop", zIndex: 5 } : edgeStyle !== "default" ? { type: edgeStyle } : {}),
+				// A self-loop always arcs from the bottom of its card to the top, whichever way the rest
+				// of the diagram flows; in the default direction those are the flow handles themselves.
+				sourceHandle: self && !down ? "self-out" : "out",
+				targetHandle: self && !down ? "self-in" : "in",
 				// Drawn principal -> dependent so the dash animation, which runs along the path
 				// direction, flows toward the many end. The dependent is the many side unless the
 				// foreign key is unique.
@@ -111,8 +186,11 @@ function buildEdges(tables, colourOf) {
 				label: relationshipLabel(fk),
 				className: "flowing",
 				style: {
-					stroke: colourOf(contextOf.get(fk.principalTable)),
+					// A styled relationship wins, then a styled principal table's accent, then the
+					// principal's context — so a relationship is traceable to where it starts.
+					stroke: themed(styled?.accent) ?? principalAccent ?? colourOf(contextOf.get(fk.principalTable)),
 					strokeWidth: 2.5,
+					...(styled?.lineStyle ? { strokeDasharray: DASHES[styled.lineStyle] } : {}),
 					// The principal end is always exactly one: a foreign key references a single row.
 					markerStart: "url(#erd-one)",
 					markerEnd: `url(#${dependentMarker(fk)})`,
@@ -120,11 +198,16 @@ function buildEdges(tables, colourOf) {
 				// Labels sit on top of whatever the edge crosses, so they carry their own background
 				// rather than being read against a table underneath them.
 				labelShowBg: true,
-				labelBgStyle: { fill: "var(--panel)", stroke: "var(--line)" },
+				labelBgStyle: { fill: themed(styled?.background) ?? "var(--panel)", stroke: "var(--line)" },
 				labelBgPadding: [8, 4],
 				labelBgBorderRadius: 10,
-				labelStyle: { fill: "var(--fg)", fontSize: 11 },
-				data: { unique: !!fk.isUnique, required: !!fk.isRequired },
+				labelStyle: {
+					fill: themed(styled?.foreground) ?? "var(--fg)",
+					fontSize: 11,
+					...(styled?.bold ? { fontWeight: 700 } : {}),
+					...(styled?.italic ? { fontStyle: "italic" } : {}),
+				},
+				data: { unique: !!fk.isUnique, required: !!fk.isRequired, loop: self && horizontalFlow() ? "below" : "beside" },
 			});
 		}
 	}
@@ -137,10 +220,18 @@ function buildEdges(tables, colourOf) {
 // against both the light and dark themes.
 const CONTEXT_COLOURS = ["#3b82f6", "#22c55e", "#f59e0b", "#a855f7", "#f43f5e", "#14b8a6"];
 
-const tint = (hex, alpha) => {
-	const n = Number.parseInt(hex.slice(1), 16);
-	return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+/** The configured palette, when there is one, else the built-in six. */
+const contextPalette = () => {
+	const configured = (PRESENTATION.palette ?? []).map(themed).filter(Boolean);
+
+	return configured.length > 0 ? configured : CONTEXT_COLOURS;
 };
+
+/**
+ * A translucent wash of any CSS colour. color-mix rather than parsing hex, because a configured colour
+ * may be a light-dark() pair or a colour function, and the wash has to follow it through a theme change.
+ */
+const tint = (colour, alpha) => `color-mix(in srgb, ${colour} ${Math.round(alpha * 100)}%, transparent)`;
 
 /** A labelled container holding every table from one DbContext. */
 function ContextNode({ data }) {
@@ -307,32 +398,103 @@ const columnType = (col) => {
 	return t;
 };
 
+/**
+ * What hovering over a column says about it: everything the model knows that the row has no room for.
+ * Only built when tooltips are on; otherwise the type cell keeps its one long-standing tooltip, the
+ * database type behind a domain-type headline.
+ */
+function columnTooltip(table, col, style) {
+	const lines = [col.name];
+	let db = col.storeType ?? "";
+
+	if (col.maxLength > 0 && !db.includes("(")) db += `(${col.maxLength})`;
+
+	lines.push(`Database type: ${db}${col.isNullable ? ", nullable" : ""}`);
+
+	if (col.domainTypeName) lines.push(`Domain type: ${col.domainTypeName}${markerOf(col) ? ` (${markerOf(col)})` : ""}`);
+	if (col.clrTypeName) lines.push(`CLR type: ${col.clrTypeName}`);
+
+	const keys = columnBadges(col).map((k) => k.toUpperCase());
+
+	if (keys.length > 0) lines.push(`Keys: ${keys.join(", ")}`);
+
+	const description = columnDescriptionOf(table, col.name);
+
+	if (description) lines.push("", description);
+	if (col.comment && col.comment !== description) lines.push(`Comment: ${col.comment}`);
+	if (style?.tooltip) lines.push("", style.tooltip);
+
+	return lines.join("\n");
+}
+
+/** Inline style for a styled row: a bar in the accent, a fill, and the name's colour and weight. */
+const columnRowStyle = (style) =>
+	style
+		? {
+				...(style.accent ? { boxShadow: `inset 3px 0 0 ${themed(style.accent)}` } : {}),
+				...(style.background ? { background: themed(style.background) } : {}),
+			}
+		: undefined;
+
+const columnNameStyle = (style) =>
+	style
+		? {
+				...(style.foreground ? { color: themed(style.foreground) } : {}),
+				...(style.bold ? { fontWeight: 700 } : {}),
+				...(style.italic ? { fontStyle: "italic" } : {}),
+			}
+		: undefined;
+
 /** One ordinary column row, or one member of an opened complex value object. */
-function ColumnRow({ col, name, type, needle, className }) {
+function ColumnRow({ table, col, name, type, needle, className, view }) {
+	const style = columnStyleOf(table, col.name);
+	const description = view.descriptions ? columnDescriptionOf(table, col.name) : null;
+
 	return h(
 		"div",
 		{
 			// A table can match on a column the reader cannot see the reason for, so the row that caused
 			// the hit is marked rather than only the card around it.
-			className: `col${className}${needle && col.name.toLowerCase().includes(needle) ? " hit" : ""}`,
+			className: `col${className}${needle && col.name.toLowerCase().includes(needle) ? " hit" : ""}${style ? " styled" : ""}`,
+			style: columnRowStyle(style),
+			title: view.tooltips ? columnTooltip(table, col, style) : undefined,
 		},
 		h(
 			"span",
 			{ className: "name" },
-			h("span", { className: "col-name" }, name),
+			h("span", { className: "col-name", style: columnNameStyle(style) }, name),
 			...columnBadges(col).map((k) => h("span", { className: `badge ${k}`, key: k }, k.toUpperCase())),
+			style?.badge
+				? h(
+						"span",
+						{ className: "badge custom", key: "custom", style: badgeStyle(style) },
+						style.badge,
+					)
+				: null,
 		),
 		h(
 			"span",
 			{
 				className: "type",
 				// The database type stays reachable even when the domain type is the headline.
-				title: !bothShown() && type.annotation ? type.annotation : undefined,
+				title: !view.tooltips && !bothShown() && type.annotation ? type.annotation : undefined,
 			},
 			type.text,
 		),
+		// Every row of a card carries the cell, filled or not, so the type column stays aligned. A card
+		// with no column descriptions has no cell at all: an empty one would still take a flex gap.
+		view.descWidth > 0
+			? h(
+					"span",
+					{ className: "desc", style: { width: `${view.descWidth}px` }, title: description ?? undefined },
+					description ?? "",
+				)
+			: null,
 	);
 }
+
+/** A custom badge takes its element's accent, so a legend entry and the badge it explains agree. */
+const badgeStyle = (style) => (style?.accent ? { color: themed(style.accent) } : undefined);
 
 /**
  * The rows a card draws, with each complex value object folded under a row that opens it.
@@ -343,17 +505,25 @@ function ColumnRow({ col, name, type, needle, className }) {
 function cardRowElements(data, onToggle) {
 	const expanded = expandedOf(data);
 	const elements = [];
+	const table = data.table.name;
+	const view = {
+		descriptions: !!data.descriptions,
+		descWidth: data.descriptions ? (data.card?.descWidth ?? 0) : 0,
+		tooltips: tooltipsOn(),
+	};
 
 	for (const row of rowPlan(data.table)) {
 		if (row.kind === "column") {
 			elements.push(
 				h(ColumnRow, {
 					key: row.key,
+					table,
 					col: row.col,
 					name: row.col.name,
 					type: rowType(row.col, null),
 					needle: data.needle,
 					className: "",
+					view,
 				}),
 			);
 
@@ -387,6 +557,7 @@ function cardRowElements(data, onToggle) {
 					h("span", { className: "col-name" }, row.name),
 				),
 				h("span", { className: "type" }, groupType(row, open)),
+				view.descWidth > 0 ? h("span", { className: "desc", style: { width: `${view.descWidth}px` } }) : null,
 			),
 		);
 
@@ -396,11 +567,13 @@ function cardRowElements(data, onToggle) {
 			elements.push(
 				h(ColumnRow, {
 					key: col.name,
+					table,
 					col,
 					name: memberName(row, col),
 					type: rowType(col, row),
 					needle: data.needle,
 					className: " member",
+					view,
 				}),
 			);
 		}
@@ -433,12 +606,24 @@ function EntityNode({ id, data, selected }) {
 		[id, setNodes],
 	);
 
+	const style = tableStyleOf(data.table.name);
+	// A styled table's accent replaces its context colour on the card; the container keeps the context's.
+	const accent = themed(style?.accent) ?? data.colour;
+	const sides = flowSides();
+	const description = data.descriptions ? tableDescriptionOf(data.table.name) : null;
+
 	return h(
 		"div",
 		{
-			className: `entity ${data.match}`,
+			className: `entity ${data.match}${style ? " styled" : ""}`,
 			// The node's box is the card: the width is measured, and a manual resize overrides it.
-			style: { borderColor: tint(data.colour, 0.5), width: "100%", height: "100%" },
+			style: {
+				borderColor: tint(accent, style?.accent ? 0.85 : 0.5),
+				...(style?.lineStyle && style.lineStyle !== "solid" ? { borderStyle: style.lineStyle } : {}),
+				...(style?.background ? { background: themed(style.background) } : {}),
+				width: "100%",
+				height: "100%",
+			},
 		},
 		h(NodeResizer, {
 			isVisible: selected,
@@ -447,18 +632,80 @@ function EntityNode({ id, data, selected }) {
 			lineClassName: "entity-resize-line",
 			handleClassName: "entity-resize-handle",
 		}),
-		h(Handle, { type: "target", position: Position.Top, isConnectable: false }),
+		h(Handle, { type: "target", position: sides.in, id: "in", isConnectable: false }),
+		// A self-loop needs a side no other relationship uses. Flowing down, that is the right-hand
+		// side, reached from the flow handles themselves; flowing up, the same, from handles of its own;
+		// flowing sideways, both flanks carry relationships, so the loop hangs below the card between two
+		// handles set apart on its bottom edge.
+		...(verticalDown()
+			? []
+			: [
+					h(Handle, {
+						key: "self-in",
+						type: "target",
+						position: horizontalFlow() ? Position.Bottom : Position.Top,
+						id: "self-in",
+						isConnectable: false,
+						className: "self-handle",
+						...(horizontalFlow() ? { style: { left: "30%" } } : {}),
+					}),
+					h(Handle, {
+						key: "self-out",
+						type: "source",
+						position: Position.Bottom,
+						id: "self-out",
+						isConnectable: false,
+						className: "self-handle",
+						...(horizontalFlow() ? { style: { left: "70%" } } : {}),
+					}),
+				]),
 		h(
 			"header",
-			{ style: { borderBottomColor: data.colour, background: tint(data.colour, 0.14) } },
-			h("span", null, data.table.name),
-			// The context is the container's label now, so only the schema is worth repeating here.
-			data.table.schema ? h("span", { className: "schema" }, data.table.schema) : null,
+			{
+				style: {
+					borderBottomColor: accent,
+					background: tint(accent, 0.14),
+					...(style?.foreground ? { color: themed(style.foreground) } : {}),
+					...(style?.bold === false ? { fontWeight: 500 } : style?.bold ? { fontWeight: 800 } : {}),
+					...(style?.italic ? { fontStyle: "italic" } : {}),
+				},
+				title: tooltipsOn() ? tableTooltip(data.table, style) : undefined,
+			},
+			h("span", { className: "table-name" }, data.table.name),
+			h(
+				"span",
+				{ className: "header-end" },
+				style?.badge ? h("span", { className: "badge custom", style: badgeStyle(style) }, style.badge) : null,
+				// The context is the container's label now, so only the schema is worth repeating here.
+				data.table.schema ? h("span", { className: "schema" }, data.table.schema) : null,
+			),
 		),
+		description ? h("div", { className: "table-desc", title: description }, description) : null,
 		// "names" mode is the overview: the header alone, so a large schema can be read at a glance.
 		data.tables === "names" ? null : cardRowElements(data, onToggle),
-		h(Handle, { type: "source", position: Position.Bottom, isConnectable: false }),
+		h(Handle, { type: "source", position: sides.out, id: "out", isConnectable: false }),
 	);
+}
+
+/** Whether hovering explains a row or a header. Set by the AppHost; on unless turned off there. */
+const tooltipsOn = () => PRESENTATION.viewer?.tooltips ?? true;
+
+/** What hovering over a table's header says: where it comes from, and what it is for. */
+function tableTooltip(table, style) {
+	const lines = [table.name, `Entity: ${table.clrTypeName}`, `Context: ${table.context}`];
+
+	if (table.schema) lines.push(`Schema: ${table.schema}`);
+	if (table.isJoinEntity) lines.push("Join table");
+
+	lines.push(`${(table.columns ?? []).length} columns · ${(table.foreignKeys ?? []).length} foreign keys`);
+
+	const description = tableDescriptionOf(table.name);
+
+	if (description) lines.push("", description);
+	if (table.comment && table.comment !== description) lines.push(`Comment: ${table.comment}`);
+	if (style?.tooltip) lines.push("", style.tooltip);
+
+	return lines.join("\n");
 }
 
 /*
@@ -520,16 +767,44 @@ const textWidth = (text, font) => {
 	return measureContext.measureText(text).width;
 };
 
+// A description is set smaller and muted, and capped: it is a gloss on the column, and a long one
+// should not stretch every card to the width of a sentence. The full text is its tooltip.
+const FONT_DESC = 'italic 11px ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif';
+const DESC_MAX_WIDTH = 240;
+const TABLE_DESC_MAX_WIDTH = 360;
+
+/** The width one badge takes beside a name, from its text. */
+const badgeWidth = (text) =>
+	BADGE_GAP + textWidth(text, FONT_BADGE) + BADGE_PADDING + text.length * 9 * BADGE_LETTER_SPACING;
+
 /** The width one column row needs, as a name, its badges and its type. */
-function columnRowWidth(col, name, indent, type) {
-	let row = indent + textWidth(name, FONT_SANS);
+function columnRowWidth(table, col, name, indent, type) {
+	const style = columnStyleOf(table, col.name);
+	let row = indent + textWidth(name, style?.bold ? `700 ${FONT_SANS}` : FONT_SANS);
 
 	for (const badge of columnBadges(col)) {
-		const text = badge.toUpperCase();
-		row += BADGE_GAP + textWidth(text, FONT_BADGE) + BADGE_PADDING + text.length * 9 * BADGE_LETTER_SPACING;
+		row += badgeWidth(badge.toUpperCase());
 	}
 
+	if (style?.badge) row += badgeWidth(style.badge);
+
 	return row + COLUMN_GAP + textWidth(type, FONT_TYPE);
+}
+
+/**
+ * The width of the card's description column: its longest description, capped. Every row of the card
+ * gets a cell this wide, so the types to its left stay aligned whether a row has a description or not.
+ */
+function descriptionWidth(table) {
+	let widest = 0;
+
+	for (const col of table.columns ?? []) {
+		const description = columnDescriptionOf(table.name, col.name);
+
+		if (description) widest = Math.max(widest, textWidth(description, FONT_DESC));
+	}
+
+	return widest === 0 ? 0 : Math.ceil(Math.min(DESC_MAX_WIDTH, widest + MEASURE_BUFFER));
 }
 
 /**
@@ -538,16 +813,30 @@ function columnRowWidth(col, name, indent, type) {
  * A collapsed group is measured as though it were open, so expanding one never re-widens the card and
  * nothing has to be laid out again to accommodate it.
  */
-function cardWidth(table, tables) {
-	let widest = textWidth(table.name, FONT_HEADER);
+function cardWidth(table, tables, descriptions = false) {
+	const style = tableStyleOf(table.name);
+	let widest = textWidth(table.name, style?.bold ? FONT_HEADER.replace("600", "800") : FONT_HEADER);
 
 	if (table.schema) widest += COLUMN_GAP + textWidth(table.schema, FONT_SCHEMA);
+	if (style?.badge) widest += badgeWidth(style.badge);
+
+	const tableDescription = descriptions ? tableDescriptionOf(table.name) : null;
+
+	if (tableDescription) {
+		widest = Math.max(widest, Math.min(TABLE_DESC_MAX_WIDTH, textWidth(tableDescription, FONT_DESC)));
+	}
 
 	// In names mode only the header is drawn, so only the header has to fit.
 	if (tables !== "names") {
+		const desc = descriptions ? descriptionWidth(table) : 0;
+		const extra = desc > 0 ? COLUMN_GAP + desc : 0;
+
 		for (const row of rowPlan(table)) {
 			if (row.kind === "column") {
-				widest = Math.max(widest, columnRowWidth(row.col, row.col.name, 0, rowType(row.col, null).text));
+				widest = Math.max(
+					widest,
+					columnRowWidth(table.name, row.col, row.col.name, 0, rowType(row.col, null).text) + extra,
+				);
 
 				continue;
 			}
@@ -559,13 +848,14 @@ function cardWidth(table, tables) {
 					CHEVRON_GAP +
 					textWidth(row.name, FONT_SANS) +
 					COLUMN_GAP +
-					textWidth(groupType(row, false), FONT_TYPE),
+					textWidth(groupType(row, false), FONT_TYPE) +
+					extra,
 			);
 
 			for (const col of row.columns) {
 				widest = Math.max(
 					widest,
-					columnRowWidth(col, memberName(row, col), MEMBER_INDENT, rowType(col, row).text),
+					columnRowWidth(table.name, col, memberName(row, col), MEMBER_INDENT, rowType(col, row).text) + extra,
 				);
 			}
 		}
@@ -574,11 +864,16 @@ function cardWidth(table, tables) {
 	return Math.ceil(widest + CARD_PADDING * 2 + ENTITY_BORDER + MEASURE_BUFFER);
 }
 
-/** How many rows a card draws: a closed group is one row, an open one is itself plus its members. */
-function cardRows(table, tables, expanded) {
-	if (tables === "names") return 0;
+/**
+ * How many rows a card draws: a closed group is one row, an open one is itself plus its members, and a
+ * table's own description takes one of its own under the header.
+ */
+function cardRows(table, tables, expanded, descriptions = false) {
+	const described = descriptions && tableDescriptionOf(table.name) ? 1 : 0;
 
-	let rows = 0;
+	if (tables === "names") return described;
+
+	let rows = described;
 
 	for (const row of rowPlan(table)) {
 		rows += row.kind === "column" ? 1 : 1 + (expanded.has(row.key) ? row.columns.length : 0);
@@ -596,9 +891,11 @@ function cardRows(table, tables, expanded) {
  * @param tables the table display mode: "columns" draws every column, "names" only the header.
  * @param expanded the complex value-object groups this card is showing the members of.
  */
-const cardSize = (table, tables, expanded = new Set()) => ({
-	width: Math.max(ENTITY_MIN_WIDTH, cardWidth(table, tables)),
-	height: ENTITY_BORDER + ENTITY_HEADER_HEIGHT + cardRows(table, tables, expanded) * ENTITY_ROW_HEIGHT,
+const cardSize = (table, tables, expanded = new Set(), descriptions = false) => ({
+	width: Math.max(ENTITY_MIN_WIDTH, cardWidth(table, tables, descriptions)),
+	height:
+		ENTITY_BORDER + ENTITY_HEADER_HEIGHT + cardRows(table, tables, expanded, descriptions) * ENTITY_ROW_HEIGHT,
+	descWidth: descriptions && tables !== "names" ? descriptionWidth(table) : 0,
 });
 
 const SELF_LOOP_REACH = 280;
@@ -612,13 +909,49 @@ const SELF_LOOP_LABEL_ALLOWANCE = 70;
 /** The gutter a self-loop needs beside a card of the given width. */
 const selfLoopGutter = (width) => SELF_LOOP_REACH * SELF_LOOP_PEAK - width / 2 + SELF_LOOP_LABEL_ALLOWANCE;
 
+/*
+ * The loop that hangs below a card in a sideways layout. Both control points sit the same distance
+ * below the card, so the curve's lowest point — where the label rides — is three quarters of the way
+ * down: a cubic's midpoint with both handles level.
+ */
+const SELF_LOOP_DROP = 120;
+const SELF_LOOP_DROP_PEAK = 0.75;
+const SELF_LOOP_DROP_LABEL = 26;
+
+/** The space a hanging self-loop needs below its card, label included. */
+const selfLoopDrop = () => SELF_LOOP_DROP * SELF_LOOP_DROP_PEAK + SELF_LOOP_DROP_LABEL;
+
 /**
  * A relationship from a table to itself, such as a parent category.
  *
  * The default edge runs from the node's bottom handle to its own top handle, which passes straight
  * behind the card and leaves only a stub visible. This arcs clear of the right-hand edge instead.
  */
-function SelfLoopEdge({ sourceX, sourceY, targetX, targetY, style, label }) {
+function SelfLoopEdge({ sourceX, sourceY, targetX, targetY, style, label, data }) {
+	if (data?.loop === "below") {
+		const drop = SELF_LOOP_DROP;
+		const d = `M ${sourceX},${sourceY} C ${sourceX + 30},${sourceY + drop} ${targetX - 30},${targetY + drop} ${targetX},${targetY}`;
+
+		return h(
+			React.Fragment,
+			null,
+			h("path", { className: "react-flow__edge-path", d, style, fill: "none" }),
+			label
+				? h(
+						"text",
+						{
+							className: "self-loop-label",
+							x: (sourceX + targetX) / 2,
+							y: Math.max(sourceY, targetY) + drop * SELF_LOOP_DROP_PEAK + 12,
+							dominantBaseline: "middle",
+							textAnchor: "middle",
+						},
+						label,
+					)
+				: null,
+		);
+	}
+
 	const reach = SELF_LOOP_REACH;
 	const d = `M ${sourceX},${sourceY} C ${sourceX + reach},${sourceY + 24} ${targetX + reach},${targetY - 24} ${targetX},${targetY}`;
 
@@ -651,12 +984,13 @@ const edgeTypes = { selfLoop: SelfLoopEdge };
  * Wider than the rendered card when the table references itself: React Flow draws the card at its
  * own width against the left of this box, which leaves the remainder as clear gutter for the loop.
  */
-const entitySize = (table, selfReferencing, tables) => {
-	const card = cardSize(table, tables);
+const entitySize = (table, selfReferencing, tables, descriptions) => {
+	const card = cardSize(table, tables, new Set(), descriptions);
+	const below = selfReferencing && horizontalFlow();
 
 	return {
-		width: card.width + (selfReferencing ? selfLoopGutter(card.width) : 0),
-		height: card.height,
+		width: card.width + (selfReferencing && !below ? selfLoopGutter(card.width) : 0),
+		height: card.height + (below ? selfLoopDrop() : 0),
 	};
 };
 
@@ -691,7 +1025,7 @@ function resizeEntity(node) {
 
 	// Only the row count changes, so the height is recomputed directly rather than re-measuring every
 	// name and type through the canvas — this runs for every card on every keystroke of a search.
-	const rows = cardRows(node.data.table, node.data.tables, expandedOf(node.data));
+	const rows = cardRows(node.data.table, node.data.tables, expandedOf(node.data), node.data.descriptions);
 	const height = ENTITY_BORDER + ENTITY_HEADER_HEIGHT + rows * ENTITY_ROW_HEIGHT;
 
 	if (node.data.card?.height === height && node.style?.height === height) return node;
@@ -784,14 +1118,14 @@ function fitContexts(nodes) {
  */
 const LAYOUT_KEY = "aspirec4-erd-layout";
 
-const layoutFingerprint = (tables, mode) =>
-	`${mode}|` +
+const layoutFingerprint = (tables, mode, descriptions = false) =>
+	`${mode}${descriptions ? "+desc" : ""}|${layoutOptions().direction}|` +
 	tables
 		.map((t) => `${t.name}#${(t.columns ?? []).length}`)
 		.sort()
 		.join("|");
 
-function saveLayout(nodes, tables, mode) {
+function saveLayout(nodes, tables, mode, descriptions = false) {
 	try {
 		const containers = {};
 		const entities = {};
@@ -823,14 +1157,14 @@ function saveLayout(nodes, tables, mode) {
 
 		localStorage.setItem(
 			LAYOUT_KEY,
-			JSON.stringify({ fingerprint: layoutFingerprint(tables, mode), containers, entities }),
+			JSON.stringify({ fingerprint: layoutFingerprint(tables, mode, descriptions), containers, entities }),
 		);
 	} catch {
 		/* the arrangement still applies to this session */
 	}
 }
 
-function loadLayout(tables, mode) {
+function loadLayout(tables, mode, descriptions = false) {
 	try {
 		const raw = localStorage.getItem(LAYOUT_KEY);
 
@@ -838,7 +1172,7 @@ function loadLayout(tables, mode) {
 
 		const saved = JSON.parse(raw);
 
-		return saved.fingerprint === layoutFingerprint(tables, mode) ? saved : null;
+		return saved.fingerprint === layoutFingerprint(tables, mode, descriptions) ? saved : null;
 	} catch {
 		return null;
 	}
@@ -861,6 +1195,7 @@ function saveFrom(nodes) {
 			nodes,
 			entities.map((node) => node.data.table),
 			entities[0].data.tables,
+			entities[0].data.descriptions,
 		);
 	}
 
@@ -868,7 +1203,7 @@ function saveFrom(nodes) {
 }
 
 /** Rebuilds the graph from a saved arrangement, dropping anything the model no longer has. */
-function restoreLayout(saved, tables, colourOf, mode) {
+function restoreLayout(saved, tables, colourOf, mode, descriptions = false) {
 	const nodes = [];
 	const known = new Set(tables.map((t) => t.name));
 
@@ -892,7 +1227,7 @@ function restoreLayout(saved, tables, colourOf, mode) {
 		if (!table || !known.has(id)) continue;
 
 		const expanded = position.expanded ?? [];
-		const card = cardSize(table, mode, new Set(expanded));
+		const card = cardSize(table, mode, new Set(expanded), descriptions);
 		const manual = position.width != null || position.height != null;
 		const width = manual ? position.width : card.width;
 		const height = manual ? position.height : card.height;
@@ -913,6 +1248,7 @@ function restoreLayout(saved, tables, colourOf, mode) {
 				needle: "",
 				card,
 				tables: mode,
+				descriptions,
 				expanded,
 				forced: [],
 			},
@@ -925,13 +1261,15 @@ function restoreLayout(saved, tables, colourOf, mode) {
 /** Assigns each context a stable colour, so nodes and edges agree on it. */
 function contextColours(tables) {
 	const contexts = [...new Set(tables.map((t) => t.context))];
-	const byContext = new Map(contexts.map((c, i) => [c, CONTEXT_COLOURS[i % CONTEXT_COLOURS.length]]));
+	const palette = contextPalette();
+	const byContext = new Map(contexts.map((c, i) => [c, palette[i % palette.length]]));
 
-	return (context) => byContext.get(context) ?? CONTEXT_COLOURS[0];
+	return (context) => byContext.get(context) ?? palette[0];
 }
 
-async function layout(tables, edges, colourOf, mode) {
+async function layout(tables, edges, colourOf, mode, descriptions = false) {
 	const contexts = [...new Set(tables.map((t) => t.context))];
+	const { direction, nodeSpacing, layerSpacing, contextSpacing } = layoutOptions();
 
 	const contextOf = new Map(tables.map((t) => [t.name, t.context]));
 	const selfReferencing = new Set(edges.filter((e) => e.source === e.target).map((e) => e.source));
@@ -948,26 +1286,26 @@ async function layout(tables, edges, colourOf, mode) {
 			// one row was already closer to that ratio than wrapping would be, and 1.4 produced a
 			// ragged three-plus-one. A target squarer than the viewport is what actually wraps.
 			"elk.aspectRatio": "1.1",
-			"elk.spacing.nodeNode": "88",
+			"elk.spacing.nodeNode": String(contextSpacing),
 		},
 		children: contexts.map((context) => ({
 			id: `ctx:${context}`,
 			layoutOptions: {
 				"elk.algorithm": "layered",
-				"elk.direction": "DOWN",
+				"elk.direction": direction,
 				// Top carries the label that sits on the border line; the other three are even, so the
 				// container reads as a frame around its tables rather than a box they are pushed into.
 				"elk.padding": "[top=56,left=32,bottom=32,right=32]",
 				// The gap between layers carries the relationship labels, which are drawn at the middle
 				// of an edge over their own background: too little room and a label lands on the card
 				// below it. The sideways gap only has to separate two cards, so it is smaller.
-				"elk.spacing.nodeNode": "72",
-				"elk.layered.spacing.nodeNodeBetweenLayers": "120",
+				"elk.spacing.nodeNode": String(nodeSpacing),
+				"elk.layered.spacing.nodeNodeBetweenLayers": String(layerSpacing),
 				// Tables that no relationship connects form separate components, which ELK lays out one
 				// by one and then packs — a seam the between-layer spacing never reaches. Left at its
 				// default of 20 those groups sit almost touching, which reads as one crowded block
 				// rather than as the unrelated groups they are.
-				"elk.spacing.componentComponent": "120",
+				"elk.spacing.componentComponent": String(layerSpacing),
 				// Edges routed around a card keep clear of it rather than running along its border, and
 				// parallel edges stay far enough apart to be followed individually.
 				"elk.spacing.edgeNode": "40",
@@ -977,7 +1315,10 @@ async function layout(tables, edges, colourOf, mode) {
 			},
 			children: tables
 				.filter((t) => t.context === context)
-				.map((table) => ({ id: table.name, ...entitySize(table, selfReferencing.has(table.name), mode) })),
+				.map((table) => ({
+					id: table.name,
+					...entitySize(table, selfReferencing.has(table.name), mode, descriptions),
+				})),
 			// Only relationships within this context: they order the tables sensibly. Cross-context
 			// edges are left out because ELK's routing is unused — React Flow draws every edge itself
 			// from the resulting node positions. Self-loops go too: they say nothing about ordering,
@@ -1009,7 +1350,7 @@ async function layout(tables, edges, colourOf, mode) {
 
 		for (const child of container.children ?? []) {
 			const table = tables.find((t) => t.name === child.id);
-			const card = cardSize(table, mode);
+			const card = cardSize(table, mode, new Set(), descriptions);
 
 			nodes.push({
 				id: child.id,
@@ -1018,7 +1359,17 @@ async function layout(tables, edges, colourOf, mode) {
 				position: { x: child.x ?? 0, y: child.y ?? 0 },
 				style: { width: card.width, height: card.height },
 				// Complex value objects start folded: a fresh card shows the table, not its interiors.
-				data: { table, colour, match: "", needle: "", card, tables: mode, expanded: [], forced: [] },
+				data: {
+					table,
+					colour,
+					match: "",
+					needle: "",
+					card,
+					tables: mode,
+					descriptions,
+					expanded: [],
+					forced: [],
+				},
 			});
 		}
 	}
@@ -1035,9 +1386,23 @@ async function layout(tables, edges, colourOf, mode) {
  */
 const THEMES = ["auto", "light", "dark"];
 const ANIMATIONS = ["off", "slow", "normal", "fast"];
-const BACKGROUNDS = ["lines", "dots", "cross"];
+const BACKGROUNDS = ["lines", "dots", "cross", "none"];
 const MOTIONS = ["system", "reduce", "allow"];
 const TABLES = ["columns", "names"];
+const SWITCHES = ["off", "on"];
+
+/** The values each setting can take; a stored value outside them is ignored. */
+const SETTING_CHOICES = {
+	theme: THEMES,
+	animation: ANIMATIONS,
+	background: BACKGROUNDS,
+	motion: MOTIONS,
+	tables: TABLES,
+	descriptions: SWITCHES,
+	legend: SWITCHES,
+	transitions: SWITCHES,
+	hover: SWITCHES,
+};
 
 const SETTINGS_KEY = "aspirec4-erd-settings";
 
@@ -1047,19 +1412,61 @@ const SETTINGS_DEFAULTS = {
 	background: "lines",
 	motion: "system",
 	tables: "columns",
+	descriptions: "off",
+	legend: "off",
+	transitions: "on",
+	hover: "on",
 };
 
 const ANIMATION_DURATIONS = { slow: "1.8s", normal: "0.9s", fast: "0.45s" };
 
-/** Reads the stored settings, tolerating an origin where storage is unavailable. */
+const onOff = (value, fallback) => (value === undefined ? fallback : value ? "on" : "off");
+
+/** Where each setting starts: the AppHost's configured default, or the viewer's own. */
+function configuredDefaults() {
+	const viewer = PRESENTATION.viewer ?? {};
+	const pick = (key, value) => (SETTING_CHOICES[key].includes(value) ? value : SETTINGS_DEFAULTS[key]);
+
+	return {
+		...SETTINGS_DEFAULTS,
+		theme: pick("theme", viewer.theme),
+		animation: pick("animation", viewer.animation),
+		background: pick("background", viewer.background),
+		tables: pick("tables", viewer.tables),
+		descriptions: onOff(viewer.descriptions, SETTINGS_DEFAULTS.descriptions),
+		legend: onOff(viewer.legend, SETTINGS_DEFAULTS.legend),
+		transitions: onOff(viewer.transitions, SETTINGS_DEFAULTS.transitions),
+		hover: onOff(viewer.hover, SETTINGS_DEFAULTS.hover),
+	};
+}
+
+/**
+ * Reads the stored settings, tolerating an origin where storage is unavailable.
+ *
+ * Each choice is stored with the default it was made against. A reader's choice outlives a reload,
+ * but not a change of the AppHost's default for that setting: the configuration has said something
+ * new, and a choice made against the old default would silently hide it.
+ */
 function storedSettings() {
+	const defaults = configuredDefaults();
+
 	try {
 		const raw = localStorage.getItem(SETTINGS_KEY);
 		const parsed = raw ? JSON.parse(raw) : {};
+		const against = parsed.defaults ?? {};
+		const settings = { ...defaults };
 
-		return { ...SETTINGS_DEFAULTS, ...parsed };
+		for (const key of Object.keys(SETTING_CHOICES)) {
+			const value = parsed[key];
+			// A store written before defaults were recorded made its choices against the built-in ones.
+			const madeAgainst = against[key] ?? SETTINGS_DEFAULTS[key];
+
+			if (SETTING_CHOICES[key].includes(value) && madeAgainst === defaults[key]) settings[key] = value;
+		}
+
+		return settings;
 	} catch {
-		return { ...SETTINGS_DEFAULTS };
+		return defaults;
 	}
 }
 
@@ -1068,7 +1475,7 @@ function useSettings() {
 
 	useEffect(() => {
 		try {
-			localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+			localStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...settings, defaults: configuredDefaults() }));
 		} catch {
 			/* the choice still applies to this session */
 		}
@@ -1080,6 +1487,8 @@ function useSettings() {
 
 		if (settings.motion === "system") delete root.dataset.motion;
 		else root.dataset.motion = settings.motion;
+
+		root.dataset.transitions = settings.transitions;
 
 		const duration = ANIMATION_DURATIONS[settings.animation];
 
@@ -1219,6 +1628,58 @@ async function exportImage(format, nodes, title) {
 	return true;
 }
 
+/**
+ * What the colours and badges mean: one swatch per context, the key badges, and every badge a style
+ * adds, in the colour that style gives it.
+ */
+function Legend({ tables }) {
+	const colourOf = contextColours(tables);
+	const contexts = [...new Set(tables.map((t) => t.context))];
+	const custom = new Map();
+
+	const collect = (style) => {
+		if (style?.badge && !custom.has(style.badge)) custom.set(style.badge, style);
+	};
+
+	for (const style of Object.values(PRESENTATION.styles?.tables ?? {})) collect(style);
+
+	for (const columns of Object.values(PRESENTATION.styles?.columns ?? {})) {
+		for (const style of Object.values(columns)) collect(style);
+	}
+
+	const entry = (key, swatch, label) =>
+		h("div", { className: "legend-entry", key }, swatch, h("span", null, label));
+
+	return h(
+		"div",
+		{ className: "legend", role: "group", "aria-label": "Legend" },
+		h("div", { className: "legend-title" }, "Contexts"),
+		...contexts.map((context) =>
+			entry(
+				context,
+				h("span", { className: "legend-swatch", style: { background: colourOf(context) } }),
+				context,
+			),
+		),
+		h("div", { className: "legend-title" }, "Keys"),
+		entry("pk", h("span", { className: "badge pk" }, "PK"), "Primary key"),
+		entry("fk", h("span", { className: "badge fk" }, "FK"), "Foreign key"),
+		entry("uk", h("span", { className: "badge uk" }, "UK"), "Unique"),
+		...(custom.size > 0
+			? [
+					h("div", { className: "legend-title", key: "styles" }, "Badges"),
+					...[...custom.entries()].map(([badge, style]) =>
+						entry(
+							`custom-${badge}`,
+							h("span", { className: "badge custom", style: badgeStyle(style) }, badge),
+							style.tooltip ?? badge,
+						),
+					),
+				]
+			: []),
+	);
+}
+
 function Diagram({ model }) {
 	const tables = useMemo(() => flatten(model), [model]);
 	const complex = useMemo(() => hasComplexColumns(tables), [tables]);
@@ -1229,6 +1690,28 @@ function Diagram({ model }) {
 	const [exporting, setExporting] = useState("");
 	const [settings, setSettings, resolvedTheme] = useSettings();
 	const [settingsOpen, setSettingsOpen] = useState(false);
+	const [hovered, setHovered] = useState(null);
+
+	// Descriptions are only a setting when the model has some; otherwise the toggle is dead chrome and
+	// the cards are measured exactly as they always were.
+	const describable = useMemo(() => hasDescriptions(), [model]);
+	const descriptions = describable && settings.descriptions === "on";
+
+	/** Each table's neighbours across a relationship, either way, for the hover highlight. */
+	const neighbours = useMemo(() => {
+		const map = new Map(tables.map((t) => [t.name, new Set()]));
+
+		for (const table of tables) {
+			for (const fk of table.foreignKeys ?? []) {
+				if (!map.has(fk.principalTable)) continue;
+
+				map.get(table.name).add(fk.principalTable);
+				map.get(fk.principalTable).add(table.name);
+			}
+		}
+
+		return map;
+	}, [tables]);
 
 	const { fitView } = useReactFlow();
 	const input = useRef(null);
@@ -1239,19 +1722,20 @@ function Diagram({ model }) {
 	useEffect(() => {
 		const colourOf = contextColours(tables);
 		const built = buildEdges(tables, colourOf);
-		const saved = loadLayout(tables, settings.tables);
+		const saved = loadLayout(tables, settings.tables, descriptions);
 
 		// A remembered arrangement wins over ELK, so a reload keeps the reader's layout. It is keyed by
-		// the model's fingerprint and the table display mode, so a regenerated diagram — or a mode
-		// whose card sizes differ — falls back to a fresh layout.
+		// the model's fingerprint, the table display mode, whether descriptions are shown and the layout
+		// direction, so a regenerated diagram — or a mode whose card sizes differ — falls back to a fresh
+		// layout.
 		if (saved) {
-			setNodes(restoreLayout(saved, tables, colourOf, settings.tables));
+			setNodes(restoreLayout(saved, tables, colourOf, settings.tables, descriptions));
 		} else {
-			layout(tables, built, colourOf, settings.tables).then((positioned) => setNodes(positioned));
+			layout(tables, built, colourOf, settings.tables, descriptions).then((positioned) => setNodes(positioned));
 		}
 
 		setEdges(built);
-	}, [tables, settings.tables, setNodes, setEdges]);
+	}, [tables, settings.tables, descriptions, setNodes, setEdges]);
 
 	/**
 	 * Applies React Flow's own changes, then fits each container around its tables and, once a drag or
@@ -1272,12 +1756,12 @@ function Diagram({ model }) {
 			setNodes((current) => {
 				const fitted = fitContexts(current);
 
-				saveLayout(fitted, tables, settings.tables);
+				saveLayout(fitted, tables, settings.tables, descriptions);
 
 				return fitted;
 			});
 		},
-		[onNodesChange, setNodes, tables, settings.tables],
+		[onNodesChange, setNodes, tables, settings.tables, descriptions],
 	);
 
 	const needle = query.trim().toLowerCase();
@@ -1297,10 +1781,15 @@ function Diagram({ model }) {
 
 	const current = matches.length > 0 ? matches[Math.min(cursor, matches.length - 1)] : null;
 
+	// Hovering picks out a table's relationships, but a search outranks it: the reader asked for those
+	// matches, and a passing mouse should not repaint them.
+	const focus = !needle && settings.hover === "on" && hovered ? hovered : null;
+
 	// Marking is derived from the query rather than applied by the change handler, so the state of
 	// the drawing cannot drift from the state of the field.
 	useEffect(() => {
 		const hits = new Set(matches);
+		const related = focus ? new Set([focus, ...(neighbours.get(focus) ?? [])]) : null;
 
 		setNodes((nodes) =>
 			fitContexts(
@@ -1308,7 +1797,19 @@ function Diagram({ model }) {
 					// Containers are never dimmed; doing so would wash out the tables inside them.
 					if (n.type !== "entity") return n;
 
-					const match = !needle ? "" : n.id === current ? "hit current" : hits.has(n.id) ? "hit" : "dimmed";
+					const match = needle
+						? n.id === current
+							? "hit current"
+							: hits.has(n.id)
+								? "hit"
+								: "dimmed"
+						: related
+							? n.id === focus
+								? "focus"
+								: related.has(n.id)
+									? "related"
+									: "faded"
+							: "";
 
 					// A match inside a folded complex value object would otherwise be reported and then not
 					// shown. The groups opened this way are held apart from the reader's own, so clearing
@@ -1340,12 +1841,21 @@ function Diagram({ model }) {
 		// whichever end was dimmed.
 		setEdges((edges) =>
 			edges.map((e) => {
-				const className = `flowing${needle && !(hits.has(e.source) && hits.has(e.target)) ? " dimmed" : ""}`;
+				const touches = focus && (e.source === focus || e.target === focus);
+				const state =
+					needle && !(hits.has(e.source) && hits.has(e.target))
+						? " dimmed"
+						: related
+							? touches
+								? " focus"
+								: " faded"
+							: "";
+				const className = `flowing${state}`;
 
 				return e.className === className ? e : { ...e, className };
 			}),
 		);
-	}, [matches, needle, current, setNodes, setEdges]);
+	}, [matches, needle, current, focus, neighbours, setNodes, setEdges]);
 
 	const search = useCallback((value) => {
 		setQuery(value);
@@ -1490,9 +2000,15 @@ function Diagram({ model }) {
 		{ className: "settings-panel", role: "group", "aria-label": "Viewer settings" },
 		optionRow("Theme", "theme", THEMES),
 		optionRow("Edge animation", "animation", ANIMATIONS),
+		optionRow("Transitions", "transitions", SWITCHES),
+		optionRow("Hover highlight", "hover", SWITCHES),
 		optionRow("Background", "background", BACKGROUNDS),
 		optionRow("Motion", "motion", MOTIONS),
+		...(describable ? [optionRow("Descriptions", "descriptions", SWITCHES)] : []),
+		optionRow("Legend", "legend", SWITCHES),
 	);
+
+	const legend = settings.legend === "on" ? h(Legend, { tables }) : null;
 
 	return h(
 		React.Fragment,
@@ -1607,11 +2123,14 @@ function Diagram({ model }) {
 				settingsOpen ? settingsPanel : null,
 			),
 		),
+		legend,
 		h(ReactFlow, {
 			nodes,
 			edges,
 			onNodesChange: handleNodesChange,
 			onEdgesChange,
+			onNodeMouseEnter: (_, node) => node.type === "entity" && setHovered(node.id),
+			onNodeMouseLeave: () => setHovered(null),
 			nodeTypes,
 			edgeTypes,
 			colorMode: resolvedTheme,
@@ -1626,7 +2145,9 @@ function Diagram({ model }) {
 			fitViewOptions: { padding: { top: "96px", right: "24px", bottom: "24px", left: "24px" } },
 			proOptions: { hideAttribution: true },
 			children: [
-				h(Background, { key: "bg", variant: settings.background, gap: 28, color: "var(--grid)" }),
+				settings.background === "none"
+					? null
+					: h(Background, { key: "bg", variant: settings.background, gap: 28, color: "var(--grid)" }),
 				h(Controls, { key: "controls" }),
 				h(MiniMap, { key: "minimap", pannable: true, zoomable: true }),
 			],
@@ -1644,7 +2165,11 @@ function App() {
 				if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
 				return r.json();
 			})
-			.then(setModel)
+			.then((loaded) => {
+				// Before the first render, so every measurement and colour already sees it.
+				PRESENTATION = loaded?.presentation ?? {};
+				setModel(loaded);
+			})
 			.catch((e) =>
 				setError(
 					`Could not load ${DATA_URL}: ${e.message}. Opening this file directly from disk may be blocked by the browser's file:// restrictions — serve the folder over HTTP instead.`,

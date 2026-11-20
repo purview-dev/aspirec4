@@ -403,6 +403,146 @@
 				color: var(--uk);
 			}
 
+			/* A badge a style adds: muted unless the style gives it an accent, which app.js applies inline. */
+			.badge.custom {
+				color: var(--muted);
+			}
+
+			/* The header's right-hand side: a style's badge, then the schema. */
+			.entity header .header-end {
+				display: flex;
+				flex: none;
+				gap: 6px;
+				align-items: center;
+			}
+
+			.entity header .table-name {
+				white-space: nowrap;
+			}
+
+			/*
+			 * Descriptions read as a gloss, not as data: smaller, muted and italic, cut to one line with the
+			 * full text as the tooltip. app.js measures the column to its longest entry, capped, and gives
+			 * every row of the card a cell that wide so the types stay aligned.
+			 */
+			.entity .col .desc {
+				flex: none;
+				overflow: hidden;
+				color: var(--muted);
+				font-size: 11px;
+				font-style: italic;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+			}
+
+			/* A table's own description takes one row under its header, so it is measured like one. */
+			.entity .table-desc {
+				height: var(--entity-row-height);
+				padding: 0 12px;
+				overflow: hidden;
+				border-bottom: 1px solid var(--line);
+				color: var(--muted);
+				font-size: 11px;
+				font-style: italic;
+				line-height: calc(var(--entity-row-height) - 1px);
+				text-overflow: ellipsis;
+				white-space: nowrap;
+			}
+
+			/*
+			 * Hovering a table picks out its relationships and the tables they reach. Fainter than the
+			 * search's dimming, because it is a passing glance rather than a question the reader asked.
+			 */
+			.entity {
+				transition: opacity 140ms ease;
+			}
+
+			.entity.faded {
+				opacity: 0.38;
+			}
+
+			.entity.focus {
+				border-color: var(--accent);
+				box-shadow: 0 0 0 2px rgb(59 130 246 / 28%);
+			}
+
+			.react-flow__edge.faded {
+				opacity: 0.16;
+			}
+
+			/* !important because the stroke width is set inline on each edge's path. */
+			.react-flow__edge.focus .react-flow__edge-path {
+				stroke-width: 3.5px !important;
+			}
+
+			/* A self-loop's own handles exist only to anchor it; they are never something to grab. */
+			.self-handle {
+				opacity: 0;
+				pointer-events: none;
+			}
+
+			/*
+			 * Tables glide to a new arrangement rather than jumping. Never while one is being dragged or
+			 * resized — the card has to stay under the pointer — and never when motion is to be reduced.
+			 */
+			:root[data-transitions="on"] .react-flow__node:not(.dragging):not(.selected) {
+				transition: transform 260ms ease;
+			}
+
+			@media (prefers-reduced-motion: reduce) {
+				:root:not([data-motion="allow"]) .react-flow__node {
+					transition: none !important;
+				}
+			}
+
+			:root[data-motion="reduce"] .react-flow__node {
+				transition: none !important;
+			}
+
+			/* Bottom left, clear of the zoom controls, which sit in the corner itself. */
+			.legend {
+				position: absolute;
+				z-index: 10;
+				bottom: 14px;
+				left: 58px;
+				display: grid;
+				gap: 5px;
+				min-width: 170px;
+				max-height: calc(100% - 140px);
+				padding: 10px 12px;
+				overflow: auto;
+				border: 1px solid var(--line);
+				border-radius: 3px;
+				background: var(--panel);
+				font-size: 11px;
+			}
+
+			.legend-title {
+				margin-top: 4px;
+				color: var(--muted);
+				font-size: 10px;
+				font-weight: 700;
+				letter-spacing: 0.06em;
+				text-transform: uppercase;
+			}
+
+			.legend-title:first-child {
+				margin-top: 0;
+			}
+
+			.legend-entry {
+				display: flex;
+				gap: 8px;
+				align-items: center;
+			}
+
+			.legend-swatch {
+				flex: none;
+				width: 12px;
+				height: 12px;
+				border-radius: 2px;
+			}
+
 			/* React Flow's resize handles, tinted to match rather than left as its light default. */
 			.entity-resize-line {
 				border-color: var(--accent);
@@ -508,15 +648,27 @@
 			 * some file:// configurations give you, so the absence of a stored choice and the
 			 * inability to read one both end up meaning "follow the system".
 			 */
+			/*
+			 * The AppHost substitutes its configured default theme. A stored choice wins only while it was
+			 * made against that same default — the rule app.js applies to every setting — so changing the
+			 * default in the AppHost is not hidden by a choice made under the old one.
+			 */
+			const configured = ["light", "dark"].includes("__DEFAULT_THEME__") ? "__DEFAULT_THEME__" : "auto";
+			let theme = configured;
+
 			try {
 				const raw = localStorage.getItem("aspirec4-erd-settings");
-				const theme = raw ? JSON.parse(raw).theme : null;
+				const stored = raw ? JSON.parse(raw) : null;
 
-				if (theme === "light" || theme === "dark") {
-					document.documentElement.dataset.theme = theme;
+				if (stored && (stored.defaults?.theme ?? "auto") === configured && stored.theme) {
+					theme = stored.theme;
 				}
 			} catch {
 				/* no stored preference available */
+			}
+
+			if (theme === "light" || theme === "dark") {
+				document.documentElement.dataset.theme = theme;
 			}
 		</script>
 	</head>

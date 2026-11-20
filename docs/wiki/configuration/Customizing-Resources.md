@@ -27,10 +27,10 @@ builder.AddProject<Projects.Api>("api")
 | Method | Purpose |
 | --- | --- |
 | `WithLabel(string)` | Display label on the element node. |
-| `WithTechnology(string?)` | Technology string shown beneath the label (e.g. `.NET`, `Redis`). |
+| `WithTechnology(string?)` | Technology string shown beneath the label (e.g. `.NET`, `Redis`). When unset it is detected; see [Technology and icons](../Generated-Output.md#technology-and-icons). |
 | `WithDescription(string?)` | Longer description rendered in the detail panel (Markdown). |
 | `WithSummary(string?)` | One-line summary shown in tooltips/map view. |
-| `WithIcon(string?)` | Icon identifier (e.g. `tech:dotnet`, `azure:storage`); `null` reverts to automatic inference. |
+| `WithIcon(string?)` | Icon identifier (e.g. `tech:dotnet`, `azure:storage-accounts`); `null` reverts to automatic inference. |
 | `WithAutoIcon(bool?)` | Per-element override for auto-icon inference (`null` inherits the project setting). |
 | `WithKind(string?)` | Element kind override (e.g. `service`); must be a valid LikeC4 identifier. |
 | `WithTag(string)` | Adds a tag; a leading `#` is accepted and stripped. |
@@ -124,6 +124,52 @@ opts.withExcludedResourceType("Acme.Hosting.InternalResource");
 ## Aspire metadata injection
 
 When `AutoIncludeAspireMetadata` is `All` (the default), each element automatically receives `aspire-name`/`aspire-type` metadata and links to its allocated HTTP/HTTPS endpoints. Endpoint URLs come from resource snapshots so they use the correct public ports.
+
+### Where each resource comes from
+
+With `Metadata` included, AspireC4 also records where each resource comes from. A local project gets
+its path and the runtime version its own files declare. A container gets its image:
+
+```likec4
+data_service = component 'data-service' {
+  metadata {
+    aspire-name 'data-service'
+    project-path '../DataService/DataService.csproj'
+    dotnet-target-framework 'net10.0'
+  }
+}
+sql = container 'sql' {
+  metadata {
+    aspire-name 'sql'
+    container-image 'mcr.microsoft.com/mssql/server:2025-latest'
+    container-tag '2025-latest'
+  }
+}
+```
+
+| Key | Resource | Read from |
+| --- | --- | --- |
+| `project-path` | .NET project; an executable whose working directory holds `package.json`, `pyproject.toml`, `.python-version`, `requirements.txt` or `go.mod` | the project file (`.csproj`, or the `.cs` file of a file-based app), or the project directory |
+| `dotnet-target-framework` | .NET project | `obj/project.assets.json`, then `<TargetFramework(s)>` in the project file, or `#:property TargetFramework=` in a file-based app |
+| `node-version` | Node project | `.nvmrc`, then `.node-version`, then `engines.node` in `package.json` |
+| `bun-version` | Bun project | `engines.bun` in `package.json` |
+| `package-manager` | JavaScript project | `packageManager` in `package.json`, without Corepack's `+sha512` suffix |
+| `python-version` | Python project | `.python-version`, then `requires-python` in `pyproject.toml` |
+| `go-version` | Go module | `toolchain` in `go.mod`, then its `go` directive |
+| `container-image` | container | the full image reference: `registry/image:tag`, or `registry/image@sha256:…` when pinned by digest |
+| `container-tag`, `container-digest` | container | the tag, or the digest, separately |
+| `dockerfile` | container built from a Dockerfile | the Dockerfile path |
+
+- **Paths are relative to the AppHost directory**, with forward slashes, so the same model is generated
+  on every machine.
+- **Only the project's own directory is read.** A `.nvmrc` at the repository root, or a framework set in a
+  `Directory.Build.props`, is not followed. For .NET, `project.assets.json` resolves the framework
+  however it was set, so it is present once the project has been restored.
+- **It is read once per AppHost start**, not on every regeneration, and it is best-effort: a missing or
+  malformed file contributes nothing and never stops the diagram being generated.
+- **A key you set wins.** `WithLikeC4Details(d => d.WithMetadata("project-path", "src/Api"))` replaces the
+  detected value, as it does for `aspire-name`. `WithAutoIncludeAspireMetadata(AspireMetadataInclusion.Links)`
+  turns all of it off.
 
 ## Next pages
 

@@ -14,4 +14,11 @@ public sealed record D2Table
 
 	/// <summary>The columns, in order. Each becomes one row of the sql_table shape.</summary>
 	public IReadOnlyList<D2Column> Columns { get; init; } = [];
+
+	/// <summary>The table's resolved style, when a rule or callback styles it.</summary>
+	/// <remarks>d2 has no theme switch here, so only the light, hex colours are written.</remarks>
+	public ErdElementStyle? Style { get; init; }
+
+	/// <summary>Text shown on hovering over the table: its description and any style tooltip.</summary>
+	public string? Tooltip { get; init; }
 }

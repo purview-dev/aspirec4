@@ -51,6 +51,8 @@ public sealed record AspireC4EfModelGeneratorTestOptions : SourceGeneratorTestOp
 				public IndexBuilder HasIndex(Expression<Func<T, object>> expression) => new IndexBuilder();
 
 				public PropertyBuilder Property(Expression<Func<T, object>> expression) => new PropertyBuilder();
+
+				public EntityTypeBuilder<T> HasComment(string comment) => this;
 			}
 
 			public class IndexBuilder
@@ -67,6 +69,16 @@ public sealed record AspireC4EfModelGeneratorTestOptions : SourceGeneratorTestOp
 				public PropertyBuilder HasMaxLength(int length) => this;
 
 				public PropertyBuilder IsRequired(bool required = true) => this;
+
+				public PropertyBuilder HasComment(string comment) => this;
+			}
+
+			[AttributeUsage(AttributeTargets.Class | AttributeTargets.Property)]
+			public sealed class CommentAttribute : Attribute
+			{
+				public CommentAttribute(string comment) => Comment = comment;
+
+				public string Comment { get; }
 			}
 
 			[AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
@@ -115,6 +127,31 @@ public sealed record AspireC4EfModelGeneratorTestOptions : SourceGeneratorTestOp
 				public string Name { get; }
 
 				public string TypeName { get; set; }
+			}
+
+			// The three display attributes a description is read from, matched by name like the rest.
+			[AttributeUsage(AttributeTargets.Class | AttributeTargets.Property)]
+			public sealed class DescriptionAttribute : Attribute
+			{
+				public DescriptionAttribute(string description) => Description = description;
+
+				public string Description { get; }
+			}
+
+			[AttributeUsage(AttributeTargets.Class | AttributeTargets.Property)]
+			public sealed class DisplayAttribute : Attribute
+			{
+				public string Name { get; set; }
+
+				public string Description { get; set; }
+			}
+
+			[AttributeUsage(AttributeTargets.Class | AttributeTargets.Property)]
+			public sealed class DisplayNameAttribute : Attribute
+			{
+				public DisplayNameAttribute(string displayName) => DisplayName = displayName;
+
+				public string DisplayName { get; }
 			}
 
 			[AttributeUsage(AttributeTargets.Class)]

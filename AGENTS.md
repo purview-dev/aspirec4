@@ -455,6 +455,19 @@ both:
 - **Relationships** come from either end: the dependent's reference navigation, or the principal's
   collection alone, using EF's foreign-key names and adding EF's shadow foreign key when none matches.
 
+Each table and column also carries its description sources separately — `Description` (the display
+attributes), `Documentation` (the XML `<summary>`) and `Comment` — and the AppHost picks between them by
+`AspireC4EfDiagramOptions.DescriptionSources`. The summary is turned into plain text by one source file,
+`src/src/EntityFrameworkCore/XmlDocumentationText.cs`, **linked** into the analyzer and the dump tool
+(each copy takes its project's namespace through `ASPIREC4_ANALYZERS` / `ASPIREC4_MODELDUMP`), so all
+three paths read a summary the same way; it must stay `netstandard2.0`-compatible.
+
+Styles, layout, animation and descriptions resolve once per regeneration in `ErdPresentation`, which every
+renderer reads and which the interactive renderer writes beside `contexts` as `presentation` in its JSON.
+`app.js` reads that shape field by field, and `ErdPresentation.RelationshipId` mirrors its edge id —
+change either side, change both, and run `just erd-check`, whose presentation phase covers it. The user
+-facing rules live in `docs/wiki/configuration/ER-Diagram-Styling.md`.
+
 `EfDomainTypeKind` is read leniently (`EfDomainTypeKindConverter`): an unknown kind from a newer analyzer
 becomes `null` rather than failing the parse, which would empty the whole model. A new kind is therefore
 safe to add. The dump projector uses the real model, so fluent `ComplexProperty`, `OwnsOne`/`OwnsMany`,
@@ -529,7 +542,8 @@ npx skills add purview-dev/aspirec4
 | -- | -- |
 | `skills/purview-aspirec4-quickstart/` | requirements (.NET 11 SDK, Aspire minimum), installing, `AddAspireC4`, what happens on startup, Docker sidecar versus local CLI, and when to add the ER diagram as well |
 | `skills/purview-aspirec4-configuration/` | every `AspireC4DiagramOptions` property and its fluent method |
-| `skills/purview-aspirec4-resources/` | `WithLikeC4Details`, `WithLikeC4Reference`, `WithLikeC4Group`, and exclusion |
+| `skills/purview-aspirec4-resources/` | `WithLikeC4Details`, `WithLikeC4Reference`, `WithLikeC4Group`, `WithLikeC4Element`, styling by tag or kind, and exclusion |
+| `skills/purview-aspirec4-enrichment/` | migrating an existing AppHost (inline or Purview.Aspire.ResourceKit) onto a curated diagram: auditing `model.gen.c4`, enrichment, ResourceKit groups → LikeC4 groups, styling, and excluding `__dotnet-project-build`, rebuilders, installers and group nodes |
 | `skills/purview-aspirec4-entityframework/` | `WithEntityFrameworkDiagram`, the three model-discovery sources, renderers, domain types, and ER image export |
 | `skills/purview-aspirec4-validation/` | the `[LikeC4Registry]` class, severity levels, and the `ASPIREC4xxx` diagnostics |
 

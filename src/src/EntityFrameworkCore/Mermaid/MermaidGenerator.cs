@@ -37,10 +37,26 @@ public static class MermaidGenerator
 		ArgumentNullException.ThrowIfNull(model);
 		ArgumentNullException.ThrowIfNull(options);
 
+		return Generate(model, options, ErdPresentation.Build(model, options));
+	}
+
+	internal static string Generate(EfModel model, AspireC4EfDiagramOptions options, ErdPresentation presentation)
+	{
+		ArgumentNullException.ThrowIfNull(model);
+		ArgumentNullException.ThrowIfNull(options);
+		ArgumentNullException.ThrowIfNull(presentation);
+
 		StringBuilder sb = new(512);
 
 		WriteHeader(sb);
 		sb.AppendLine("erDiagram");
+
+		// Top to bottom is Mermaid's own default, so it is left unsaid and an unconfigured diagram is
+		// unchanged.
+		if (Direction(options.LayoutDirection) is { } direction)
+		{
+			sb.Append("\tdirection ").AppendLine(direction);
+		}
 
 		var group = options.GroupByContext && model.Contexts.Count > 1 && options.UseSubgraphs;
 
@@ -55,7 +71,7 @@ public static class MermaidGenerator
 
 			foreach (var table in context.Tables)
 			{
-				WriteEntity(sb, table, indent, options);
+				WriteEntity(sb, table, indent, options, presentation);
 			}
 
 			if (group)
@@ -65,10 +81,20 @@ public static class MermaidGenerator
 		}
 
 		WriteRelationships(sb, model);
-		WriteStyles(sb, model, group);
+		WriteStyles(sb, model, group, options);
+		WriteTableStyles(sb, model, presentation);
 
 		return sb.ToString();
 	}
+
+	static string? Direction(ErdLayoutDirection direction) =>
+		direction switch
+		{
+			ErdLayoutDirection.Right => "LR",
+			ErdLayoutDirection.Up => "BT",
+			ErdLayoutDirection.Left => "RL",
+			_ => null,
+		};
 
 	static void WriteHeader(StringBuilder sb)
 	{
@@ -80,7 +106,13 @@ public static class MermaidGenerator
 		sb.AppendLine("%% =============================================================================");
 	}
 
-	static void WriteEntity(StringBuilder sb, EfTable table, string indent, AspireC4EfDiagramOptions options)
+	static void WriteEntity(
+		StringBuilder sb,
+		EfTable table,
+		string indent,
+		AspireC4EfDiagramOptions options,
+		ErdPresentation presentation
+	)
 	{
 		sb.Append(indent).Append(Identifier(table.Name));
 
@@ -96,13 +128,25 @@ public static class MermaidGenerator
 
 		foreach (var column in table.Columns)
 		{
-			WriteAttribute(sb, column, indent, options);
+			WriteAttribute(
+				sb,
+				column,
+				indent,
+				options,
+				options.ShowDescriptions ? presentation.ColumnDescription(table.Name, column.Name) : null
+			);
 		}
 
 		sb.Append(indent).AppendLine("}");
 	}
 
-	static void WriteAttribute(StringBuilder sb, EfColumn column, string indent, AspireC4EfDiagramOptions options)
+	static void WriteAttribute(
+		StringBuilder sb,
+		EfColumn column,
+		string indent,
+		AspireC4EfDiagramOptions options,
+		string? description
+	)
 	{
 		sb.Append(indent).Append('\t').Append(StoreType(column, options)).Append(' ').Append(Identifier(column.Name));
 
@@ -140,6 +184,12 @@ public static class MermaidGenerator
 		if (!string.IsNullOrWhiteSpace(column.Comment))
 		{
 			notes.Add(column.Comment);
+		}
+
+		// The description is often the comment itself, when that is the only source a column has.
+		if (description is not null && !notes.Contains(description, StringComparer.Ordinal))
+		{
+			notes.Add(description);
 		}
 
 		if (notes.Count > 0)
@@ -221,18 +271,27 @@ public static class MermaidGenerator
 	/// </remarks>
 	const string ContextLabelColour = "#1f2937";
 
-	static void WriteStyles(StringBuilder sb, EfModel model, bool grouped)
+	static void WriteStyles(StringBuilder sb, EfModel model, bool grouped, AspireC4EfDiagramOptions options)
 	{
 		if (!grouped)
 		{
 			return;
 		}
 
+		var custom = (options.ContextPalette ?? []).Where(c => c is { IsEmpty: false }).ToList();
+
 		// A ':::' assignment with no matching classDef parses but silently does nothing, so the
 		// definitions have to be emitted too.
 		for (var i = 0; i < model.Contexts.Count; i++)
 		{
 			var (fill, stroke) = ContextPalette[i % ContextPalette.Length];
+
+			// A configured colour takes the stroke, and the fill is derived from it the way the built-in
+			// pairs are: the same hue, washed nearly to white, so the dark label stays legible on it.
+			if (custom.Count > 0 && custom[i % custom.Count].Hex is { } hex)
+			{
+				(fill, stroke) = (Wash(hex), hex);
+			}
 
 			sb.Append("\tclassDef ")
 				.Append(Identifier(model.Contexts[i].Name))
@@ -251,6 +310,93 @@ public static class MermaidGenerator
 				sb.Append('\t').Append(Identifier(table.Name)).Append(":::").AppendLine(Identifier(context.Name));
 			}
 		}
+	}
+
+	/// <summary>
+	/// Writes one <c>style</c> statement per styled table, after the context classes so it wins over
+	/// them.
+	/// </summary>
+	/// <remarks>
+	/// Mermaid has no theme switch of its own here, so the light colours are used, and only hex ones —
+	/// the statement separates properties with commas, which a CSS colour function would break. Columns
+	/// and relationships cannot be styled individually in an <c>erDiagram</c>.
+	/// </remarks>
+	static void WriteTableStyles(StringBuilder sb, EfModel model, ErdPresentation presentation)
+	{
+		if (!presentation.HasStyles)
+		{
+			return;
+		}
+
+		foreach (var table in model.Contexts.SelectMany(c => c.Tables))
+		{
+			if (presentation.TableStyle(table.Name) is not { } style)
+			{
+				continue;
+			}
+
+			List<string> properties = [];
+
+			if (style.Background?.Hex is { } background)
+			{
+				properties.Add($"fill:{background}");
+			}
+			else if (style.Accent?.Hex is { } washed)
+			{
+				properties.Add($"fill:{Wash(washed)}");
+			}
+
+			if (style.Accent?.Hex is { } accent)
+			{
+				properties.Add($"stroke:{accent}");
+			}
+
+			if (style.Foreground?.Hex is { } foreground)
+			{
+				properties.Add($"color:{foreground}");
+			}
+
+			if (style.LineStyle is ErdLineStyle.Dashed or ErdLineStyle.Dotted)
+			{
+				properties.Add(
+					style.LineStyle == ErdLineStyle.Dashed ? "stroke-dasharray:6 4" : "stroke-dasharray:2 3"
+				);
+			}
+
+			if (style.Bold == true)
+			{
+				properties.Add("font-weight:bold");
+			}
+
+			if (style.Italic == true)
+			{
+				properties.Add("font-style:italic");
+			}
+
+			if (properties.Count > 0)
+			{
+				sb.Append("\tstyle ")
+					.Append(Identifier(table.Name))
+					.Append(' ')
+					.AppendLine(string.Join(",", properties));
+			}
+		}
+	}
+
+	/// <summary>A hex colour washed to 15% strength over white — the fill the built-in palette pairs use.</summary>
+	internal static string Wash(string hex)
+	{
+		var digits = hex.TrimStart('#');
+
+		if (digits.Length == 3)
+		{
+			digits = string.Concat(digits.Select(d => $"{d}{d}"));
+		}
+
+		var value = Convert.ToInt32(digits[..6], 16);
+		int Mix(int channel) => (int)Math.Round((channel * 0.15) + (255 * 0.85));
+
+		return $"#{Mix((value >> 16) & 255):x2}{Mix((value >> 8) & 255):x2}{Mix(value & 255):x2}";
 	}
 
 	static string StoreType(EfColumn column, AspireC4EfDiagramOptions options)

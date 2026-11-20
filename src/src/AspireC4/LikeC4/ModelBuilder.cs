@@ -58,6 +58,16 @@ static class ModelBuilder
 	/// Optional set of full type names to exclude: a resource is excluded when its type, or any base type, has
 	/// one of these names. See <see cref="AspireC4DiagramOptions.ExcludedResourceTypeNames"/>.
 	/// </param>
+	/// <param name="resourceSourceMetadata">
+	/// Optional per-resource source metadata (project path, runtime version, container image), keyed by
+	/// resource name and read by <see cref="ResourceSourceMetadata.ReadAll"/>. Added when
+	/// <paramref name="aspireMetadataInclusion"/> includes <see cref="AspireMetadataInclusion.Metadata"/>;
+	/// a key the user set takes precedence.
+	/// </param>
+	/// <param name="technologyOverrides">
+	/// Optional application-wide technology rules, consulted before the built-in catalogue. See
+	/// <see cref="AspireC4DiagramOptions.TechnologyOverrides"/>.
+	/// </param>
 	[System.Diagnostics.CodeAnalysis.SuppressMessage(
 		"Design",
 		"CA1054:URI-like parameters should not be strings",
@@ -76,7 +86,9 @@ static class ModelBuilder
 		IReadOnlyDictionary<string, string?>? stateTagMap = null,
 		IReadOnlyDictionary<string, IReadOnlyList<(string Url, string Name)>>? resourceSnapshotUrls = null,
 		IReadOnlySet<Type>? excludedResourceTypes = null,
-		IReadOnlySet<string>? excludedResourceTypeNames = null
+		IReadOnlySet<string>? excludedResourceTypeNames = null,
+		IReadOnlyDictionary<string, IReadOnlyList<LikeC4Metadata>>? resourceSourceMetadata = null,
+		IReadOnlyList<TechnologyOverride>? technologyOverrides = null
 	)
 	{
 		ArgumentNullException.ThrowIfNull(resources);
@@ -101,6 +113,20 @@ static class ModelBuilder
 			.Where(r => !visibleResources.Contains(r))
 			.GroupBy(r => r.Name, StringComparer.OrdinalIgnoreCase)
 			.ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+		// Aspire 17's RunAsContainer() removes the Azure resource from the model outright, leaving only
+		// the container that replaced it. The Azure resource survives as the target of every reference
+		// made to it before the swap, so it is recovered from there: without it a local stand-in for
+		// Azure Database for PostgreSQL is indistinguishable from a plain PostgreSQL container.
+		var inModel = resources.ToHashSet();
+
+		foreach (var target in resources.SelectMany(r => r.Annotations.OfType<ResourceRelationshipAnnotation>()))
+		{
+			if (!inModel.Contains(target.Resource) && visibleByName.ContainsKey(target.Resource.Name))
+			{
+				hiddenByName.TryAdd(target.Resource.Name, target.Resource);
+			}
+		}
 
 		// Build a name → DSL-identifier map. A LikeC4DslIdAnnotation lets any resource emit
 		// under a different identifier than its Aspire resource name (used, for example, to
@@ -142,7 +168,9 @@ static class ModelBuilder
 					dashboardBaseUrl,
 					dashboardBrowserToken,
 					stateTagMap,
-					resourceSnapshotUrls?.GetValueOrDefault(resource.Name)
+					resourceSnapshotUrls?.GetValueOrDefault(resource.Name),
+					resourceSourceMetadata?.GetValueOrDefault(resource.Name),
+					technologyOverrides
 				)
 			);
 			CollectRelationships(
@@ -272,11 +300,16 @@ static class ModelBuilder
 		string? dashboardBaseUrl = null,
 		string? dashboardBrowserToken = null,
 		IReadOnlyDictionary<string, string?>? stateTagMap = null,
-		IReadOnlyList<(string Url, string Name)>? snapshotEndpointUrls = null
+		IReadOnlyList<(string Url, string Name)>? snapshotEndpointUrls = null,
+		IReadOnlyList<LikeC4Metadata>? sourceMetadata = null,
+		IReadOnlyList<TechnologyOverride>? technologyOverrides = null
 	)
 	{
 		var details = resource.Annotations.OfType<LikeC4NodeDetailsAnnotation>().LastOrDefault();
-		var inferredTechnology = InferTechnology(resource);
+		// What the resource is: the user's own rules first, then what is recognised from its project, type
+		// or image; failing all of those, the old guess.
+		var detected = TechnologyCatalog.Detect(resource, hiddenOriginal, technologyOverrides);
+		var inferredTechnology = detected?.Name ?? InferTechnology(resource);
 		var extendsExisting = resource.Annotations.OfType<LikeC4ExistingElementAnnotation>().Any();
 
 		var label = details?.Label ?? resource.Name;
@@ -284,6 +317,7 @@ static class ModelBuilder
 			resource,
 			details,
 			inferredTechnology,
+			detected,
 			extendsExisting,
 			autoIconsEnabled,
 			hiddenOriginal,
@@ -305,7 +339,8 @@ static class ModelBuilder
 			includeDashboardLinks,
 			dashboardBaseUrl,
 			dashboardBrowserToken,
-			snapshotEndpointUrls
+			snapshotEndpointUrls,
+			sourceMetadata
 		);
 
 		// Prepend the state tag (when configured) to the element's user-defined tags.
@@ -354,6 +389,7 @@ static class ModelBuilder
 		IResource resource,
 		LikeC4NodeDetailsAnnotation? details,
 		string? inferredTechnology,
+		KnownTechnology? detected,
 		bool extendsExisting,
 		bool autoIconsEnabled,
 		IResource? hiddenOriginal,
@@ -367,7 +403,15 @@ static class ModelBuilder
 
 		return (
 			details?.Technology ?? inferredTechnology,
-			ResolveIcon(resource, details, inferredTechnology, autoIconsEnabled, hiddenOriginal, iconResolvers)
+			ResolveIcon(
+				resource,
+				details,
+				inferredTechnology,
+				autoIconsEnabled,
+				hiddenOriginal,
+				iconResolvers,
+				detected
+			)
 		);
 	}
 
@@ -383,7 +427,8 @@ static class ModelBuilder
 		bool includeDashboardLinks = true,
 		string? dashboardBaseUrl = null,
 		string? dashboardBrowserToken = null,
-		IReadOnlyList<(string Url, string Name)>? snapshotEndpointUrls = null
+		IReadOnlyList<(string Url, string Name)>? snapshotEndpointUrls = null,
+		IReadOnlyList<LikeC4Metadata>? sourceMetadata = null
 	)
 	{
 		List<LikeC4Metadata> metadata = [];
@@ -406,6 +451,16 @@ static class ModelBuilder
 			if (!string.IsNullOrEmpty(resourceType) && !existingKeys.Contains("aspire-type"))
 			{
 				metadata.Add(new LikeC4Metadata("aspire-type", resourceType));
+			}
+
+			// Where the resource comes from: its project and runtime, or its container image. Read once
+			// per start by ResourceSourceMetadata; a key the user set wins, as it does for the two above.
+			foreach (var entry in sourceMetadata ?? [])
+			{
+				if (existingKeys.Add(entry.Key))
+				{
+					metadata.Add(entry);
+				}
 			}
 		}
 
@@ -597,7 +652,8 @@ static class ModelBuilder
 		string? inferredTechnology,
 		bool autoIconsEnabled,
 		IResource? hiddenOriginal = null,
-		IReadOnlyList<Func<IconResolverContext, string?>>? iconResolvers = null
+		IReadOnlyList<Func<IconResolverContext, string?>>? iconResolvers = null,
+		KnownTechnology? detected = null
 	)
 	{
 		if (!string.IsNullOrWhiteSpace(details?.Icon))
@@ -619,21 +675,41 @@ static class ModelBuilder
 			}
 		}
 
-		return !(details?.AutoIconEnabled ?? autoIconsEnabled)
-			? null
-			: IconMatcher.TryInferIcon([
-				details?.Technology,
-				inferredTechnology,
-				// The hidden original (e.g. AzurePostgresFlexibleServerResource) carries richer
-				// type information than the visible surrogate (e.g. a generic ContainerResource).
-				// Short name first — it has fewer noise tokens than the fully-qualified name.
-				hiddenOriginal?.GetType().Name,
-				hiddenOriginal?.GetType().FullName,
-				resource.Annotations.OfType<ResourceSnapshotAnnotation>().LastOrDefault()?.InitialSnapshot.ResourceType,
-				resource.GetType().FullName,
-				resource.GetType().Name,
-				resource.Name,
-			]);
+		// An icon named in one of the user's technology overrides is as explicit as WithIcon, so it applies
+		// whether or not auto icons are on.
+		if (detected is { IsOverride: true, Icon: { } overrideIcon })
+		{
+			return overrideIcon;
+		}
+
+		if (!(details?.AutoIconEnabled ?? autoIconsEnabled))
+		{
+			return null;
+		}
+
+		// A recognised technology has its own icon, or deliberately none: fuzzy matching is only for
+		// what the catalogue does not know, because a confident wrong icon is worse than none.
+		// A technology label the user set is a stronger signal than the resource's type, so it is still
+		// matched when it names something different. An override with no icon is matched from its label,
+		// which reaches the matcher below as the inferred technology.
+		if (detected is { IsOverride: false } known && string.IsNullOrWhiteSpace(details?.Technology))
+		{
+			return known.Icon;
+		}
+
+		return IconMatcher.TryInferIcon([
+			details?.Technology,
+			inferredTechnology,
+			// The hidden original (e.g. AzurePostgresFlexibleServerResource) carries richer
+			// type information than the visible surrogate (e.g. a generic ContainerResource).
+			// Short name first — it has fewer noise tokens than the fully-qualified name.
+			hiddenOriginal?.GetType().Name,
+			hiddenOriginal?.GetType().FullName,
+			resource.Annotations.OfType<ResourceSnapshotAnnotation>().LastOrDefault()?.InitialSnapshot.ResourceType,
+			resource.GetType().FullName,
+			resource.GetType().Name,
+			resource.Name,
+		]);
 	}
 
 	static void CollectRelationships(

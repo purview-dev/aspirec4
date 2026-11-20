@@ -2,7 +2,7 @@ using Aspire.Hosting.AspireC4.EntityFrameworkCore.Analyzers.Helpers;
 
 namespace Aspire.Hosting.AspireC4.EntityFrameworkCore.Analyzers;
 
-public sealed class AspireC4EfModelGeneratorTests
+public sealed partial class AspireC4EfModelGeneratorTests
 	: TUnitSourceGeneratorTestBase<AspireC4EfModelGenerator, AspireC4EfModelGeneratorTestOptions>
 {
 	const string DescriptorHintName = "AspireC4EfModel.g.cs";

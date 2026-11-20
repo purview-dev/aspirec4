@@ -194,6 +194,18 @@ static partial class IconMatcher
 		return bestTechScore >= MinScore ? bestTechIcon : null;
 	}
 
+	/// <summary>Whether an icon such as <c>tech:redis</c> is in the bundled manifest.</summary>
+	/// <remarks>Lets a test hold the hand-curated <see cref="TechnologyCatalog"/> to icons that exist.</remarks>
+	internal static bool IsKnownIcon(string icon)
+	{
+		var separator = icon.IndexOf(':', StringComparison.Ordinal);
+
+		return separator > 0
+			&& Manifest.Value is { } manifest
+			&& manifest.Icons.TryGetValue(icon[..separator], out var names)
+			&& names.Contains(icon[(separator + 1)..], StringComparer.Ordinal);
+	}
+
 	// Returns true when the token consists entirely of digits (e.g. "16", "3", "2022").
 	// Such tokens originate from Docker image version tags (e.g. "postgres:16-alpine") and
 	// are never part of an icon name.

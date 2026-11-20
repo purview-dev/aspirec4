@@ -352,6 +352,9 @@ static class EfModelMetadataReader
 			ClrTypeName = entity.FullName ?? entity.Name,
 			Name = GetAttributeString(entity, "Table", 0) ?? defaultName,
 			Schema = GetAttributeNamedString(entity, "Table", "Schema"),
+			Comment = GetAttributeString(entity, "Comment", 0),
+			Description = DescriptionAttribute(entity),
+			Documentation = XmlDocumentationText.TypeSummary(entity),
 		};
 
 		var uniqueFromIndexes = ReadUniqueIndexProperties(entity);
@@ -463,8 +466,27 @@ static class EfModelMetadataReader
 			IsUnique = uniqueFromIndexes.Contains(property.Name),
 			MaxLength = GetAttributeInt(property, "MaxLength", 0) ?? GetAttributeInt(property, "StringLength", 0),
 			Comment = GetAttributeString(property, "Comment", 0),
+			Description = DescriptionAttribute(property),
+			Documentation = PropertyDocumentation(property),
 		};
 	}
+
+	/// <summary>
+	/// The description a member declares for display: <c>[Description]</c>, then
+	/// <c>[Display(Description = …)]</c>, then <c>[DisplayName]</c> — the analyzer's order.
+	/// </summary>
+	static string? DescriptionAttribute(MemberInfo member) =>
+		GetAttributeString(member, "Description", 0)
+		?? GetAttributeNamedString(member, "Display", "Description")
+		?? GetAttributeString(member, "DisplayName", 0);
+
+	/// <summary>
+	/// The property's summary from the documentation file beside its assembly, which exists only when
+	/// that project sets <c>GenerateDocumentationFile</c>. The declaring type is used, so an inherited
+	/// audit column carries the base entity's documentation.
+	/// </summary>
+	static string? PropertyDocumentation(PropertyInfo property) =>
+		property.DeclaringType is { } declaring ? XmlDocumentationText.PropertySummary(declaring, property.Name) : null;
 
 	/// <summary>
 	/// Flattens a complex value object into columns on the owning table, the way EF maps one.
@@ -557,6 +579,8 @@ static class EfModelMetadataReader
 					IsNullable = memberNullable,
 					MaxLength = GetAttributeInt(member, "MaxLength", 0) ?? GetAttributeInt(member, "StringLength", 0),
 					Comment = GetAttributeString(member, "Comment", 0),
+					Description = DescriptionAttribute(member),
+					Documentation = PropertyDocumentation(member),
 				}
 			);
 		}
@@ -1506,6 +1530,9 @@ static class EfModelMetadataReader
 			ClrTypeName = shape.ClrTypeName,
 			Schema = shape.Schema,
 			IsJoinEntity = shape.IsJoinEntity,
+			Comment = shape.Comment,
+			Description = shape.Description,
+			Documentation = shape.Documentation,
 			Columns =
 			[
 				.. shape.Columns.Select(c => new EfColumn
@@ -1523,6 +1550,8 @@ static class EfModelMetadataReader
 					IsForeignKey = c.IsForeignKey,
 					MaxLength = c.MaxLength,
 					Comment = c.Comment,
+					Description = c.Description,
+					Documentation = c.Documentation,
 				}),
 			],
 			ForeignKeys =
@@ -1566,6 +1595,12 @@ static class EfModelMetadataReader
 		public List<ForeignKeyShape> ForeignKeys { get; } = [];
 
 		public bool IsJoinEntity { get; set; }
+
+		public string? Comment { get; init; }
+
+		public string? Description { get; init; }
+
+		public string? Documentation { get; init; }
 	}
 
 	sealed class ColumnShape
@@ -1597,6 +1632,10 @@ static class EfModelMetadataReader
 		public int? MaxLength { get; init; }
 
 		public string? Comment { get; init; }
+
+		public string? Description { get; init; }
+
+		public string? Documentation { get; init; }
 	}
 
 	sealed class ForeignKeyShape

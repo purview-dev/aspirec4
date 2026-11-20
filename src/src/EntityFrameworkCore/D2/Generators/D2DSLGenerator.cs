@@ -80,6 +80,23 @@ public static class D2DSLGenerator
 		sb.AppendLine("}");
 		sb.AppendLine();
 
+		// d2 lays out downward by default, so that is left unsaid and an unconfigured diagram is
+		// unchanged.
+		if (options.LayoutDirection != ErdLayoutDirection.Down)
+		{
+			sb.Append("direction: ")
+				.AppendLine(
+					options.LayoutDirection switch
+					{
+						ErdLayoutDirection.Right => "right",
+						ErdLayoutDirection.Up => "up",
+						ErdLayoutDirection.Left => "left",
+						_ => "down",
+					}
+				);
+			sb.AppendLine();
+		}
+
 		if (!string.IsNullOrWhiteSpace(options.Title))
 		{
 			sb.Append("title: |md # ").Append(options.Title).AppendLine(" | { near: top-center }");
@@ -124,6 +141,23 @@ public static class D2DSLGenerator
 		if (!string.Equals(table.Label, table.Id, StringComparison.Ordinal))
 		{
 			sb.Append(indent).Append("\tlabel: ").AppendLine(Quote(table.Label));
+		}
+
+		if (!string.IsNullOrWhiteSpace(table.Tooltip))
+		{
+			sb.Append(indent).Append("\ttooltip: ").AppendLine(Quote(table.Tooltip));
+		}
+
+		if (table.Style is { } style && StyleProperties(style, isEdge: false) is { Count: > 0 } properties)
+		{
+			sb.Append(indent).AppendLine("\tstyle: {");
+
+			foreach (var property in properties)
+			{
+				sb.Append(indent).Append("\t\t").AppendLine(property);
+			}
+
+			sb.Append(indent).AppendLine("\t}");
 		}
 
 		foreach (var column in table.Columns)
@@ -173,8 +207,63 @@ public static class D2DSLGenerator
 				sb.Append(": ").Append(Quote(edge.Label));
 			}
 
+			if (edge.Style is { } style && StyleProperties(style, isEdge: true) is { Count: > 0 } properties)
+			{
+				sb.Append(" {").Append(string.Join("; ", properties.Select(p => $"style.{p}"))).Append('}');
+			}
+
 			sb.AppendLine();
 		}
+	}
+
+	/// <summary>
+	/// The d2 style properties a resolved style becomes, as <c>key: value</c> lines.
+	/// </summary>
+	/// <remarks>
+	/// d2 has no theme switch for an individual shape, so the light colour is written, and only when it
+	/// is hex: a CSS function's own syntax would have to be quoted and validated against d2's colour
+	/// parser, which is narrower than a browser's. On a <c>sql_table</c> the fill is the header band and
+	/// the rows the fill.
+	/// </remarks>
+	internal static List<string> StyleProperties(ErdElementStyle style, bool isEdge)
+	{
+		List<string> properties = [];
+
+		// On a sql_table d2 draws the header band in the fill and the rows in the stroke — confirmed by
+		// rendering, and the reverse of an ordinary shape. So a table's accent is its fill, matching the
+		// header band every other renderer gives it, and only a background reaches the rows: an accent
+		// there leaves the column text unreadable. An edge is all stroke.
+		if (style.Accent?.Hex is { } accent)
+		{
+			properties.Add(isEdge ? $"stroke: {Quote(accent)}" : $"fill: {Quote(accent)}");
+		}
+
+		if (!isEdge && style.Background?.Hex is { } background)
+		{
+			properties.Add($"stroke: {Quote(background)}");
+		}
+
+		if (style.Foreground?.Hex is { } foreground)
+		{
+			properties.Add($"font-color: {Quote(foreground)}");
+		}
+
+		if (style.LineStyle is ErdLineStyle.Dashed or ErdLineStyle.Dotted)
+		{
+			properties.Add(style.LineStyle == ErdLineStyle.Dashed ? "stroke-dash: 5" : "stroke-dash: 2");
+		}
+
+		if (style.Bold is { } bold)
+		{
+			properties.Add($"bold: {(bold ? "true" : "false")}");
+		}
+
+		if (style.Italic is { } italic)
+		{
+			properties.Add($"italic: {(italic ? "true" : "false")}");
+		}
+
+		return properties;
 	}
 
 	static string ToEngineName(D2LayoutEngine engine) =>

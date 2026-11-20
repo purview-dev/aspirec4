@@ -38,6 +38,28 @@ public sealed partial class EfModelDumpProjectorTests
 	// Tests
 
 	[Test]
+	public async Task Project_DescriptionAttributes_AreRecorded()
+	{
+		// Act
+		var orders = Table(Project(), "DumpOrders");
+
+		// Assert
+		await Assert.That(orders.Description).IsEqualTo("An order a customer placed");
+		await Assert.That(orders.Columns.Single(c => c.Name == "Total").Description).IsEqualTo("Including tax");
+	}
+
+	[Test]
+	public async Task Project_TableComment_IsRecorded()
+	{
+		// The built model is the one source that sees ToTable(t => t.HasComment(...)).
+		// Act
+		var orders = Table(Project(), "DumpOrders");
+
+		// Assert
+		await Assert.That(orders.Comment).IsEqualTo("Every order ever placed");
+	}
+
+	[Test]
 	public async Task Project_ProducesTheDiagramContract()
 	{
 		// Act
@@ -163,6 +185,7 @@ public sealed class DumpCustomer
 	public DumpStatus Status { get; set; }
 }
 
+[System.ComponentModel.Description("An order a customer placed")]
 public sealed class DumpOrder
 {
 	public DumpOrderId Id { get; set; }
@@ -173,6 +196,7 @@ public sealed class DumpOrder
 
 	public DumpCustomer? Customer { get; set; }
 
+	[System.ComponentModel.DataAnnotations.Display(Description = "Including tax")]
 	public decimal Total { get; set; }
 }
 
@@ -198,6 +222,7 @@ public sealed class DumpDbContext(DbContextOptions<DumpDbContext> options) : DbC
 
 		modelBuilder.Entity<DumpOrder>(builder =>
 		{
+			builder.ToTable(table => table.HasComment("Every order ever placed"));
 			builder.HasKey(o => new { o.TenantId, o.Id });
 			builder.Property(o => o.Id).HasConversion(value => value.Value, raw => new DumpOrderId { Value = raw });
 			builder
