@@ -102,6 +102,26 @@ public sealed class LatestVersionResolverTests
 	}
 
 	[Test]
+	public async Task TryExtractVersion_YarnDlxOutput_ExtractsLikeC4sVersionNotYarns()
+	{
+		// Arrange
+		// yarn dlx prints its own version first; the CLI's version is the last line.
+		const string cliOutput =
+			"➤ YN0000: · Yarn 4.18.0\n"
+			+ "➤ YN0085: │ + likec4@npm:1.61.0, react-dom@npm:19.3.1, and 119 more.\n"
+			+ "➤ YN0000: · Done in 9s 516ms\n"
+			+ "\n"
+			+ "1.61.0\n";
+
+		// Act
+		var found = LatestVersionResolver.TryExtractVersion(cliOutput, out var versionToken);
+
+		// Assert
+		await Assert.That(found).IsTrue();
+		await Assert.That(versionToken).IsEqualTo("1.61.0");
+	}
+
+	[Test]
 	public async Task TryExtractVersion_WholeMultiLineOutput_ExtractsTheVersion()
 	{
 		// Arrange
