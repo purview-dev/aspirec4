@@ -221,8 +221,8 @@ _e2e-cli-run image configuration:
         -v aspirec4-nuget-cache://root/.nuget/packages \
         -v aspirec4-testbin://workspace/src/tests/AspireC4.IntegrationTests/bin \
         -v aspirec4-testobj://workspace/src/tests/AspireC4.IntegrationTests/obj \
-        -v aspirec4-testhost-bin://workspace/src/src/AspireC4.TestAppHost/bin \
-        -v aspirec4-testhost-obj://workspace/src/src/AspireC4.TestAppHost/obj \
+        -v aspirec4-testhost-bin://workspace/src/src/TestAppHost/bin \
+        -v aspirec4-testhost-obj://workspace/src/src/TestAppHost/obj \
         -v aspirec4-nodeapp-modules://workspace/samples/node-app/node_modules \
         -w //workspace \
         {{ image }} \

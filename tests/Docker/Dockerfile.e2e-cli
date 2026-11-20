@@ -13,8 +13,8 @@
 #     -v $(pwd):/workspace \
 #     -v aspirec4-testbin:/workspace/src/tests/AspireC4.IntegrationTests/bin \
 #     -v aspirec4-testobj:/workspace/src/tests/AspireC4.IntegrationTests/obj \
-#     -v aspirec4-testhost-bin:/workspace/src/src/AspireC4.TestAppHost/bin \
-#     -v aspirec4-testhost-obj:/workspace/src/src/AspireC4.TestAppHost/obj \
+#     -v aspirec4-testhost-bin:/workspace/src/src/TestAppHost/bin \
+#     -v aspirec4-testhost-obj:/workspace/src/src/TestAppHost/obj \
 #     -v aspirec4-nodeapp-modules:/workspace/samples/node-app/node_modules \
 #     -v aspirec4-nuget-cache:/root/.nuget/packages \
 #     aspirec4-e2e-npm \
@@ -39,6 +39,13 @@ RUN apt-get update -qq && \
     curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
     apt-get install -y --no-install-recommends nodejs && \
     rm -rf /var/lib/apt/lists/*
+
+# The SDK image carries only the .NET 11 runtimes, but the test projects also build net10.0 and the
+# sample AppHost is net10.0 only; without these the test host exits 150 (framework missing).
+RUN curl -fsSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh && \
+    bash /tmp/dotnet-install.sh --channel 10.0 --runtime dotnet --install-dir /usr/share/dotnet && \
+    bash /tmp/dotnet-install.sh --channel 10.0 --runtime aspnetcore --install-dir /usr/share/dotnet && \
+    rm /tmp/dotnet-install.sh
 
 # Shared DinD entrypoint. Starts dockerd (needed for redis/postgres containers
 # in the TestAppHost), waits for readiness, then pre-installs the likec4 package

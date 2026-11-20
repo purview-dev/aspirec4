@@ -25,6 +25,13 @@ RUN apt-get update -qq && \
     apt-get install -y --no-install-recommends nodejs && \
     rm -rf /var/lib/apt/lists/*
 
+# The SDK image carries only the .NET 11 runtimes, but the test projects also build net10.0 and the
+# sample AppHost is net10.0 only; without these the test host exits 150 (framework missing).
+RUN curl -fsSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh && \
+    bash /tmp/dotnet-install.sh --channel 10.0 --runtime dotnet --install-dir /usr/share/dotnet && \
+    bash /tmp/dotnet-install.sh --channel 10.0 --runtime aspnetcore --install-dir /usr/share/dotnet && \
+    rm /tmp/dotnet-install.sh
+
 # Entrypoint: start dockerd (DinD), wait for readiness, pre-pull the LikeC4 image
 # so it is cached before Aspire starts it inside the test, then exec the test command.
 RUN cat > /entrypoint.sh <<'EOF'
