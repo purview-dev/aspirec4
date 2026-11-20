@@ -57,7 +57,8 @@ to `WithLikeC4ConnectionReference`, which always adds it.
 - **The real LikeC4 version for `latest`.** `CheckLatestImageVersion`, on by default, now runs a one-shot
   container at startup to ask the `latest` image which version it is. The dashboard shows that version
   instead of `latest`, and LikeC4 1.57 or later gets its configurable HMR port where it used to fall back
-  to the fixed one. This adds the time of a `docker run --pull always` to startup. Pin
+  to the fixed one. This adds the time of a `docker run --pull always` to startup, up to 300 seconds on a first
+  pull, though the server would wait for that image anyway. Pin
   `ContainerImageTag`, or set `CheckLatestImageVersion` to `false`, to skip it; see
   [Generated Output](Generated-Output.md).
 - **Background failures are reported.** A diagram that fails to regenerate, export its images or keep

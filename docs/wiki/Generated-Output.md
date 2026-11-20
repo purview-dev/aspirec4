@@ -299,7 +299,7 @@ A **custom icon resolver** (below) runs before overrides and the catalogue, but 
 
 When the container image tag resolves to `latest` (default), `CheckLatestImageVersion` (default `true`) runs a throwaway container at startup to call `likec4 --version` and resolve the actual version. The resolved version configures version-gated features (such as configurable HMR ports) and is surfaced as a **LikeC4 Version** property on the dashboard resource. Set it to `false` for faster startup if you pin an explicit tag or accept possible misconfiguration.
 
-The probe pulls the image first (`--pull always`), as the server itself does, so it reports the version the server is about to run rather than an older cached `latest`. It is capped by `ExternalProcessTimeoutSeconds`; if it fails or times out — a first pull on a slow connection, say — the tag itself is shown, HMR falls back to the fixed port, and a warning on the diagram's Console tab says why. A pinned tag is never probed.
+The probe pulls the image first (`--pull always`), as the server itself does, so it reports the version the server is about to run rather than an older cached `latest`. Because that includes the pull, it waits up to 300 seconds, or `ExternalProcessTimeoutSeconds` if that is larger; the server would wait for the same image before starting anyway. If it fails or times out, the tag itself is shown, HMR falls back to the fixed port, and a warning on the diagram's Console tab says why. A pinned tag is never probed.
 
 ## Live state reflection
 
