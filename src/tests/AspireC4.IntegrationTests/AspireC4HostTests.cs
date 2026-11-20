@@ -267,6 +267,9 @@ public sealed class AspireC4HostTests(Fixtures.TestAppHostFixture fixture)
 	}
 
 	[Test]
+	// Shares the key with LikeC4DSLValidationTests: concurrent `npx likec4` installs into a cold npx cache
+	// collide (ENOTEMPTY in ~/.npm/_npx), which is what an image without a pre-warmed npx cache hits.
+	[NotInParallel("npx-likec4-validate")]
 	public async Task StartAsync_WhenAppStarts_GeneratedDSLPassesValidation(CancellationToken cancellationToken)
 	{
 		// Arrange

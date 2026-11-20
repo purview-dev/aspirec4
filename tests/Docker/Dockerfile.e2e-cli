@@ -123,6 +123,9 @@ ENV ASPIREC4_CLI_RUNTIME=Yarn
 # the node-modules cache populated during the pre-install step, causing a full
 # package re-download on every test run.
 ENV YARN_NODE_LINKER=node-modules
+# This repository's root package.json pins packageManager to bun, which Corepack cannot parse, so
+# every yarn call below it fails with "Unsupported package manager specification". Ignore the field.
+ENV COREPACK_ENABLE_PROJECT_SPEC=0
 
 # ── bun ───────────────────────────────────────────────────────────────────────
 
