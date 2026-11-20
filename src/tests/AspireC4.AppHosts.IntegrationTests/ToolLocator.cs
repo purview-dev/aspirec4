@@ -7,9 +7,7 @@ static class ToolLocator
 	/// <see langword="true"/> when <c>ASPIREC4_REQUIRE_APPHOSTS</c> is <c>true</c> or <c>1</c>, as in the
 	/// CI job that gates on the polyglot AppHosts: a missing tool then fails the test instead of skipping it.
 	/// </summary>
-	public static bool ToolsRequired =>
-		Environment.GetEnvironmentVariable("ASPIREC4_REQUIRE_APPHOSTS") is { } value
-		&& (value == "1" || value.Equals("true", StringComparison.OrdinalIgnoreCase));
+	public static bool ToolsRequired => RequiredEnvironment.AppHostsRequired;
 
 	/// <summary>
 	/// Whether <paramref name="tool"/> resolves from <c>PATH</c>, honouring <c>PATHEXT</c> on Windows, where

@@ -23,3 +23,10 @@ jobs:
     uses: ./.github/workflows/apphosts.yml
     permissions:
       contents: read
+
+  # The ER viewer and Mermaid preview in a real browser, which no test project can drive.
+  erd:
+    name: ER viewer
+    uses: ./.github/workflows/erd.yml
+    permissions:
+      contents: read

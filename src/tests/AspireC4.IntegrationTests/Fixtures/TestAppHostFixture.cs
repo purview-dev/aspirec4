@@ -445,7 +445,17 @@ public sealed class TestAppHostFixture : TUnit.Aspire.AspireFixture<SampleAppHos
 		if (!await IsContainerRuntimeAvailableAsync(RunCancellationToken))
 		{
 			var runtime = Environment.GetEnvironmentVariable("ASPIRE_CONTAINER_RUNTIME") ?? "docker";
-			SkipReason = $"Container runtime '{runtime}' is not available on this machine.";
+			var reason = $"Container runtime '{runtime}' is not available on this machine.";
+
+			// In CI a skip would let the suite pass without having run; see RequiredEnvironment.
+			if (RequiredEnvironment.DockerRequired)
+			{
+				throw new InvalidOperationException(
+					$"{reason} It is required here ({RequiredEnvironment.RequireDockerVariable}, or GitHub Actions)."
+				);
+			}
+
+			SkipReason = reason;
 			return;
 		}
 
