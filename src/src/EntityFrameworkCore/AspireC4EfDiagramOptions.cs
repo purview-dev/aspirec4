@@ -268,6 +268,398 @@ public sealed class AspireC4EfDiagramOptions
 	/// <summary>Name used for the diagram link when hidden from the dashboard.</summary>
 	public string DashboardLinkDisplayName { get; set; } = "ER Diagram";
 
+	/// <summary>
+	/// Rules that style the tables, columns and relationships matching their patterns, applied in order.
+	/// </summary>
+	/// <remarks>
+	/// Populate with <see cref="WithStyle(Action{ErdStyleRule})"/>, <see cref="WithTableStyle"/>,
+	/// <see cref="WithColumnStyle"/> or <see cref="WithTypeStyle"/>, or bind from configuration
+	/// (<c>AspireC4:EntityFramework:Styles:0:Table</c>, <c>…:Styles:0:Style:Accent:Light</c>). Where
+	/// several rules match one element, a later rule overrides only what it sets.
+	/// </remarks>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1002:Do not expose generic lists")]
+	[System.Diagnostics.CodeAnalysis.SuppressMessage(
+		"Usage",
+		"CA2227:Collection properties should be read only",
+		Justification = "Settable for configuration binding and direct assignment in user code"
+	)]
+	public List<ErdStyleRule> Styles { get; set; } = [];
+
+	/// <summary>
+	/// Callbacks that adjust each table's style after the <see cref="Styles"/> rules, run in order on
+	/// every regeneration.
+	/// </summary>
+	/// <remarks>Populate with <see cref="OnTableStyle"/>; see <see cref="ErdTableStyleContext"/>.</remarks>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1002:Do not expose generic lists")]
+	public List<Action<ErdTableStyleContext>> TableStyleCallbacks { get; } = [];
+
+	/// <summary>
+	/// Callbacks that adjust each column's style after the <see cref="Styles"/> rules, run in order on
+	/// every regeneration.
+	/// </summary>
+	/// <remarks>Populate with <see cref="OnColumnStyle"/>; see <see cref="ErdColumnStyleContext"/>.</remarks>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1002:Do not expose generic lists")]
+	public List<Action<ErdColumnStyleContext>> ColumnStyleCallbacks { get; } = [];
+
+	/// <summary>
+	/// Callbacks that adjust each relationship's style after the <see cref="Styles"/> rules, run in order
+	/// on every regeneration.
+	/// </summary>
+	/// <remarks>Populate with <see cref="OnRelationshipStyle"/>; see <see cref="ErdRelationshipStyleContext"/>.</remarks>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1002:Do not expose generic lists")]
+	public List<Action<ErdRelationshipStyleContext>> RelationshipStyleCallbacks { get; } = [];
+
+	/// <summary>
+	/// The colours each <c>DbContext</c> is drawn in, cycled in order. Empty (the default) uses the
+	/// built-in palette of six.
+	/// </summary>
+	/// <remarks>
+	/// Used by the interactive viewer and by Mermaid's per-context fills. Populate with
+	/// <see cref="WithContextPalette"/>.
+	/// </remarks>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1002:Do not expose generic lists")]
+	[System.Diagnostics.CodeAnalysis.SuppressMessage(
+		"Usage",
+		"CA2227:Collection properties should be read only",
+		Justification = "Settable for configuration binding and direct assignment in user code"
+	)]
+	public List<ErdColour> ContextPalette { get; set; } = [];
+
+	/// <summary>
+	/// The direction relationships flow in. Defaults to <see cref="ErdLayoutDirection.Down"/>.
+	/// </summary>
+	/// <remarks>Applied by the interactive viewer, d2 and Mermaid.</remarks>
+	public ErdLayoutDirection LayoutDirection { get; set; } = ErdLayoutDirection.Down;
+
+	/// <summary>
+	/// Pixels between neighbouring tables in the interactive viewer. Defaults to <c>72</c>.
+	/// </summary>
+	public int NodeSpacing { get; set; } = DefaultNodeSpacing;
+
+	/// <summary>
+	/// Pixels between a table and the tables it relates to, along <see cref="LayoutDirection"/>, in the
+	/// interactive viewer. Defaults to <c>120</c>.
+	/// </summary>
+	/// <remarks>This gap carries the relationship labels, so too small a value puts them on the cards.</remarks>
+	public int LayerSpacing { get; set; } = DefaultLayerSpacing;
+
+	/// <summary>
+	/// Pixels between the <c>DbContext</c> containers in the interactive viewer. Defaults to <c>88</c>.
+	/// </summary>
+	public int ContextSpacing { get; set; } = DefaultContextSpacing;
+
+	/// <summary>
+	/// How the interactive viewer draws relationships. Defaults to <see cref="ErdEdgeStyle.Bezier"/>.
+	/// </summary>
+	public ErdEdgeStyle EdgeStyle { get; set; } = ErdEdgeStyle.Bezier;
+
+	/// <summary>
+	/// How fast relationship lines flow in the interactive viewer, by default. Defaults to
+	/// <see cref="ErdEdgeAnimation.Normal"/>.
+	/// </summary>
+	public ErdEdgeAnimation EdgeAnimation { get; set; } = ErdEdgeAnimation.Normal;
+
+	/// <summary>
+	/// Whether tables glide to their new place, rather than jumping, when the viewer re-arranges them —
+	/// on switching what the cards show, or opening a complex value object. On by default.
+	/// </summary>
+	/// <remarks>Turned off by a browser that asks for reduced motion.</remarks>
+	public bool AnimateTransitions { get; set; } = true;
+
+	/// <summary>
+	/// Whether hovering over a table in the interactive viewer picks out its relationships and the tables
+	/// at their other end, fading the rest. On by default.
+	/// </summary>
+	public bool HighlightOnHover { get; set; } = true;
+
+	/// <summary>The interactive viewer's theme, by default. Defaults to <see cref="ErdViewerTheme.Auto"/>.</summary>
+	public ErdViewerTheme Theme { get; set; } = ErdViewerTheme.Auto;
+
+	/// <summary>
+	/// The pattern behind the interactive viewer's diagram, by default. Defaults to
+	/// <see cref="ErdViewerBackground.Lines"/>.
+	/// </summary>
+	public ErdViewerBackground ViewerBackground { get; set; } = ErdViewerBackground.Lines;
+
+	/// <summary>
+	/// What each card in the interactive viewer shows, by default. Defaults to
+	/// <see cref="ErdTableDisplay.Columns"/>.
+	/// </summary>
+	public ErdTableDisplay TableDisplay { get; set; } = ErdTableDisplay.Columns;
+
+	/// <summary>
+	/// Whether the interactive viewer opens with a legend explaining the context colours, the key badges
+	/// and any badges the styles add. Off by default.
+	/// </summary>
+	public bool ShowLegend { get; set; }
+
+	/// <summary>
+	/// Whether hovering over a column or a table header in the interactive viewer shows its
+	/// detail — CLR type, store type, length, nullability, keys, comment, description and any style tooltip.
+	/// On by default.
+	/// </summary>
+	public bool ShowTooltips { get; set; } = true;
+
+	/// <summary>
+	/// Whether tables and columns show a description. Off by default.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// The description comes from the first of <see cref="DescriptionSources"/> that has one: a
+	/// <c>[Description]</c>, <c>[Display(Description = …)]</c> or <c>[DisplayName]</c> attribute, then the
+	/// XML documentation summary, then the database comment.
+	/// </para>
+	/// <para>
+	/// The interactive viewer adds a description column to each card and a line under each table name,
+	/// and the reader can switch them on or off in its settings — descriptions are always sent to the
+	/// viewer, and this sets whether they start shown. Mermaid and DBML add the description to the
+	/// column's note, DBML to the table's note too, and d2 to the table's tooltip.
+	/// </para>
+	/// </remarks>
+	public bool ShowDescriptions { get; set; }
+
+	/// <summary>
+	/// Where descriptions may come from. Defaults to <see cref="ErdDescriptionSources.All"/>.
+	/// </summary>
+	public ErdDescriptionSources DescriptionSources { get; set; } = ErdDescriptionSources.All;
+
+	internal const int DefaultNodeSpacing = 72;
+	internal const int DefaultLayerSpacing = 120;
+	internal const int DefaultContextSpacing = 88;
+
+	/// <summary>Adds a style rule, configured by the callback.</summary>
+	/// <remarks>
+	/// The general form, for a combination of patterns:
+	/// <c>options.WithStyle(rule =&gt; rule.ForTable("Order*").ForType("decimal").WithAccent("#b45309", "#f59e0b"))</c>.
+	/// </remarks>
+	/// <param name="configure">Configures the rule's patterns and style.</param>
+	/// <returns>This options instance, for chaining.</returns>
+	public AspireC4EfDiagramOptions WithStyle(Action<ErdStyleRule> configure)
+	{
+		ArgumentNullException.ThrowIfNull(configure);
+
+		ErdStyleRule rule = new();
+		configure(rule);
+
+		return WithStyle(rule);
+	}
+
+	/// <summary>Adds a style rule.</summary>
+	/// <param name="rule">The rule.</param>
+	/// <returns>This options instance, for chaining.</returns>
+	public AspireC4EfDiagramOptions WithStyle(ErdStyleRule rule)
+	{
+		ArgumentNullException.ThrowIfNull(rule);
+
+		Styles.Add(rule);
+
+		return this;
+	}
+
+	/// <summary>Styles the tables matching a pattern.</summary>
+	/// <param name="table">A table or entity name pattern, such as <c>Orders</c> or <c>Audit*</c>.</param>
+	/// <param name="configure">Configures the style.</param>
+	/// <returns>This options instance, for chaining.</returns>
+	public AspireC4EfDiagramOptions WithTableStyle(string table, Action<ErdElementStyle> configure) =>
+		WithElementStyle(new ErdStyleRule().ForTable(table), configure);
+
+	/// <summary>Styles the columns matching a pattern, in every table or in the tables matching another.</summary>
+	/// <param name="column">A column name pattern, such as <c>*Id</c> or <c>Email</c>.</param>
+	/// <param name="configure">Configures the style.</param>
+	/// <param name="table">Optionally, a table pattern the columns must be in.</param>
+	/// <returns>This options instance, for chaining.</returns>
+	public AspireC4EfDiagramOptions WithColumnStyle(
+		string column,
+		Action<ErdElementStyle> configure,
+		string? table = null
+	)
+	{
+		var rule = new ErdStyleRule().ForColumn(column);
+
+		return WithElementStyle(table is null ? rule : rule.ForTable(table), configure);
+	}
+
+	/// <summary>Styles the columns of a matching type, in every table or in the tables matching a pattern.</summary>
+	/// <param name="type">
+	/// A type pattern: a store type (<c>decimal</c>), a domain type (<c>OrderId</c>), a CLR type, or a
+	/// kind of domain type (<c>enum</c>, <c>union</c>, <c>ValueObject</c>).
+	/// </param>
+	/// <param name="configure">Configures the style.</param>
+	/// <param name="table">Optionally, a table pattern the columns must be in.</param>
+	/// <returns>This options instance, for chaining.</returns>
+	public AspireC4EfDiagramOptions WithTypeStyle(string type, Action<ErdElementStyle> configure, string? table = null)
+	{
+		var rule = new ErdStyleRule().ForType(type);
+
+		return WithElementStyle(table is null ? rule : rule.ForTable(table), configure);
+	}
+
+	/// <summary>Adds a callback that adjusts each table's style, after the rules, on every regeneration.</summary>
+	/// <param name="callback">The callback; change <see cref="ErdTableStyleContext.Style"/> in place.</param>
+	/// <returns>This options instance, for chaining.</returns>
+	public AspireC4EfDiagramOptions OnTableStyle(Action<ErdTableStyleContext> callback)
+	{
+		ArgumentNullException.ThrowIfNull(callback);
+
+		TableStyleCallbacks.Add(callback);
+
+		return this;
+	}
+
+	/// <summary>Adds a callback that adjusts each column's style, after the rules, on every regeneration.</summary>
+	/// <param name="callback">The callback; change <see cref="ErdColumnStyleContext.Style"/> in place.</param>
+	/// <returns>This options instance, for chaining.</returns>
+	public AspireC4EfDiagramOptions OnColumnStyle(Action<ErdColumnStyleContext> callback)
+	{
+		ArgumentNullException.ThrowIfNull(callback);
+
+		ColumnStyleCallbacks.Add(callback);
+
+		return this;
+	}
+
+	/// <summary>
+	/// Adds a callback that adjusts each relationship's style, after the rules, on every regeneration.
+	/// </summary>
+	/// <param name="callback">The callback; change <see cref="ErdRelationshipStyleContext.Style"/> in place.</param>
+	/// <returns>This options instance, for chaining.</returns>
+	public AspireC4EfDiagramOptions OnRelationshipStyle(Action<ErdRelationshipStyleContext> callback)
+	{
+		ArgumentNullException.ThrowIfNull(callback);
+
+		RelationshipStyleCallbacks.Add(callback);
+
+		return this;
+	}
+
+	/// <summary>Replaces the colours each <c>DbContext</c> is drawn in.</summary>
+	/// <remarks>Passing none restores the built-in palette.</remarks>
+	/// <param name="colours">The colours, cycled in order.</param>
+	/// <returns>This options instance, for chaining.</returns>
+	public AspireC4EfDiagramOptions WithContextPalette(params ErdColour[] colours)
+	{
+		ArgumentNullException.ThrowIfNull(colours);
+
+		ContextPalette = [.. colours.Where(c => c is { IsEmpty: false })];
+
+		return this;
+	}
+
+	/// <summary>Sets how the diagram is laid out.</summary>
+	/// <param name="direction">The direction relationships flow in.</param>
+	/// <param name="nodeSpacing">Pixels between neighbouring tables; unchanged when omitted.</param>
+	/// <param name="layerSpacing">Pixels between related tables; unchanged when omitted.</param>
+	/// <param name="contextSpacing">Pixels between context containers; unchanged when omitted.</param>
+	/// <returns>This options instance, for chaining.</returns>
+	public AspireC4EfDiagramOptions WithLayout(
+		ErdLayoutDirection direction,
+		int? nodeSpacing = null,
+		int? layerSpacing = null,
+		int? contextSpacing = null
+	)
+	{
+		LayoutDirection = direction;
+		NodeSpacing = Spacing(nodeSpacing, NodeSpacing, nameof(nodeSpacing));
+		LayerSpacing = Spacing(layerSpacing, LayerSpacing, nameof(layerSpacing));
+		ContextSpacing = Spacing(contextSpacing, ContextSpacing, nameof(contextSpacing));
+
+		return this;
+	}
+
+	/// <summary>Sets how the interactive viewer draws relationships.</summary>
+	/// <param name="style">The edge style.</param>
+	/// <returns>This options instance, for chaining.</returns>
+	public AspireC4EfDiagramOptions WithEdgeStyle(ErdEdgeStyle style)
+	{
+		EdgeStyle = style;
+
+		return this;
+	}
+
+	/// <summary>Sets the interactive viewer's animation.</summary>
+	/// <param name="edges">How fast relationship lines flow.</param>
+	/// <param name="transitions">Whether tables glide when re-arranged; unchanged when omitted.</param>
+	/// <returns>This options instance, for chaining.</returns>
+	public AspireC4EfDiagramOptions WithAnimation(ErdEdgeAnimation edges, bool? transitions = null)
+	{
+		EdgeAnimation = edges;
+		AnimateTransitions = transitions ?? AnimateTransitions;
+
+		return this;
+	}
+
+	/// <summary>Turns off every animation in the interactive viewer: flowing lines and gliding tables.</summary>
+	/// <returns>This options instance, for chaining.</returns>
+	public AspireC4EfDiagramOptions WithoutAnimation()
+	{
+		EdgeAnimation = ErdEdgeAnimation.Off;
+		AnimateTransitions = false;
+
+		return this;
+	}
+
+	/// <summary>Sets the interactive viewer's theme, background and card display, by default.</summary>
+	/// <remarks>The reader can still change each in the viewer; this is where it starts.</remarks>
+	/// <param name="theme">The theme.</param>
+	/// <param name="background">The background pattern; unchanged when omitted.</param>
+	/// <param name="tables">What each card shows; unchanged when omitted.</param>
+	/// <returns>This options instance, for chaining.</returns>
+	public AspireC4EfDiagramOptions WithViewerDefaults(
+		ErdViewerTheme theme,
+		ErdViewerBackground? background = null,
+		ErdTableDisplay? tables = null
+	)
+	{
+		Theme = theme;
+		ViewerBackground = background ?? ViewerBackground;
+		TableDisplay = tables ?? TableDisplay;
+
+		return this;
+	}
+
+	/// <summary>Opens the interactive viewer with its legend shown.</summary>
+	/// <param name="show">Whether the legend starts shown.</param>
+	/// <returns>This options instance, for chaining.</returns>
+	public AspireC4EfDiagramOptions WithLegend(bool show = true)
+	{
+		ShowLegend = show;
+
+		return this;
+	}
+
+	/// <summary>Shows a description for each table and column, from the given sources.</summary>
+	/// <param name="sources">Where descriptions may come from. Defaults to every source.</param>
+	/// <returns>This options instance, for chaining.</returns>
+	/// <seealso cref="ShowDescriptions"/>
+	public AspireC4EfDiagramOptions WithDescriptions(ErdDescriptionSources sources = ErdDescriptionSources.All)
+	{
+		ShowDescriptions = sources != ErdDescriptionSources.None;
+		DescriptionSources = sources;
+
+		return this;
+	}
+
+	AspireC4EfDiagramOptions WithElementStyle(ErdStyleRule rule, Action<ErdElementStyle> configure)
+	{
+		ArgumentNullException.ThrowIfNull(configure);
+
+		configure(rule.Style);
+
+		return WithStyle(rule);
+	}
+
+	static int Spacing(int? value, int current, string name)
+	{
+		if (value is null)
+		{
+			return current;
+		}
+
+		ArgumentOutOfRangeException.ThrowIfNegative(value.Value, name);
+
+		return value.Value;
+	}
+
 	/// <summary>Restricts the diagram to the contexts whose short or full type name is listed.</summary>
 	/// <remarks>Entries are matched case-insensitively; see <see cref="IncludedContexts"/>.</remarks>
 	/// <param name="contextNames">The context names to include.</param>

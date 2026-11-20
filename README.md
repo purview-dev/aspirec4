@@ -44,14 +44,14 @@ types to be registered as .NET project resources, with `AddProject<Projects.X>(.
   drops the `ASPIREC4xxx` validation and the `[LikeC4Registry]` types.
 - **Aspire 13.6.5 or later**, on the 13 line (an `Aspire.AppHost.Sdk` AppHost) or 17 and later (a
   `Microsoft.NET.Sdk` AppHost referencing `Aspire.Hosting.AppHost`). One package serves both; see
-  [Requirements](docs/wiki/Requirements.md#aspire).
+  [Requirements](https://purview.dev/docs/aspirec4/requirements/#aspire).
 - **Docker** is used by default to run the LikeC4 sidecar container.
 - Optional: a local Node.js CLI runtime (`npx`, `pnpm`, `yarn`, `bun`, or `deno`) if you call `.WithLocalCLI()`.
 
-**.NET 8 and .NET 9 are not supported.** [Requirements](docs/wiki/Requirements.md) owns the detail: the
+**.NET 8 and .NET 9 are not supported.** [Requirements](https://purview.dev/docs/aspirec4/requirements/) owns the detail: the
 target frameworks each package ships, what each optional package needs, and what happens when a
 requirement is missing. How this repository is built is in
-[Toolchain and support matrix](docs/wiki/contributing/Toolchain.md).
+[Toolchain and support matrix](https://purview.dev/docs/aspirec4/contributing/toolchain/).
 
 ## Installation
 
@@ -136,7 +136,8 @@ Configure the diagram through `AspireC4DiagramOptions`:
 | `DisableHMR` | `false` | Disable Hot Module Replacement |
 | `HMRPort` | `null` (dynamically allocated) | HMR port used by the LikeC4 server and browser when it supports configurable HMR ports; set a fixed port when needed |
 | `ContainerImageTag` | `null` (`latest`) | Pin the `ghcr.io/likec4/likec4` image tag |
-| `AutoIconsEnabled` | `true` | Infer LikeC4 icons from resource type and name |
+| `AutoIconsEnabled` | `true` | Recognise each resource's technology and icon — its framework (`package.json`, `pyproject.toml`, or a .NET project's SDK and packages: ASP.NET Core, gRPC, YARP…), Aspire type (Azure services named as Azure names them, with Azurite and emulators labelled) or container image — and fuzzy-match the rest. See [Technology and icons](docs/wiki/Generated-Output.md#technology-and-icons) |
+| `TechnologyOverrides` | `[]` | App-wide rules that name the technology and icon by package, resource type or container image, before the built-in catalogue: `WithPackageTechnology`, `WithResourceTypeTechnology`, `WithContainerImageTechnology`. See [Overriding it](docs/wiki/Generated-Output.md#overriding-it) |
 | `HideFromDashboard` | `false` | Hide the LikeC4 sidecar from the Aspire dashboard |
 | `DashboardLinkDisplayName` | `"Architecture Diagram"` | Name used for the diagram link when hidden from the dashboard |
 | `IncludeAspireDashboardLinks` | `true` | Add Aspire dashboard links to diagram elements |
@@ -169,6 +170,17 @@ builder.AddAspireC4(options => options.WithHMRDisabled());
 ### Exclude the sidecar from the diagram
 
 The LikeC4 sidecar is excluded automatically. Set `WithIncludeAspireC4InternalResource(true)` in the options callback if you want to inspect it.
+
+### Automatic metadata
+
+Every element carries `aspire-name` and `aspire-type` metadata. It also records where the resource comes
+from. A local .NET, Node, Bun, Python or Go project gets its `project-path`, relative to the AppHost, and
+the runtime version its own files declare (`dotnet-target-framework`, `node-version`, `python-version`,
+`go-version`, …). A container gets its full `container-image` reference, such as
+`mcr.microsoft.com/mssql/server:2025-latest`, and its tag or digest. A key you set with `WithMetadata`
+wins, and `WithAutoIncludeAspireMetadata(AspireMetadataInclusion.Links)` turns all of it off. The keys and
+the files they are read from are listed in
+[Customizing Resources](https://purview.dev/docs/aspirec4/configuration/customizing-resources/#where-each-resource-comes-from).
 
 ### Export the views as images
 
@@ -239,7 +251,7 @@ files it writes, and leaves a `.gitignore` it did not write alone:
 Every file is also written only when its content changes — compared against the file on disk, and with
 no timestamp in the header — so restarting an unchanged application touches nothing.
 `WithoutGitIgnoreFileGeneration()` turns the ignore files off for a repository that commits the model
-deliberately. See [Source control](docs/wiki/Generated-Output.md#source-control).
+deliberately. See [Source control](https://purview.dev/docs/aspirec4/generated-output/#source-control).
 
 #### Your own LikeC4 files
 
@@ -247,7 +259,7 @@ Put hand-written `.c4` files — people, external systems, `extend` blocks, extr
 `likec4-extensions/` folder beside the AppHost and they are included automatically. Generated elements
 are named after their Aspire resources, so those files can extend and reference them. This replaces a
 separate LikeC4 project reading a committed model. See
-[Extending the generated model](docs/wiki/Generated-Output.md#extending-the-generated-model).
+[Extending the generated model](https://purview.dev/docs/aspirec4/generated-output/#extending-the-generated-model).
 
 The two diagrams differ in how well their image export caches:
 
@@ -296,7 +308,7 @@ project.
 
 It is a compatibility shim that will be removed in a future major version — prefer adopting the new
 layout. The full details, including what to update when you drop it, are in the
-[migration guide](docs/wiki/Migration.md).
+[migration guide](https://purview.dev/docs/aspirec4/migration/).
 
 ## Using your own LikeC4 project
 
@@ -328,7 +340,7 @@ model {
 
 Only tags, links, metadata, relationships and nested elements are applied — LikeC4's `extend` body accepts
 nothing else, so your project stays the single source of each element's title, technology, description and
-icon. See [Generated Output](docs/wiki/Generated-Output.md) for the details.
+icon. See [Generated Output](https://purview.dev/docs/aspirec4/generated-output/) for the details.
 
 ## Entity Framework Core ER diagrams
 
@@ -430,6 +442,45 @@ aspirec4                 # parent row, added only when there is more than one di
 | `UseViewerFidelityExport` | `false` | Render images through the viewer in a headless browser so they match its own export. Pulls a ~3.7 GB browser image; `Interactive` only |
 | `ViewerExportImage` | `null` | Override the browser image, including its tag |
 | `ViewerExportTimeoutSeconds` | `600` | How long to wait for a viewer-fidelity export, which may be pulling the image |
+| `Styles` | `[]` | Style rules matching tables, columns, types and relationships by pattern. `WithStyle`, `WithTableStyle`, `WithColumnStyle`, `WithTypeStyle` |
+| `TableStyleCallbacks` / `ColumnStyleCallbacks` / `RelationshipStyleCallbacks` | `[]` | Per-element callbacks run after the rules on every regeneration. `OnTableStyle`, `OnColumnStyle`, `OnRelationshipStyle` |
+| `ContextPalette` | `[]` (built-in six) | The colours each `DbContext` is drawn in. `WithContextPalette(...)` |
+| `LayoutDirection` | `Down` | `Down`, `Right`, `Up` or `Left`. Viewer, d2 and Mermaid. `WithLayout(...)` |
+| `NodeSpacing` / `LayerSpacing` / `ContextSpacing` | `72` / `120` / `88` | Viewer spacing, in pixels. `WithLayout(...)` |
+| `EdgeStyle` | `Bezier` | `Bezier`, `SmoothStep`, `Step` or `Straight`. `WithEdgeStyle(...)` |
+| `EdgeAnimation` / `AnimateTransitions` | `Normal` / `true` | Flowing relationship lines and gliding tables. `WithAnimation(...)`, `WithoutAnimation()` |
+| `HighlightOnHover` | `true` | Hovering a table picks out its relationships and fades the rest |
+| `Theme` / `ViewerBackground` / `TableDisplay` | `Auto` / `Lines` / `Columns` | Where the viewer starts. `WithViewerDefaults(...)` |
+| `ShowLegend` / `ShowTooltips` | `false` / `true` | The legend panel, and hover detail on columns and headers. `WithLegend()` |
+| `ShowDescriptions` / `DescriptionSources` | `false` / `All` | Show a description per table and column, from attributes, XML docs or comments. `WithDescriptions(...)` |
+
+### Styling, layout and descriptions
+
+Style rules match by pattern, using `*` and `?`, on any combination of context, table, column and type.
+Each takes a colour for light and dark, or one colour for both. Callbacks then adjust each element's
+style from the model on every regeneration:
+
+```csharp
+builder.AddAspireC4()
+       .WithEntityFrameworkDiagram(configure: options => options
+           .WithTableStyle("Order*", s => s.WithAccent("#dc2626", "#f87171").WithBadge("SALES"))
+           .WithStyle(rule => rule.ForTable("Order*").ForType("decimal").WithAccent("#16a34a"))
+           .WithColumnStyle("Email", s => s.WithBadge("PII"), table: "Customers")
+           .OnColumnStyle(ctx => { if (ctx.Column.IsForeignKey) ctx.Style.WithForeground("#2563eb"); })
+           .WithLayout(ErdLayoutDirection.Right, layerSpacing: 160)
+           .WithEdgeStyle(ErdEdgeStyle.SmoothStep)
+           .WithDescriptions()
+           .WithLegend());
+```
+
+Descriptions are off by default. Each one comes from `[Description]`, `[Display(Description = …)]` or
+`[DisplayName]`, then the XML `<summary>`, then `[Comment]`/`HasComment`. The metadata reader and the
+build-time dump read XML documentation from the documentation file, so those projects need
+`GenerateDocumentationFile`.
+
+The interactive viewer applies everything. Mermaid, d2 and DBML apply table and relationship colours,
+direction and descriptions where their formats allow, in the light theme and with hex colours only.
+[ER Diagram Styling](docs/wiki/configuration/ER-Diagram-Styling.md) has the full mapping.
 
 ### Renderers
 
@@ -612,7 +663,7 @@ match for the migrated schema.
   `ComplexType`), EF's `[ComplexType]`, or an `[Owned]` reference — are flattened into the owner's table;
   one mapped to JSON is one `json` column, as is a collection of primitives or value objects. **Unions**
   are marked `union`. The full table is in
-  [Value objects, enums and unions](docs/wiki/Entity-Framework-Diagrams.md#value-objects-enums-and-unions).
+  [Value objects, enums and unions](https://purview.dev/docs/aspirec4/entity-framework-diagrams/#value-objects-enums-and-unions).
 
 **Also recovered from a descriptor** (analyzer-referenced projects):
 
@@ -772,8 +823,8 @@ All five sample AppHosts — C# on Aspire 17 and 13.6.5, TypeScript, Go and Pyth
 graph and are checked against one shared contract on every pull request and release
 (`just test-apphosts` runs the polyglot ones locally). See
 [AppHost languages](https://purview.dev/docs/aspirec4/apphosts/) for the comparison and the
-[TypeScript](docs/wiki/apphosts/TypeScript.md), [Go](docs/wiki/apphosts/Go.md) and
-[Python](docs/wiki/apphosts/Python.md) pages.
+[TypeScript](https://purview.dev/docs/aspirec4/apphosts/typescript/), [Go](https://purview.dev/docs/aspirec4/apphosts/go/) and
+[Python](https://purview.dev/docs/aspirec4/apphosts/python/) pages.
 
 ## Compile-time registry validation
 

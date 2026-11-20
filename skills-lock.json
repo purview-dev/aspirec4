@@ -83,7 +83,7 @@
       "source": "purview-dev/build-sdk",
       "sourceType": "github",
       "skillPath": "skills/purview-buildsdk-project-detection/SKILL.md",
-      "computedHash": "15a8581770e22b49e867e82cf02d606d15949e00d221bace997fa87f8e7e7d76"
+      "computedHash": "a98da28a4f42f5dfac4d3a02c38b07a42b5039b98b0b45a1073d620c00f60fc0"
     },
     "purview-buildsdk-project-layout": {
       "source": "purview-dev/build-sdk",
@@ -256,14 +256,14 @@
     "purview-telemetry-benchmarks": {
       "source": "purview-dev/telemetry-sourcegenerator",
       "sourceType": "github",
-      "skillPath": ".agents/skills/purview-telemetry-benchmarks/SKILL.md",
-      "computedHash": "4c3ebba5b36b1d03cad515ed817ead57cb793ac802b10ad3129d1f5e7068fe23"
+      "skillPath": "skills/purview-telemetry-benchmarks/SKILL.md",
+      "computedHash": "2e1719149b6ffa6512a88f0f90bf0c512a5faee5ba1211805c3c62fbb53b1249"
     },
     "purview-telemetry-design": {
       "source": "purview-dev/telemetry-sourcegenerator",
       "sourceType": "github",
       "skillPath": "skills/purview-telemetry-design/SKILL.md",
-      "computedHash": "87a32eed41cbf344b810958f85f1e1a7839e005755dbb0027c8dd6a964524fcd"
+      "computedHash": "4b8adc67fe3cc1a7bc8dcac37008fc234458cd8e2fe2ac6a4ffc2e73b8019689"
     },
     "purview-telemetry-diagnostics": {
       "source": "purview-dev/telemetry-sourcegenerator",

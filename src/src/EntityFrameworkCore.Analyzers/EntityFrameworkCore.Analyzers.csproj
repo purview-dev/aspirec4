@@ -45,6 +45,18 @@
 			Link="Sdk/likec4-logo.png"
 		/>
 	</ItemGroup>
+	<!--
+		Shared with the AppHost's metadata reader and the build-time dump, so all three discovery paths
+		read a description out of XML documentation the same way. The define gives this copy the
+		analyzer's own namespace.
+	-->
+	<PropertyGroup>
+		<DefineConstants>$(DefineConstants);ASPIREC4_ANALYZERS</DefineConstants>
+	</PropertyGroup>
+	<ItemGroup>
+		<Compile Include="..\EntityFrameworkCore\XmlDocumentationText.cs" Link="Helpers\XmlDocumentationText.cs" />
+	</ItemGroup>
+
 	<ItemGroup>
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
 		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />

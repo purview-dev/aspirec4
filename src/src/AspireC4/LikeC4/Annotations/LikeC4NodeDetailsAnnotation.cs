@@ -36,7 +36,7 @@ public sealed class LikeC4NodeDetailsAnnotation : IResourceAnnotation
 	public string? Summary { get; private set; }
 
 	/// <summary>
-	/// Optional icon identifier (e.g. <c>"tech:dotnet"</c>, <c>"azure:storage"</c>).
+	/// Optional icon identifier (e.g. <c>"tech:dotnet"</c>, <c>"azure:storage-accounts"</c>).
 	/// When <see langword="null"/>, the icon is inferred automatically if auto-icons are enabled.
 	/// </summary>
 	public string? Icon { get; private set; }
@@ -98,7 +98,7 @@ public sealed class LikeC4NodeDetailsAnnotation : IResourceAnnotation
 
 	/// <summary>
 	/// Sets the icon for this element.
-	/// Use a namespaced identifier such as <c>"tech:dotnet"</c> or <c>"azure:storage"</c>.
+	/// Use a namespaced identifier such as <c>"tech:dotnet"</c> or <c>"azure:storage-accounts"</c>.
 	/// Pass <see langword="null"/> to revert to automatic inference.
 	/// </summary>
 	/// <param name="icon">The icon identifier, or <see langword="null"/> to clear it.</param>

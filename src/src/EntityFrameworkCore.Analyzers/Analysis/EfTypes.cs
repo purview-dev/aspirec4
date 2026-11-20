@@ -35,6 +35,15 @@ static class EfTypes
 		public const string NotMapped = "NotMapped";
 		public const string Index = "Index";
 		public const string Comment = "Comment";
+
+		/// <summary><c>System.ComponentModel.DescriptionAttribute</c>.</summary>
+		public const string Description = "Description";
+
+		/// <summary><c>System.ComponentModel.DataAnnotations.DisplayAttribute</c>, read for its <c>Description</c>.</summary>
+		public const string Display = "Display";
+
+		/// <summary><c>System.ComponentModel.DisplayNameAttribute</c>, the last resort for a description.</summary>
+		public const string DisplayName = "DisplayName";
 	}
 
 	/// <summary>

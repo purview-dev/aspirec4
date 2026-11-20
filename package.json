@@ -1,6 +1,6 @@
 {
 	"name": "aspirec4",
-	"version": "17.0.0-prerelease.1",
+	"version": "17.0.0-prerelease.2",
 	"license": "MIT",
 	"description": "Live LikeC4 architecture and Entity Framework Core ER diagrams from the Aspire resource graph, for C#, TypeScript, Go and Python AppHosts. This file is the version manifest for the release pipeline and the repository's JavaScript tooling.",
 	"keywords": [

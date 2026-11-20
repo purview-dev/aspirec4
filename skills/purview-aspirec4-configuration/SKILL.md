@@ -103,10 +103,11 @@ LikeC4 v1.57 cannot be configured correctly without resolving the actual version
 
 | Property | Default | Description |
 | --- | --- | --- |
-| `AutoIconsEnabled` | `true` | infer LikeC4 icons from resource type and name |
+| `AutoIconsEnabled` | `true` | recognise each resource's technology label and icon — framework from `package.json`/`pyproject.toml`/`requirements.txt` (Astro on Vite reads as Astro) or a .NET project's SDK, packages and framework references (ASP.NET Core, gRPC, YARP, Orleans, Functions, Worker Service; otherwise `.NET`), an installer by its package manager (npm, pnpm, Yarn…), Aspire type (Azure services by their Azure name; Azurite, emulators and `RunAsContainer()` labelled), or container image — then fuzzy-match the rest. A recognised technology never guesses an icon. An explicit `WithTechnology`/`WithIcon` always wins |
 | `UseDotIfAvailable` | `true` | use GraphViz `dot` for more accurate icon inference when it is on `PATH` |
 | `IconResolvers` | `[]` | custom resolvers, evaluated **before** built-in inference |
-| `AutoIncludeAspireMetadata` | `All` | `None`, `Metadata` (`aspire-name`, `aspire-type`), `Links` (endpoint URLs), or `All` |
+| `TechnologyOverrides` | `[]` | app-wide `TechnologyOverride` rules, checked **before** the catalogue: `WithPackageTechnology` (npm, Python, or a .NET package/framework reference/SDK), `WithResourceTypeTechnology` (full or short type name, or `<T>`), `WithContainerImageTechnology`. Package rules are checked before type rules, and type rules before image rules; within a kind, the first registered wins. A rule's icon applies even with auto icons off; a rule without one has its icon matched from the label. Per-resource `WithLikeC4Details` still wins |
+| `AutoIncludeAspireMetadata` | `All` | `None`, `Metadata` (`aspire-name`, `aspire-type`, plus `project-path` and the runtime version for local projects, and `container-image` for containers; see `purview-aspirec4-resources`), `Links` (endpoint URLs), or `All` |
 | `NormaliseMetadataBehaviour` | `Normalise` | how invalid characters in metadata keys are handled: `Normalise`, `NormaliseLowercase`, or `Throw` |
 | `ExcludedResourceTypes` | `{ParameterResource}` | types excluded from the diagram, including subclasses |
 | `ExcludedResourceTypeNames` | `{"Aspire.Hosting.Azure.AzureEnvironmentResource"}` | the same by full type name; the only form a TypeScript, Go or Python AppHost can use |
@@ -248,6 +249,10 @@ WithHMRDisabled(bool = true)
 WithContainerImageTag(string?)            WithCheckLatestImageVersion(bool = true)
 WithAutoIcons(bool = true)                WithUseDotIfAvailable(bool)
 WithIconResolver(Func<IconResolverContext, string?>)
+WithPackageTechnology(string packageName, string technology, string? icon = null)
+WithResourceTypeTechnology(string typeName, string technology, string? icon = null)
+WithResourceTypeTechnology<T>(string technology, string? icon = null)
+WithContainerImageTechnology(string image, string technology, string? icon = null)
 WithHideFromDashboard(string displayName = "Architecture Diagram")
 WithRelationshipKindSyntax(LikeC4RelationshipKindSyntax)
 WithFormatGeneratedFile(bool = true)
@@ -273,6 +278,8 @@ WithImageExportDirectory(string)          WithoutImageExport()
 ## Related skills
 
 `purview-aspirec4-quickstart` for installing and running it, `purview-aspirec4-resources` for
-per-resource customisation, `purview-aspirec4-validation` for the registry that keeps the kind
+per-resource customisation, `purview-aspirec4-enrichment` for curating an existing AppHost's diagram
+(groups, tag and kind styling, excluding Aspire's build plumbing),
+`purview-aspirec4-validation` for the registry that keeps the kind
 and tag strings honest, and `purview-aspirec4-entityframework` for the Entity Framework Core ER
 diagram and its own options.

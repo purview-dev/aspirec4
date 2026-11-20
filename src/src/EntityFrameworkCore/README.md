@@ -28,7 +28,7 @@ You install it in the **AppHost** and call one method. Your service projects nee
 - Docker (or Podman) for the default viewer sidecar. See [Without a container runtime](#without-a-container-runtime)
   if you have neither.
 
-The [requirements page](https://github.com/purview-dev/aspirec4/blob/main/docs/wiki/Requirements.md)
+The [requirements page](https://purview.dev/docs/aspirec4/requirements/)
 has the detail behind each of these.
 
 Container image exports verify bind sharing through `Purview.Containers.Environment`; preload
@@ -114,7 +114,7 @@ column — as well as shape-only value objects, EF's `[ComplexType]` and `[Owned
 primitives or value objects (one `json` column), enums by their underlying type, and C# unions, marked
 `union`. Foreign keys typed with a value object resolve from either end of the relationship, including
 EF's shadow foreign key when only the principal declares a collection. The full rules are in the
-[Value objects, enums and unions](https://github.com/purview-dev/aspirec4/blob/main/docs/wiki/Entity-Framework-Diagrams.md#value-objects-enums-and-unions)
+[Value objects, enums and unions](https://purview.dev/docs/aspirec4/entity-framework-diagrams/#value-objects-enums-and-unions)
 guide.
 
 ## Screenshots
@@ -193,6 +193,29 @@ Set options in the `configure` callback or in the `AspireC4:EntityFramework` con
 Set `OutputDirectory` in the callback rather than in configuration. The sidecar's bind mount is fixed
 when the AppHost builder runs, so a value from configuration changes where files are written but not
 what the sidecar serves.
+
+## Styling, layout and descriptions
+
+Style tables, columns, types and relationships by pattern, with a separate colour for the dark theme.
+Per-element callbacks can then compute a style from the model, and run on every regeneration. You can
+also set the layout direction, spacing, edge style, animation and the viewer's starting theme, and
+show a description for each table and column. Descriptions are off by default and come from
+`[Description]`/`[Display]`/`[DisplayName]`, the XML `<summary>`, or the database comment.
+
+```csharp
+builder.AddAspireC4()
+       .WithEntityFrameworkDiagram(configure: options => options
+           .WithTableStyle("Order*", s => s.WithAccent("#dc2626", "#f87171").WithBadge("SALES"))
+           .WithTypeStyle("decimal", s => s.WithAccent("#16a34a"))
+           .OnTableStyle(ctx => { if (ctx.Table.Columns.Count > 15) ctx.Style.WithBadge("WIDE"); })
+           .WithLayout(ErdLayoutDirection.Right)
+           .WithDescriptions()
+           .WithLegend());
+```
+
+The interactive viewer applies all of it, and Mermaid, d2 and DBML what their formats allow. See
+[ER Diagram Styling](https://purview.dev/docs/aspirec4/configuration/er-diagram-styling/) for every
+option and the per-renderer mapping.
 
 ## Without a container runtime
 

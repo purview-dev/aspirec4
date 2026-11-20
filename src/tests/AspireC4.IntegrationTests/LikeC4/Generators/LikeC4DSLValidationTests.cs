@@ -267,6 +267,51 @@ public sealed class LikeC4DSLValidationTests
 	}
 
 	[Test]
+	public async Task Generate_ElementWithSourceMetadata_ProducesNoValidationErrors(CancellationToken cancellationToken)
+	{
+		// Arrange: the shapes ResourceSourceMetadata emits — relative paths, version ranges, digests.
+		LikeC4Model model = new()
+		{
+			Elements =
+			[
+				new LikeC4Element
+				{
+					Name = "api",
+					Label = "api",
+					Kind = LikeC4ElementKind.Component,
+					Metadata =
+					[
+						new LikeC4Metadata("project-path", "../Api/Api.csproj"),
+						new LikeC4Metadata("dotnet-target-framework", "net10.0, net11.0"),
+						new LikeC4Metadata("node-version", ">=20 <23"),
+						new LikeC4Metadata("package-manager", "pnpm@9.12.0"),
+					],
+				},
+				new LikeC4Element
+				{
+					Name = "cache",
+					Label = "cache",
+					Kind = LikeC4ElementKind.Container,
+					Metadata =
+					[
+						new LikeC4Metadata("container-image", "docker.io/library/redis@sha256:abc123"),
+						new LikeC4Metadata("container-digest", "sha256:abc123"),
+					],
+				},
+			],
+			Relationships = [],
+		};
+
+		// Act
+		var dsl = LikeC4DSLGenerator.Generate(model, DefaultOptions);
+
+		// Assert
+		var result = await RunValidateAsync(dsl, cancellationToken);
+		AssertNoValidationErrors(result, dsl);
+		await Assert.That(result.FilteredErrors).IsEqualTo(0);
+	}
+
+	[Test]
 	public async Task Generate_RelationshipWithKindAndLabel_ProducesNoValidationErrors(
 		CancellationToken cancellationToken
 	)

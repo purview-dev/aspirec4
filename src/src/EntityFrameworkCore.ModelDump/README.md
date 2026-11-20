@@ -41,7 +41,7 @@ after `Build`. It rolls forward to the **latest installed major runtime**, so th
 is enough, and a project that builds `net11.0` can be loaded. A build that cannot run the tool
 simply produces no dump (the target is `ContinueOnError`); the AppHost then falls back to the other
 sources. See the
-[requirements page](https://github.com/purview-dev/aspirec4/blob/main/docs/wiki/Requirements.md#the-model-dump-tool).
+[requirements page](https://purview.dev/docs/aspirec4/requirements/#the-model-dump-tool).
 
 ### 2. Make sure the project has a design-time factory
 
@@ -80,6 +80,13 @@ to `bin/` or `publish/`, and `obj/` is normally ignored by git. The dump leaves 
 deployment or your repository.
 
 The AppHost ignores a dump that is older than the built assembly, so a stale dump is never shown.
+
+The dump also records each table's and column's description sources for the diagram's optional
+description column: the display attributes, the database comment (including `ToTable(t => t.HasComment(…))`,
+which only the built model can see), and the XML `<summary>`. The summary is read from the
+documentation file beside the assembly, so set `<GenerateDocumentationFile>true</GenerateDocumentationFile>`
+to include it. See
+[ER Diagram Styling](https://purview.dev/docs/aspirec4/configuration/er-diagram-styling/#descriptions).
 
 ## MSBuild properties
 

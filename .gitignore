@@ -683,3 +683,6 @@ src/src/TestAppHost/.aspirec4/
 # Per-agent folders (including .claude/) are local too - never commit a copy.
 .agents/skills/
 .claude/
+
+# Playwright CLI scratch output
+.playwright-cli/

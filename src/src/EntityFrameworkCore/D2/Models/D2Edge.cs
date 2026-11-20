@@ -21,4 +21,7 @@ public sealed record D2Edge
 
 	/// <summary>Optional edge label.</summary>
 	public string? Label { get; init; }
+
+	/// <summary>The relationship's resolved style, when a rule or callback styles it.</summary>
+	public ErdElementStyle? Style { get; init; }
 }

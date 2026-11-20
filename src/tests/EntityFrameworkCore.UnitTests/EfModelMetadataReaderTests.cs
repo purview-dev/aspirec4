@@ -293,4 +293,56 @@ public sealed class EfModelMetadataReaderTests
 		await Assert.That(contexts.Select(c => c.Name)).Contains("BlogDbContext");
 		await Assert.That(contexts.All(c => c.Fidelity == EfModelFidelity.Approximate)).IsTrue();
 	}
+
+	// Descriptions
+
+	[Test]
+	public async Task ReadFromAssembly_DescriptionAttributeOnEntity_IsTheTableDescription()
+	{
+		// Act
+		var products = Table(Context(Read(typeof(SalesDbContext)), "SalesDbContext"), "products");
+
+		// Assert
+		await Assert.That(products.Description).IsEqualTo("Something the shop sells");
+	}
+
+	[Test]
+	public async Task ReadFromAssembly_DisplayDescriptionOnProperty_IsTheColumnDescription()
+	{
+		// Act
+		var customers = Table(Context(Read(typeof(SalesDbContext)), "SalesDbContext"), "Customers");
+
+		// Assert
+		await Assert
+			.That(customers.Columns.Single(c => c.Name == "Email").Description)
+			.IsEqualTo("Where order confirmations are sent");
+	}
+
+	[Test]
+	public async Task ReadFromAssembly_DocumentationFile_SuppliesTheSummaries()
+	{
+		// The sample generates its documentation file, as Purview.BuildSdk projects do; without one there
+		// is nothing for a metadata-only read to find, since comments do not survive compilation.
+		// Act
+		var customers = Table(Context(Read(typeof(SalesDbContext)), "SalesDbContext"), "Customers");
+
+		// Assert
+		await Assert
+			.That(customers.Documentation)
+			.IsEqualTo("A customer, keyed conventionally and uniquely indexed on email.");
+		await Assert
+			.That(customers.Columns.Single(c => c.Name == "DisplayName").Documentation)
+			.IsEqualTo("The name shown to staff, when the customer gave one.");
+	}
+
+	[Test]
+	public async Task ReadFromAssembly_UndocumentedProperty_HasNoDocumentation()
+	{
+		// Act
+		var customers = Table(Context(Read(typeof(SalesDbContext)), "SalesDbContext"), "Customers");
+
+		// Assert
+		await Assert.That(customers.Columns.Single(c => c.Name == "CreatedAt").Documentation).IsNull();
+		await Assert.That(customers.Columns.Single(c => c.Name == "CreatedAt").Description).IsNull();
+	}
 }

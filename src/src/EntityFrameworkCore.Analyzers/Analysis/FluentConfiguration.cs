@@ -137,6 +137,12 @@ sealed class FluentConfiguration
 
 		if (propertyName is null)
 		{
+			// Entity<T>().HasComment("…") comments the table rather than a column.
+			if (name == EfTypes.Fluent.HasComment)
+			{
+				entity.Comment = GetStringArgument(invocation, 0) ?? entity.Comment;
+			}
+
 			return;
 		}
 
@@ -318,6 +324,9 @@ sealed class EntityConfiguration
 	public string? TableName { get; set; }
 
 	public string? Schema { get; set; }
+
+	/// <summary>The table comment from <c>Entity&lt;T&gt;().HasComment(…)</c>.</summary>
+	public string? Comment { get; set; }
 
 	public HashSet<string> KeyProperties { get; } = [with(StringComparer.Ordinal)];
 

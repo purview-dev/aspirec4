@@ -25,8 +25,14 @@ Both read value objects the same way — Purview's `[Scalar<T>]`, `[Scalar(typeo
 `[Owned]` — along with value-object collections and C# unions. The attributes matter here: a Purview
 generator writes the `Value` member into a generated file this analyzer cannot see, so a strongly-typed id
 is recognised by its `[Scalar]` attribute. See
-[Value objects, enums and unions](https://github.com/purview-dev/aspirec4/blob/main/docs/wiki/Entity-Framework-Diagrams.md#value-objects-enums-and-unions).
+[Value objects, enums and unions](https://purview.dev/docs/aspirec4/entity-framework-diagrams/#value-objects-enums-and-unions).
 | Fidelity: `Approximate` | Fidelity: `Full` |
+
+It also records each entity's and property's description sources for the diagram's optional
+description column: `[Description]`, `[Display(Description = …)]` and `[DisplayName]`, the database
+comment, and the XML `<summary>`. The analyzer reads the summary straight from source, so unlike the
+metadata read it needs no documentation file. See
+[ER Diagram Styling](https://purview.dev/docs/aspirec4/configuration/er-diagram-styling/#descriptions).
 
 ## Requirements
 
@@ -38,7 +44,7 @@ is recognised by its `[Scalar]` attribute. See
   is built against Roslyn 5.9 — the project's target framework has no bearing on it. An older SDK
   reports `CS9057` and skips the generator, so the ER diagram falls back to the approximate metadata
   read. See the
-  [requirements page](https://github.com/purview-dev/aspirec4/blob/main/docs/wiki/Requirements.md#the-compiler-floor-net-11-sdk).
+  [requirements page](https://purview.dev/docs/aspirec4/requirements/#the-compiler-floor-net-11-sdk).
 - The project still has to be registered in the AppHost with `AddProject<Projects.X>(...)`, and the AppHost
   still has to call `WithEntityFrameworkDiagram()`.
 

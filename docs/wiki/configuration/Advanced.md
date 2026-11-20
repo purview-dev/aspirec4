@@ -51,6 +51,10 @@ builder.AddAspireC4(options =>
         ctx.Resource is MyCustomResource ? "tech:dotnet" : null));
 ```
 
+A resolver only picks the icon. To fix the technology label as well, matched by package, resource type
+or container image, use a technology override instead. See
+[Overriding it](../Generated-Output.md#overriding-it).
+
 ## Element kind specifications
 
 Declare custom element kinds with optional style, notation, and technology in the `specification {}` block. These are additive — kinds listed here but not present in the model are still declared:
@@ -106,7 +110,7 @@ builder.AddAspireC4(options => options.WithRelationshipKindSyntax(LikeC4Relation
 `AutoIncludeAspireMetadata` (`WithAutoIncludeAspireMetadata`) controls which Aspire runtime metadata is injected into generated elements:
 
 - `None` — no automatic metadata.
-- `Metadata` — `aspire-name` and `aspire-type` entries.
+- `Metadata` — `aspire-name` and `aspire-type` entries, plus where each resource comes from: its project path and runtime version, or its container image. See [Customizing Resources](Customizing-Resources.md#where-each-resource-comes-from).
 - `Links` — allocated HTTP/HTTPS endpoint URLs as element links.
 - `All` (default) — both.
 

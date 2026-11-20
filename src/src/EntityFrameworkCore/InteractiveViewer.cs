@@ -22,6 +22,23 @@ public static class InteractiveViewer
 	public static string Asset(string name, string modelFileName, string? title, DomainTypeDisplay domainTypeDisplay) =>
 		Substitute(Read("viewer." + name), modelFileName, title, domainTypeDisplay);
 
+	/// <summary>
+	/// Reads an interactive-viewer asset with everything the options decide substituted, including the
+	/// theme the page paints in before its script has loaded.
+	/// </summary>
+	internal static string Asset(string name, string modelFileName, AspireC4EfDiagramOptions options) =>
+		Asset(name, modelFileName, options.Title, options.DomainTypeDisplay)
+			.Replace(
+				"__DEFAULT_THEME__",
+				options.Theme switch
+				{
+					ErdViewerTheme.Light => "light",
+					ErdViewerTheme.Dark => "dark",
+					_ => "auto",
+				},
+				StringComparison.Ordinal
+			);
+
 	/// <summary>Reads a Mermaid-preview asset, substituting the diagram file name and title.</summary>
 	public static string MermaidAsset(string name, string diagramFileName, string? title) =>
 		Substitute(Read("mermaid." + name), diagramFileName, title, DomainTypeDisplay.DomainTypeFirst);

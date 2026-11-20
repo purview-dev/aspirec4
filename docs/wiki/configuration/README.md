@@ -31,7 +31,7 @@ builder.AddAspireC4(options =>
 | `HMRPort` | `null` (dynamic) | Fixed HMR port when the LikeC4 server supports configurable ports (v1.57+); ignored on older versions, which always use port `24678`. |
 | `ContainerImageTag` | `null` (`latest`) | Pin the `ghcr.io/likec4/likec4` image tag (ignored with `.WithLocalCLI()`). |
 | `CheckLatestImageVersion` | `true` | When using the `latest` tag, run a throwaway container at startup to resolve the actual version so version-gated features (e.g. HMR port mode) are configured correctly. |
-| `AutoIconsEnabled` | `true` | Infer LikeC4 icons from resource type and name. |
+| `AutoIconsEnabled` | `true` | Recognise each resource's technology and icon from its framework (including a .NET project's flavour), Aspire type or container image, and fuzzy-match the rest. See [Technology and icons](../Generated-Output.md#technology-and-icons). |
 | `HideFromDashboard` | `false` | Hide the sidecar from the dashboard and surface the diagram as a link/command on project resources. |
 | `DashboardLinkDisplayName` | `"Architecture Diagram"` | Display name for the diagram link/command when hidden from the dashboard. |
 | `RelationshipKindSyntax` | `Dot` | DSL syntax for typed relationships: `Dot` (`SOURCE .KIND TARGET`) or `Bracket` (`SOURCE -[KIND]-> TARGET`). |
@@ -40,7 +40,7 @@ builder.AddAspireC4(options =>
 | `UseDotIfAvailable` | `true` | Use GraphViz' `dot` executable for more accurate icon inference when on `PATH`. |
 | `ElementKindSpecs` | `[]` | Custom element kind specifications emitted in the `specification {}` block (style, notation, technology). |
 | `RelationshipKindSpecs` | `[]` | Custom relationship kind specifications emitted in the `specification {}` block (technology). |
-| `AutoIncludeAspireMetadata` | `All` | Which Aspire metadata is auto-injected: `None`, `Metadata` (`aspire-name`, `aspire-type`), `Links` (endpoint URLs), or `All`. |
+| `AutoIncludeAspireMetadata` | `All` | Which Aspire metadata is auto-injected: `None`, `Metadata` (`aspire-name`, `aspire-type`, and the project path and runtime version or container image — see [Customizing Resources](Customizing-Resources.md#where-each-resource-comes-from)), `Links` (endpoint URLs), or `All`. |
 | `NormaliseMetadataBehaviour` | `Normalise` | How invalid characters in metadata keys are handled: `Normalise`, `NormaliseLowercase`, or `Throw`. |
 | `AdditionalDSLFiles` | `[]` | Extra user-managed `.c4` files copied into the output directory and synced to the container volume. |
 | `AdditionalDSLFolders` | `[]` | Directories scanned recursively for `.c4` files, added to `include.paths` in the generated config. |
@@ -56,6 +56,7 @@ builder.AddAspireC4(options =>
 | `ExcludedResourceTypes` | `{ParameterResource}` | Resource types excluded from the diagram (type and subclasses). |
 | `ExcludedResourceTypeNames` | `{"Aspire.Hosting.Azure.AzureEnvironmentResource"}` | The same, by full type name: the form TypeScript, Go and Python AppHosts use, and for types from packages the AppHost does not reference. |
 | `IconResolvers` | `[]` | Custom icon resolvers evaluated before built-in icon inference. |
+| `TechnologyOverrides` | `[]` | App-wide rules naming the technology (and optionally the icon) for every resource matched by package, resource type or container image. They are checked before the built-in catalogue. See [Overriding it](../Generated-Output.md#overriding-it). |
 | `ConfigFileMetadata` | `{}` | Additional metadata included in the generated `likec4.config.json`. |
 
 ## Fluent methods
@@ -80,10 +81,13 @@ Every property has a corresponding fluent `With*` method, for example:
 - `WithDefaultStateStyles(bool = true)`, `WithStateTag(string state, string? tag)`
 - `WithUseDotIfAvailable(bool)`
 - `WithIconResolver(Func<IconResolverContext, string?>)`
+- `WithPackageTechnology(packageName, technology, icon?)`, `WithResourceTypeTechnology(typeName, technology, icon?)`, `WithResourceTypeTechnology<T>(technology, icon?)`, `WithContainerImageTechnology(image, technology, icon?)`
 - `WithElementKindSpec(LikeC4ElementKindSpec)`, `WithRelationshipKindSpec(...)`
 - `WithAdditionalDSLFile(string)`, `WithAdditionalDSLFolder(string)`, `WithImageAliasFolder(string, string)`
 - `WithExcludedResourceType<T>()`, `WithoutExcludedResourceType<T>()`, and by full type name `WithExcludedResourceType(string)`, `WithoutExcludedResourceType(string)` (the form exported to TypeScript, Go and Python)
 - `WithIncludeAspireC4InternalResource(bool)`
+
+The Entity Framework Core ER diagram has options of its own; see [Entity Framework Core ER Diagrams](../Entity-Framework-Diagrams.md#configuration), and [ER Diagram Styling](ER-Diagram-Styling.md) for its styles, layout, animation and descriptions.
 
 See [Advanced Configuration](Advanced.md) for the folder, alias, resolver, and spec extensions, and [Source Generator Validation](Source-Generator.md) for the `AspireC4Strict` MSBuild property.
 

@@ -31,7 +31,12 @@ for (const name of ["index.html", "app.js"]) {
 	await writeFile(join(dir, name), text, "utf8");
 }
 
-const descriptor = await readFile(model, "utf8");
+// The model as given, which a generated model now writes with its presentation beside the contexts.
+// The checks below assert the viewer's own behaviour, so they run against the contexts alone, and the
+// given presentation is driven separately once they are done.
+const given = JSON.parse(await readFile(model, "utf8"));
+const ownPresentation = given.presentation ?? null;
+const descriptor = JSON.stringify({ ...given, presentation: undefined });
 
 await writeFile(join(dir, "model.json"), descriptor, "utf8");
 
@@ -94,6 +99,348 @@ const choose = async (page: any, group: string, option: string) => {
 
 /** The toolbar's View control, which is not behind the settings popover. */
 const VIEW = '[aria-label="View"]';
+
+/**
+ * Serves the model with a presentation, checks that every part of it is drawn, then puts the plain
+ * model back. Styles are chosen from the schema itself — a relationship inside one context, its two
+ * tables, and the dependent's first columns — so the check travels with whatever model it is given.
+ */
+async function checkPresentation() {
+	const parsed = JSON.parse(descriptor);
+	const tables: any[] = (parsed.contexts ?? []).flatMap((c: any) =>
+		(c.tables ?? []).map((t: any) => ({ ...t, context: c.name })),
+	);
+	const byName = new Map(tables.map((t) => [t.name, t]));
+
+	// A relationship between two different tables of one context: the layout direction can only be
+	// asserted inside a container, since containers themselves are packed rather than layered.
+	const pair = tables
+		.flatMap((t) => (t.foreignKeys ?? []).map((fk: any) => ({ dependent: t, fk })))
+		.find(
+			({ dependent, fk }) =>
+				fk.principalTable !== dependent.name && byName.get(fk.principalTable)?.context === dependent.context,
+		);
+
+	if (!pair) {
+		check("the model has a relationship inside one context", false, "nothing to style");
+		return;
+	}
+
+	const principal = pair.fk.principalTable as string;
+	const dependent = pair.dependent.name as string;
+	const relationship = `${dependent}.${pair.fk.columns.join("_")}->${principal}`;
+	const [firstColumn, secondColumn] = (pair.dependent.columns ?? []).map((c: any) => c.name as string);
+
+	const presentation = {
+		version: 1,
+		viewer: {
+			theme: "dark",
+			background: "none",
+			tables: "columns",
+			animation: "fast",
+			descriptions: true,
+			legend: true,
+			tooltips: true,
+			transitions: true,
+			hover: true,
+		},
+		layout: { direction: "RIGHT", nodeSpacing: 60, layerSpacing: 160, contextSpacing: 100, edgeStyle: "smoothstep" },
+		styles: {
+			tables: {
+				// Different colours per theme, so the check proves the dark one is the one drawn.
+				[principal]: { accent: { light: "#e11d48", dark: "#0ea5e9" }, badge: "PII", tooltip: "Personal data" },
+			},
+			columns: { [dependent]: { [firstColumn]: { accent: { light: "#7c3aed", dark: "#7c3aed" }, badge: "AUDIT" } } },
+			relationships: { [relationship]: { accent: { light: "#16a34a", dark: "#16a34a" }, lineStyle: "dashed" } },
+		},
+		descriptions: {
+			tables: { [dependent]: "A table described for the check, long enough to be worth a line of its own." },
+			columns: {
+				[dependent]: {
+					[firstColumn]: "The first column, described.",
+					...(secondColumn ? { [secondColumn]: "A second description, a little longer than the first one." } : {}),
+				},
+			},
+		},
+	};
+
+	await writeFile(join(dir, "model.json"), JSON.stringify({ ...parsed, presentation }), "utf8");
+
+	// A fresh context has no stored settings, so the configured defaults are what it opens with.
+	const context = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
+	const page = await context.newPage();
+	const errors: string[] = [];
+
+	page.on("pageerror", (e) => errors.push(e.message));
+	page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
+
+	try {
+		await page.goto(base, { waitUntil: "networkidle" });
+		await page.waitForSelector(".entity", { timeout: 20000 });
+		await page.waitForTimeout(400);
+
+		check(
+			"the configured theme applies with nothing stored",
+			(await page.evaluate(() => document.documentElement.dataset.theme)) === "dark",
+		);
+
+		check("the configured background applies", (await page.locator(".react-flow__background").count()) === 0);
+
+		const node = (id: string) => page.locator(`.react-flow__node-entity[data-id="${id}"]`);
+
+		const header = await node(principal)
+			.locator("header")
+			.evaluate((el) => getComputedStyle(el).borderBottomColor);
+
+		check("a styled table takes its dark accent", header === "rgb(14, 165, 233)", header);
+
+		check(
+			"a styled table shows its badge",
+			(await node(principal).locator("header .badge.custom", { hasText: "PII" }).count()) === 1,
+		);
+
+		const row = await node(dependent)
+			.locator(".col")
+			.first()
+			.evaluate((el) => getComputedStyle(el).boxShadow);
+
+		check("a styled column carries its accent bar", row.includes("rgb(124, 58, 237)"), row);
+
+		check(
+			"a styled column shows its badge",
+			(await node(dependent).locator(".col .badge.custom", { hasText: "AUDIT" }).count()) === 1,
+		);
+
+		const edge = page.locator(`.react-flow__edge[data-id="${relationship}"] .react-flow__edge-path`);
+		const stroke = await edge.evaluate((el) => getComputedStyle(el).stroke);
+		const dash = await edge.evaluate((el) => getComputedStyle(el).strokeDasharray);
+
+		check("a styled relationship takes its colour", stroke === "rgb(22, 163, 74)", stroke);
+		check("a styled relationship takes its line style", dash.replaceAll("px", "").replaceAll(",", "") === "8 5", dash);
+
+		const path = (await edge.getAttribute("d")) ?? "";
+
+		check("the configured edge style is drawn", path.length > 0 && !path.includes("C"), path.slice(0, 40));
+
+		// Left to right: a principal is laid out before its dependent along the flow.
+		const from = (await node(principal).boundingBox())!;
+		const to = (await node(dependent).boundingBox())!;
+
+		check(
+			"the configured direction lays relationships out left to right",
+			from.x + from.width <= to.x + 1,
+			`${principal} ends at ${Math.round(from.x + from.width)}px, ${dependent} starts at ${Math.round(to.x)}px`,
+		);
+
+		// Sideways, both flanks of a card carry relationships, so a self-reference hangs below it — and
+		// the space below has to be reserved, or its label lands on the next card down.
+		const selfTable = tables.find((t) => (t.foreignKeys ?? []).some((fk: any) => fk.principalTable === t.name));
+
+		if (selfTable) {
+			const hanging = await page.evaluate((id) => {
+				const edge = document.querySelector(`.react-flow__edge[data-id^="${id}."][data-id$="->${id}"] path`);
+				const card = document.querySelector(`.react-flow__node-entity[data-id="${id}"]`);
+				const label = document.querySelector(".self-loop-label")?.getBoundingClientRect();
+
+				if (!edge || !card || !label) return null;
+
+				const path = edge.getBoundingClientRect();
+				const box = card.getBoundingClientRect();
+				const hits = [...document.querySelectorAll(".react-flow__node .entity")]
+					.map((el) => el.getBoundingClientRect())
+					.filter((b) => b.left < label.right && b.right > label.left && b.top < label.bottom && b.bottom > label.top);
+
+				return { below: Math.round(path.bottom - box.bottom), beside: Math.round(path.right - box.right), hits: hits.length };
+			}, selfTable.name);
+
+			check(
+				"a sideways self-reference hangs below its card",
+				hanging !== null && hanging.below > 20 && hanging.beside <= 1,
+				hanging === null ? "not found" : `${hanging.below}px below, ${hanging.beside}px beside`,
+			);
+
+			check("its label overlaps no card", hanging !== null && hanging.hits === 0, `${hanging?.hits ?? "?"} cards`);
+		}
+
+		// ── Descriptions ──────────────────────────────────────────────────────────────────────
+
+		const described = await node(dependent).locator(".col .desc").allInnerTexts();
+
+		check(
+			"column descriptions are shown",
+			described.some((text) => text.includes("described")),
+			`${described.filter(Boolean).length} described rows`,
+		);
+
+		check("a table description is shown under its header", (await node(dependent).locator(".table-desc").count()) === 1);
+
+		const overflowing = await page.locator(".entity").evaluateAll((els) =>
+			els
+				.filter((e) => (e as HTMLElement).scrollWidth > (e as HTMLElement).clientWidth + 1)
+				.map((e) => e.querySelector("header")?.textContent ?? "?"),
+		);
+
+		check("descriptions fit inside their cards", overflowing.length === 0, overflowing.slice(0, 3).join(", "));
+
+		const truncated = await page.locator(".entity .col-name").evaluateAll((els) =>
+			els.filter((e) => (e as HTMLElement).scrollWidth > (e as HTMLElement).clientWidth + 1).length,
+		);
+
+		check("no column name is truncated beside a description", truncated === 0, `${truncated} truncated`);
+
+		const title = (await node(dependent).locator(".col").first().getAttribute("title")) ?? "";
+
+		check("a column explains itself on hover", title.includes("Database type") && title.includes("described"), title.split("\n")[0]);
+
+		// ── Legend ────────────────────────────────────────────────────────────────────────────
+
+		const legend = page.locator(".legend");
+
+		check("the configured legend is shown", (await legend.count()) === 1);
+		check(
+			"the legend lists every context",
+			(await legend.locator(".legend-swatch").count()) === new Set(tables.map((t) => t.context)).size,
+		);
+		check("the legend explains a style's badge", (await legend.locator(".badge.custom", { hasText: "PII" }).count()) === 1);
+
+		// ── Hover ─────────────────────────────────────────────────────────────────────────────
+
+		const box = (await node(principal).boundingBox())!;
+
+		await page.mouse.move(box.x + box.width / 2, box.y + 12);
+		await page.waitForTimeout(250);
+
+		check("hovering a table picks it out", (await node(principal).locator(".entity.focus").count()) === 1);
+		check("hovering keeps a related table in view", (await node(dependent).locator(".entity.faded").count()) === 0);
+
+		// Every table with no relationship to the hovered one, either way, is the one that recedes.
+		const linked = new Set([principal]);
+
+		for (const t of tables) {
+			for (const fk of t.foreignKeys ?? []) {
+				if (fk.principalTable === principal) linked.add(t.name);
+				if (t.name === principal && byName.has(fk.principalTable)) linked.add(fk.principalTable);
+			}
+		}
+
+		const unrelated = tables.filter((t) => !linked.has(t.name)).length;
+		const faded = await page.locator(".entity.faded").count();
+
+		check("hovering fades exactly the unrelated tables", faded === unrelated, `${faded} of ${unrelated}`);
+
+		await page.mouse.move(5, 995);
+		await page.waitForTimeout(250);
+
+		check("moving away clears the highlight", (await page.locator(".entity.faded, .entity.focus").count()) === 0);
+
+		// ── The reader's own choices still win ────────────────────────────────────────────────
+
+		await choose(page, "Descriptions", "Off");
+		await page.waitForTimeout(500);
+
+		check(
+			"descriptions can be switched off",
+			(await page.locator(".entity .desc").count()) === 0 && (await page.locator(".entity .table-desc").count()) === 0,
+		);
+
+		await choose(page, "Legend", "Off");
+		await page.waitForTimeout(150);
+
+		check("the legend can be switched off", (await page.locator(".legend").count()) === 0);
+
+		await page.reload({ waitUntil: "networkidle" });
+		await page.waitForSelector(".entity", { timeout: 20000 });
+
+		check(
+			"a reader's choice survives a reload",
+			(await page.locator(".entity .desc").count()) === 0 && (await page.locator(".legend").count()) === 0,
+		);
+
+		// A changed default in the AppHost reaches a reader who never chose otherwise. The stored theme
+		// is the old default, recorded against it, so it has to give way rather than pin the old value.
+		await writeFile(
+			join(dir, "model.json"),
+			JSON.stringify({ ...parsed, presentation: { ...presentation, viewer: { ...presentation.viewer, theme: "light" } } }),
+			"utf8",
+		);
+		await page.reload({ waitUntil: "networkidle" });
+		await page.waitForSelector(".entity", { timeout: 20000 });
+
+		check(
+			"a changed AppHost default replaces the one it was stored against",
+			(await page.evaluate(() => document.documentElement.dataset.theme)) === "light",
+		);
+
+		check(
+			"a choice the reader made is kept across that change",
+			(await page.locator(".entity .desc").count()) === 0 && (await page.locator(".legend").count()) === 0,
+		);
+
+		await page.screenshot({ path: join(dir, "viewer-check-presentation.png") });
+
+		check("no console errors (presentation)", errors.length === 0, errors.slice(0, 2).join(" | "));
+	} finally {
+		await context.close();
+		await writeFile(join(dir, "model.json"), descriptor, "utf8");
+	}
+}
+
+/**
+ * Serves the model with the presentation it was generated with — the sample AppHost's own styling —
+ * and checks the viewer draws it without error and honours its headline choices.
+ */
+async function checkOwnPresentation() {
+	await writeFile(join(dir, "model.json"), JSON.stringify({ ...JSON.parse(descriptor), presentation: ownPresentation }), "utf8");
+
+	const context = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
+	const page = await context.newPage();
+	const errors: string[] = [];
+
+	page.on("pageerror", (e) => errors.push(e.message));
+	page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
+
+	try {
+		await page.goto(base, { waitUntil: "networkidle" });
+		await page.waitForSelector(".entity", { timeout: 20000 });
+		await page.waitForTimeout(400);
+
+		check("the model's own presentation renders", (await page.locator(".entity").count()) > 0);
+
+		const styledTables = Object.keys(ownPresentation.styles?.tables ?? {}).length;
+
+		if (styledTables > 0) {
+			check(
+				"its styled tables are drawn styled",
+				(await page.locator(".entity.styled").count()) >= styledTables,
+				`${await page.locator(".entity.styled").count()} of ${styledTables}`,
+			);
+		}
+
+		check(
+			"its legend setting is honoured",
+			(await page.locator(".legend").count()) === (ownPresentation.viewer?.legend ? 1 : 0),
+		);
+
+		const described = ownPresentation.viewer?.descriptions && Object.keys(ownPresentation.descriptions?.columns ?? {}).length > 0;
+
+		if (described) {
+			check("its descriptions are shown", (await page.locator(".entity .desc").count()) > 0);
+		}
+
+		const overflowing = await page.locator(".entity").evaluateAll((els) =>
+			els.filter((e) => (e as HTMLElement).scrollWidth > (e as HTMLElement).clientWidth + 1).length,
+		);
+
+		check("its cards fit their content", overflowing === 0, `${overflowing} overflowing`);
+
+		await page.screenshot({ path: join(dir, "viewer-check-own-presentation.png") });
+
+		check("no console errors (own presentation)", errors.length === 0, errors.slice(0, 2).join(" | "));
+	} finally {
+		await context.close();
+		await writeFile(join(dir, "model.json"), descriptor, "utf8");
+	}
+}
 
 const browser = await chromium.launch();
 
@@ -799,6 +1146,19 @@ try {
 		check(`no console errors (${reducedMotion})`, errors.length === 0, errors.slice(0, 2).join(" | "));
 
 		await context.close();
+	}
+
+	// ── Presentation ──────────────────────────────────────────────────────────────────────────
+	//
+	// The AppHost writes a presentation beside the model's contexts: viewer defaults, layout, styles
+	// and descriptions. Everything above ran without one, which is the shape of a model written before
+	// it existed. Here the same model is served with one, built from whatever schema the check was
+	// given, so each option is proven to reach the drawing.
+
+	await checkPresentation();
+
+	if (ownPresentation) {
+		await checkOwnPresentation();
 	}
 } finally {
 	await browser.close();

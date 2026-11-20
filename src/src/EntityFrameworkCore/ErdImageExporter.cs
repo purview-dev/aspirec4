@@ -179,8 +179,9 @@ static class ErdImageExporter
 		// Checked before anything is written or run. The AppHost's own change detection resets every
 		// time it restarts, so without this a restart re-renders images that are already correct — and
 		// on the viewer path that means pulling and starting a multi-gigabyte browser for nothing.
+		// The presentation is part of what is rendered, so a style-only change re-renders the images too.
 		var stamp = ImageExportStamp.Compute(
-			ErdOutput.Serialise(model),
+			ErdOutput.Serialise(model, options),
 			options.FileName,
 			options.Renderer.ToString(),
 			viaViewer ? "viewer" : "d2",

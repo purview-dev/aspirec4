@@ -587,6 +587,22 @@ public sealed class AspireC4DiagramOptions
 	public List<Func<IconResolverContext, string?>> IconResolvers { get; } = [];
 
 	/// <summary>
+	/// Application-wide technology rules, consulted before the built-in technology catalogue: each names the
+	/// technology label, and optionally the icon, for every resource whose package, resource type or
+	/// container image it matches. Use them to correct a resource the catalogue gets wrong, or to name one it
+	/// does not know, once for the whole AppHost rather than on every resource.
+	/// </summary>
+	/// <remarks>
+	/// Rules are tried by kind — package, then resource type, then container image — and within a kind in
+	/// registration order; the first match wins. A technology or icon set on the resource itself through
+	/// <c>WithLikeC4Details</c>, and a custom <see cref="IconResolvers">icon resolver</see>, still win. Add
+	/// rules with <c>WithPackageTechnology</c>, <c>WithResourceTypeTechnology</c> and
+	/// <c>WithContainerImageTechnology</c>.
+	/// </remarks>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1002:Do not expose generic lists")]
+	public List<TechnologyOverride> TechnologyOverrides { get; } = [];
+
+	/// <summary>
 	/// When <see cref="GenerateConfigFile"/> is <see langword="true"/>, provides additional metadata to include in the generated config file.
 	/// </summary>
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2227:Collection properties should be read only")]

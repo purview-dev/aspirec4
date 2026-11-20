@@ -203,6 +203,24 @@ Set options in the `configure` callback or in the `AspireC4:EntityFramework` con
 | `ContainerRuntimeCommand` | `"docker"` | set to `podman` where Aspire uses Podman |
 | `GenerateGitIgnoreFile` | `true` | write a `.gitignore` naming the generated files; `WithoutGitIgnoreFileGeneration()` turns it off. See [Source control](Generated-Output.md#source-control) |
 
+### Styling, layout and descriptions
+
+Tables, columns, types and relationships can be styled by pattern, with a separate colour for the
+dark theme, and per-element callbacks can compute a style from the model on every regeneration. The
+layout direction, spacing, edge style, animation and the viewer's starting theme are configurable, and
+each table and column can show a description, off by default, taken from `[Description]`, `[Display]`
+or `[DisplayName]`, the XML `<summary>`, or the database comment. See
+[ER Diagram Styling](configuration/ER-Diagram-Styling.md) for every option and what each renderer
+applies.
+
+```csharp
+builder.AddAspireC4()
+       .WithEntityFrameworkDiagram(configure: options => options
+           .WithTableStyle("Order*", s => s.WithAccent("#dc2626", "#f87171"))
+           .WithLayout(ErdLayoutDirection.Right)
+           .WithDescriptions());
+```
+
 > [!IMPORTANT]
 > Set `OutputDirectory` in the callback rather than in configuration. The sidecar's bind mount is fixed
 > when the AppHost builder runs, so a value from configuration changes where files are written but not

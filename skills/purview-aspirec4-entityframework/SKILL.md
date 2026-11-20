@@ -6,8 +6,10 @@ description: >-
   discovered (assembly metadata, an analyzer descriptor, or the opt-in build-time dump), filtering and
   excluding DbContexts, domain types (Purview [Scalar] and [ValueObject] value objects, owned and JSON
   types, enums and C# unions) and the DomainTypeDisplay option, relationships through value-object keys,
-  the renderers, exporting the diagram as SVG and PNG on startup, and the dashboard integration. Also use
-  when a value object shows as a bare primitive, or a collection or complex type appears as a table.
+  the renderers, styling tables, columns, types and relationships (light/dark colours, rules and
+  callbacks), layout direction, spacing, edge style and animation, the optional description column,
+  exporting the diagram as SVG and PNG on startup, and the dashboard integration. Also use when a value
+  object shows as a bare primitive, or a collection or complex type appears as a table.
 metadata:
   product: AspireC4
   repository: purview-dev/aspirec4
@@ -216,6 +218,84 @@ The output path follows the architecture diagram: `WithLegacyLayout()` on `AddAs
 `./erd/gen/` as well, because there is no separate ER switch. An `OutputDirectory` set on
 `WithEntityFrameworkDiagram` still wins over either default. See `purview-aspirec4-configuration` for
 legacy mode.
+
+## Styling, layout and descriptions
+
+### Style rules
+
+A rule matches by pattern (`*` any run, `?` one character, case-insensitive) on any combination of
+`Context`, `Table` (table or entity name), `Column` and `Type`. `Type` matches the store type with or
+without its size, the domain type, the CLR type, or the kind (`enum`, `union`, `ValueObject`):
+
+```csharp
+builder.AddAspireC4().WithEntityFrameworkDiagram(configure: options => options
+    .WithTableStyle("Order*", s => s.WithAccent("#dc2626", "#f87171").WithBadge("SALES"))
+    .WithColumnStyle("Email", s => s.WithBadge("PII").WithTooltip("Personal data"), table: "Customers")
+    .WithTypeStyle("decimal", s => s.WithAccent("#16a34a"))
+    .WithStyle(r => r.ForTable("Order*").ForType("decimal").WithBold())         // combination
+    .WithStyle(r => r.ForColumn("TenantId").ForTables().WithBadge("TENANT"))    // tables that have it
+    .WithStyle(r => r.ForTable("Customers").ForRelationships().WithLineStyle(ErdLineStyle.Dotted)));
+```
+
+- **Target:** `Auto` styles columns when a column or type is named, else tables. `ForTables()` and
+  `ForRelationships()` override that. A relationship rule's table matches either end.
+- **Order:** rules apply in the order added, and a later match overrides only what it sets.
+- **Style properties:** `Accent` (table header and border, a bar beside a column, a relationship's
+  line), `Background`, `Foreground`, `Bold`, `Italic`, `LineStyle` (`Solid`/`Dashed`/`Dotted`),
+  `Badge` and `Tooltip`.
+- **Colours:** `WithAccent(light, dark?)`. One value covers both themes, and a missing side falls back
+  to the other. The viewer takes any CSS colour. Mermaid, d2 and DBML use only the **light, hex**
+  value, so prefer hex. Anything that is not a CSS colour throws `ArgumentException`. In configuration,
+  that silently drops the whole rule, because the binder ignores a failed list entry.
+- **Configuration:** rules bind from `AspireC4:EntityFramework:Styles` (`Table`, `Column`, `Type`,
+  `Context`, `Target`, `Style:Accent:Light`, …). Callbacks are code only.
+
+### Callbacks
+
+`OnTableStyle`, `OnColumnStyle` and `OnRelationshipStyle` run **after** the rules, in the AppHost, on
+every regeneration. A style computed from the model therefore follows the model as it changes. Each
+receives the element, its `DbContext`, the whole `Model` and the rule-produced `Style`, and changes the
+style in place:
+
+```csharp
+options.OnColumnStyle(ctx => { if (ctx.Column.IsForeignKey) ctx.Style.WithForeground("#2563eb"); })
+       .OnRelationshipStyle(ctx => { if (!ctx.ForeignKey.IsRequired) ctx.Style.WithLineStyle(ErdLineStyle.Dashed); });
+```
+
+Keep callbacks free of side effects: they can run more than once per regeneration, because image export
+renders separately. An exception is rethrown naming the element.
+
+### Layout, animation and viewer defaults
+
+| Option | Default | Notes |
+| --- | --- | --- |
+| `WithLayout(direction, nodeSpacing?, layerSpacing?, contextSpacing?)` | `Down`, `72`, `120`, `88` | direction reaches the viewer, d2 and Mermaid; spacing only the viewer. Sideways, a self-reference hangs below its card |
+| `WithEdgeStyle(...)` | `Bezier` | `SmoothStep`, `Step`, `Straight` |
+| `WithAnimation(edges, transitions?)` / `WithoutAnimation()` | `Normal`, `true` | flowing lines and gliding tables; reduced motion stops both |
+| `HighlightOnHover` | `true` | hovering a table fades everything unrelated |
+| `WithViewerDefaults(theme, background?, tables?)` | `Auto`, `Lines`, `Columns` | where the viewer starts; a reader's stored choice is kept only while the default it was made against is unchanged |
+| `WithLegend()` / `ShowTooltips` | `false` / `true` | legend of contexts, keys and style badges; hover detail on columns and headers |
+| `WithContextPalette(...)` | built-in six | per-`DbContext` colours, also used for Mermaid's fills |
+
+### Descriptions
+
+Off by default. `WithDescriptions(sources = All)` turns them on. The first source with a value wins:
+
+1. `Attributes`: `[Description]`, then `[Display(Description = …)]`, then `[DisplayName]`
+2. `XmlDocumentation`: the `<summary>`, or a positional record's `<param>`
+3. `Comments`: `[Comment]` / `HasComment`
+
+The analyzer reads XML documentation from source. The default metadata reader and the build-time dump
+read the documentation file instead, so the project needs `GenerateDocumentationFile`. The viewer shows a
+description column and a line under each table name, which the reader can toggle. Mermaid adds the
+description to the column comment, DBML to its notes, and d2 to the table tooltip.
+
+### Per renderer
+
+The interactive viewer applies everything. Mermaid writes a `style` line per styled table and
+`direction`. d2 writes table `style` (the accent is the header `fill`, a background the rows' `stroke`),
+edge style, a tooltip and `direction`. DBML writes `headercolor` and notes. No text format styles
+individual columns. An unstyled diagram is byte-for-byte unchanged in every format.
 
 ## Renderers
 
