@@ -25,6 +25,24 @@ public sealed class MermaidValidationTests
 	{
 		_tempDir = Path.Combine(Path.GetTempPath(), $"aspirec4-mmd-{Guid.NewGuid():N}");
 		Directory.CreateDirectory(_tempDir);
+
+		// mermaid-cli runs as its own non-root user, which cannot write into a folder another user
+		// created with the default 755 (on Linux, and the e2e images run the tests as root).
+		if (!OperatingSystem.IsWindows())
+		{
+			File.SetUnixFileMode(
+				_tempDir,
+				UnixFileMode.UserRead
+					| UnixFileMode.UserWrite
+					| UnixFileMode.UserExecute
+					| UnixFileMode.GroupRead
+					| UnixFileMode.GroupWrite
+					| UnixFileMode.GroupExecute
+					| UnixFileMode.OtherRead
+					| UnixFileMode.OtherWrite
+					| UnixFileMode.OtherExecute
+			);
+		}
 	}
 
 	[After(Test)]
