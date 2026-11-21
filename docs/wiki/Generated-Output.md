@@ -42,6 +42,11 @@ documentation. The screenshots embedded in this repository's READMEs and wiki pa
 to refresh them. See [Configuration](configuration/README.md) for `ImageExportDirectory`, `ImageFormats` and
 `WithoutImageExport()`.
 
+On Linux and macOS the images belong to the user who ran the AppHost, as any other file it writes
+would. The export containers do not all run as that user: d2 is started as it, while the LikeC4 and
+Playwright images must run as root and hand the files they wrote back before they exit. Without that, a
+rootful Docker daemon on Linux would leave root-owned images you could not overwrite.
+
 ## Source control
 
 AspireC4 writes a `.gitignore` beside what it generates, so a repository that adopts it needs no
