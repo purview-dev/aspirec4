@@ -53,12 +53,26 @@ sealed partial class AspireC4LifecycleHook
 		var resolution = await LatestVersionResolver.TryResolveFromContainerAsync(
 			opts.ContainerRuntimeCommand,
 			LikeC4ServerResource.GetImageReference(tag),
-			opts.ExternalProcessTimeoutSeconds,
+			ContainerProbeTimeoutSeconds(opts.ExternalProcessTimeoutSeconds),
 			cancellationToken
 		);
 
 		RecordVersion(resolution, fallback: tag);
 	}
+
+	/// <summary>
+	/// The smallest budget the container probe gets, because it includes the image pull.
+	/// </summary>
+	/// <remarks>
+	/// <see cref="AspireC4DiagramOptions.ExternalProcessTimeoutSeconds"/> is sized for the formatter, but
+	/// a first pull of the LikeC4 image alone can outlast it, which left a fresh machine showing
+	/// <c>latest</c>. The pull is not wasted: the server would wait for the same image before starting.
+	/// </remarks>
+	internal const int ContainerProbeMinimumTimeoutSeconds = 300;
+
+	/// <summary>The probe's timeout: the configured one, but never less than the pull budget.</summary>
+	internal static int ContainerProbeTimeoutSeconds(int externalProcessTimeoutSeconds) =>
+		Math.Max(externalProcessTimeoutSeconds, ContainerProbeMinimumTimeoutSeconds);
 
 	/// <summary>Whether the container has to be asked for its version rather than trusting the tag.</summary>
 	internal static bool ShouldProbeContainerVersion(string tag, bool checkLatestImageVersion) =>

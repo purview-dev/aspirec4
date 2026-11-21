@@ -160,7 +160,13 @@ public sealed class ErdImageExporterTests
 		var images = P("apphost", ".aspirec4", "images");
 
 		// Act
-		var (command, arguments) = ErdImageExporter.BuildInvocation(options, directory, images, ErdImageFormat.Svg);
+		var (command, arguments) = ErdImageExporter.BuildInvocation(
+			options,
+			directory,
+			images,
+			ErdImageFormat.Svg,
+			containerUser: null
+		);
 
 		// Assert
 		await Assert.That(command).IsEqualTo("docker");
@@ -179,6 +185,50 @@ public sealed class ErdImageExporterTests
 				"/data/schema.gen.d2",
 				"/out/schema.svg",
 			]);
+	}
+
+	[Test]
+	public async Task BuildInvocation_WithAContainerUser_RunsTheD2ContainerAsThatUser()
+	{
+		// The d2 image's own user cannot write into a folder owned by anyone else, and fixuid remaps it
+		// to whatever --user passes, so the image belongs to whoever ran the AppHost.
+		// Arrange
+		var options = CreateOptions();
+		var directory = P("apphost", ".aspirec4", "erd");
+		var images = P("apphost", ".aspirec4", "images");
+
+		// Act
+		var (_, arguments) = ErdImageExporter.BuildInvocation(
+			options,
+			directory,
+			images,
+			ErdImageFormat.Svg,
+			containerUser: "1000:1000"
+		);
+
+		// Assert
+		await Assert.That(arguments.Take(4)).IsEquivalentTo(["run", "--rm", "--user", "1000:1000"]);
+	}
+
+	[Test]
+	public async Task BuildInvocation_WithALocalCommand_IgnoresTheContainerUser()
+	{
+		// Arrange
+		var options = CreateOptions(d2Command: "d2");
+		var directory = P("apphost", ".aspirec4", "erd");
+		var images = P("apphost", ".aspirec4", "images");
+
+		// Act
+		var (_, arguments) = ErdImageExporter.BuildInvocation(
+			options,
+			directory,
+			images,
+			ErdImageFormat.Svg,
+			containerUser: "1000:1000"
+		);
+
+		// Assert
+		await Assert.That(arguments).DoesNotContain("--user");
 	}
 
 	[Test]

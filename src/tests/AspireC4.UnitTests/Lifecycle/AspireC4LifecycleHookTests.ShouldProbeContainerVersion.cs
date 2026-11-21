@@ -34,4 +34,25 @@ public sealed partial class AspireC4LifecycleHookTests
 		// Assert
 		await Assert.That(result).IsFalse();
 	}
+
+	[Test]
+	public async Task ContainerProbeTimeoutSeconds_WithTheFormatterDefault_AllowsForTheImagePull()
+	{
+		// The probe pulls the image, which a 30 s formatter budget does not cover on a fresh machine.
+		// Act
+		var result = AspireC4LifecycleHook.ContainerProbeTimeoutSeconds(30);
+
+		// Assert
+		await Assert.That(result).IsEqualTo(AspireC4LifecycleHook.ContainerProbeMinimumTimeoutSeconds);
+	}
+
+	[Test]
+	public async Task ContainerProbeTimeoutSeconds_WithALargerConfiguredTimeout_UsesIt()
+	{
+		// Act
+		var result = AspireC4LifecycleHook.ContainerProbeTimeoutSeconds(900);
+
+		// Assert
+		await Assert.That(result).IsEqualTo(900);
+	}
 }

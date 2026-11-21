@@ -64,6 +64,29 @@ public sealed class ErdViewerImageExporterTests
 	}
 
 	[Test]
+	public async Task BuildInvocation_WithAContainerUser_HandsTheImagesBackAfterRunningTheScript()
+	{
+		// The Playwright image runs as root; on Linux the images would otherwise be root's.
+		// Act
+		var (_, arguments) = ErdViewerImageExporter.BuildInvocation(
+			CreateOptions(),
+			P("apphost", ".aspirec4", "erd"),
+			P("apphost", ".aspirec4", "images"),
+			P("tmp", "viewer-export.mjs"),
+			[ErdImageFormat.Svg],
+			containerUser: "1000:1000"
+		);
+
+		// Assert
+		var image = arguments.ToList().IndexOf(ErdViewerImageExporter.ImageReference(CreateOptions()));
+		await Assert.That(arguments.Skip(image - 2).Take(2)).IsEquivalentTo(["--entrypoint", "sh"]);
+		await Assert.That(arguments[image + 2]).Contains("chown 1000:1000");
+		await Assert
+			.That(arguments.Skip(image + 4))
+			.IsEquivalentTo(["node", ErdViewerImageExporter.ContainerScriptPath, "svg", "schema"]);
+	}
+
+	[Test]
 	public async Task BuildInvocation_MountsTheViewerReadOnlyAndImagesWritable()
 	{
 		// The viewer is only read; the images directory is the only thing the container may write to.

@@ -60,12 +60,22 @@ static class ErdViewerImageExporter
 	/// One invocation for all formats rather than one each: starting a browser and laying the diagram
 	/// out again dominates the cost, and the viewer can produce both files from a single render.
 	/// </remarks>
+	/// <param name="options">The diagram options.</param>
+	/// <param name="viewerDirectory">The generated viewer to render.</param>
+	/// <param name="imageDirectory">Where the images are written.</param>
+	/// <param name="scriptPath">The export script on the host.</param>
+	/// <param name="formats">The formats to write.</param>
+	/// <param name="containerUser">
+	/// The <c>uid:gid</c> the container hands its images to, normally <see cref="HostUser.ContainerUser"/>;
+	/// <see langword="null"/> leaves them as the container wrote them.
+	/// </param>
 	internal static (string Command, IReadOnlyList<string> Arguments) BuildInvocation(
 		AspireC4EfDiagramOptions options,
 		string viewerDirectory,
 		string imageDirectory,
 		string scriptPath,
-		IReadOnlyList<ErdImageFormat> formats
+		IReadOnlyList<ErdImageFormat> formats,
+		string? containerUser = null
 	)
 	{
 		ArgumentNullException.ThrowIfNull(options);
@@ -73,6 +83,18 @@ static class ErdViewerImageExporter
 		ArgumentException.ThrowIfNullOrWhiteSpace(imageDirectory);
 		ArgumentException.ThrowIfNullOrWhiteSpace(scriptPath);
 		ArgumentNullException.ThrowIfNull(formats);
+
+		// The Playwright image runs as root, so on Linux its images would be root's; see HostUser.
+		var (beforeImage, afterImage) = HostUser.HandBackOwnership(
+			containerUser,
+			ContainerOutputPath,
+			[
+				"node",
+				ContainerScriptPath,
+				string.Join(",", formats.Select(ErdImageExporter.Extension)),
+				ErdImageExporter.ImageBaseName(options.FileName),
+			]
+		);
 
 		return (
 			options.ContainerRuntimeCommand,
@@ -90,11 +112,9 @@ static class ErdViewerImageExporter
 				// Chromium's sandbox needs privileges the container does not have, and the page being
 				// rendered is one this package generated from the consumer's own model.
 				"--ipc=host",
+				.. beforeImage,
 				ImageReference(options),
-				"node",
-				ContainerScriptPath,
-				string.Join(",", formats.Select(ErdImageExporter.Extension)),
-				ErdImageExporter.ImageBaseName(options.FileName),
+				.. afterImage,
 			]
 		);
 	}
@@ -135,7 +155,14 @@ static class ErdViewerImageExporter
 			await File.WriteAllTextAsync(scriptPath, InteractiveViewer.ViewerExportScript(), cancellationToken)
 				.ConfigureAwait(false);
 
-			var (command, arguments) = BuildInvocation(options, viewerDirectory, imageDirectory, scriptPath, formats);
+			var (command, arguments) = BuildInvocation(
+				options,
+				viewerDirectory,
+				imageDirectory,
+				scriptPath,
+				formats,
+				HostUser.ContainerUser
+			);
 			var browserImage = ImageReference(options);
 
 			ErdLog.ViewerImageExportStarted(logger, browserImage);

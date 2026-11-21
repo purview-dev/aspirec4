@@ -12,6 +12,11 @@ namespace Aspire.Hosting.AspireC4.LikeC4.Generators;
 /// writes it to a temporary project directory, runs the validator and asserts that the
 /// number of validation errors in the generated file is zero.
 /// </summary>
+/// <remarks>
+/// Serialised with the other <c>npx likec4 validate</c> caller: concurrent installs into a cold npx
+/// cache collide with <c>ENOTEMPTY</c> in <c>~/.npm/_npx</c>.
+/// </remarks>
+[NotInParallel("npx-likec4-validate")]
 public sealed class LikeC4DSLValidationTests
 {
 	static readonly AspireC4DiagramOptions DefaultOptions = new()

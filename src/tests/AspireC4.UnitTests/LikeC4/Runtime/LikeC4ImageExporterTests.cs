@@ -141,6 +141,61 @@ public sealed class LikeC4ImageExporterTests
 	}
 
 	[Test]
+	public async Task BuildInvocation_InContainerModeWithNoUser_UsesTheImagesOwnEntrypoint()
+	{
+		// Arrange
+		var options = CreateOptions();
+		var outputDirectory = OutputDirectory();
+		var imageDirectory = Path.Combine(outputDirectory, "images");
+		var image = $"ghcr.io/likec4/likec4:{LikeC4ServerResource.DefaultTag}";
+
+		// Act
+		var (_, arguments, _) = LikeC4ImageExporter.BuildInvocation(
+			options,
+			outputDirectory,
+			outputDirectory,
+			imageDirectory,
+			LikeC4ImageFormat.Png,
+			localCLI: null,
+			containerUser: null
+		);
+
+		// Assert
+		await Assert.That(arguments).DoesNotContain("--entrypoint");
+		await Assert.That(arguments[arguments.ToList().IndexOf(image) + 1]).IsEqualTo("export");
+	}
+
+	[Test]
+	public async Task BuildInvocation_InContainerModeWithAUser_RunsTheCLIThenHandsTheImagesBack()
+	{
+		// The LikeC4 image runs as root and cannot run as anyone else (Vite writes into its own
+		// node_modules), so the images it wrote are chowned to the AppHost's user before it exits.
+		// Arrange
+		var options = CreateOptions();
+		var outputDirectory = OutputDirectory();
+		var imageDirectory = Path.Combine(outputDirectory, "images");
+		var image = $"ghcr.io/likec4/likec4:{LikeC4ServerResource.DefaultTag}";
+
+		// Act
+		var (_, arguments, _) = LikeC4ImageExporter.BuildInvocation(
+			options,
+			outputDirectory,
+			outputDirectory,
+			imageDirectory,
+			LikeC4ImageFormat.Png,
+			localCLI: null,
+			containerUser: "1000:1000"
+		);
+
+		// Assert
+		var index = arguments.ToList().IndexOf(image);
+		await Assert.That(arguments.Skip(index - 2).Take(2)).IsEquivalentTo(["--entrypoint", "sh"]);
+		await Assert.That(arguments[index + 2]).Contains("chown 1000:1000");
+		await Assert.That(arguments[index + 4]).IsEqualTo(LikeC4ImageExporter.ImageEntrypoint);
+		await Assert.That(arguments[index + 5]).IsEqualTo("export");
+	}
+
+	[Test]
 	public async Task BuildInvocation_InContainerMode_MountsSourcesReadOnlyAndImagesWritable()
 	{
 		// The source tree is read-only for the same reason the server's mount is: an export must not

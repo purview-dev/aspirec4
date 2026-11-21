@@ -15,15 +15,23 @@ static class LatestVersionResolver
 	/// this method splits on <c>'/'</c> and <c>' '</c> and returns the first token that
 	/// <see cref="HMRPortCompatibility.TryParseVersion"/> accepts (e.g. <c>"1.57.0"</c>).
 	/// </summary>
+	/// <remarks>
+	/// Lines are read from the last one back. A package manager prints its own progress first —
+	/// <c>yarn dlx</c> opens with <c>Yarn 4.18.0</c> — and the CLI's version comes last, so the first
+	/// version-like token in the output can belong to the package manager rather than to LikeC4.
+	/// </remarks>
 	public static bool TryExtractVersion(string cliOutput, out string versionToken)
 	{
-		var parts = cliOutput.Split(['/', ' ', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries);
-		foreach (var part in parts)
+		var lines = cliOutput.Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries);
+		for (var i = lines.Length - 1; i >= 0; i--)
 		{
-			if (HMRPortCompatibility.TryParseVersion(part, out _))
+			foreach (var part in lines[i].Split(['/', ' '], StringSplitOptions.RemoveEmptyEntries))
 			{
-				versionToken = part;
-				return true;
+				if (HMRPortCompatibility.TryParseVersion(part, out _))
+				{
+					versionToken = part;
+					return true;
+				}
 			}
 		}
 

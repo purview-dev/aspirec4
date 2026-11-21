@@ -76,13 +76,21 @@ static class ErdImageExporter
 	/// </summary>
 	/// <remarks>
 	/// The container variant mounts the source read-only and the images directory writable, so the
-	/// invocation can only write where the image is meant to go.
+	/// invocation can only write where the image is meant to go, and runs as
+	/// <paramref name="containerUser"/> so the image can write there at all (see <see cref="HostUser"/>).
 	/// </remarks>
+	/// <param name="options">The diagram options.</param>
+	/// <param name="outputDirectory">Where the d2 source lives.</param>
+	/// <param name="imageDirectory">Where the image is written.</param>
+	/// <param name="format">The image format to render.</param>
+	/// <param name="containerUser">The <c>uid:gid</c> the container runs as, normally
+	/// <see cref="HostUser.ContainerUser"/>, or <see langword="null"/> for the image's default user.</param>
 	internal static (string Command, IReadOnlyList<string> Arguments) BuildInvocation(
 		AspireC4EfDiagramOptions options,
 		string outputDirectory,
 		string imageDirectory,
-		ErdImageFormat format
+		ErdImageFormat format,
+		string? containerUser = null
 	)
 	{
 		ArgumentNullException.ThrowIfNull(options);
@@ -108,6 +116,7 @@ static class ErdImageExporter
 			[
 				"run",
 				"--rm",
+				.. containerUser is null ? Array.Empty<string>() : ["--user", containerUser],
 				// --mount rather than -v: a Windows host path already contains a colon, so
 				// "C:\…\erd:/data:ro" leaves the runtime guessing where the drive letter ends and the
 				// mode begins, and it guesses wrong. --mount parses key=value and cannot be ambiguous.
@@ -232,7 +241,13 @@ static class ErdImageExporter
 			foreach (var format in formats)
 			{
 				var image = Path.Combine(imageDirectory, $"{ImageBaseName(options.FileName)}.{Extension(format)}");
-				var (command, arguments) = BuildInvocation(options, outputDirectory, imageDirectory, format);
+				var (command, arguments) = BuildInvocation(
+					options,
+					outputDirectory,
+					imageDirectory,
+					format,
+					HostUser.ContainerUser
+				);
 
 				if (await RunAsync(command, arguments, options, logger, cancellationToken).ConfigureAwait(false))
 				{

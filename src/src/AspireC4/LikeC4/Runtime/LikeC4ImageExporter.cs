@@ -70,13 +70,18 @@ static class LikeC4ImageExporter
 	/// The host command and argument prefix when running the local CLI, or <see langword="null"/> to run
 	/// the one-shot container.
 	/// </param>
+	/// <param name="containerUser">
+	/// The <c>uid:gid</c> the container hands its images to, normally <see cref="HostUser.ContainerUser"/>;
+	/// <see langword="null"/> leaves them as the container wrote them.
+	/// </param>
 	internal static (string Command, IReadOnlyList<string> Arguments, string WorkingDirectory) BuildInvocation(
 		AspireC4DiagramOptions options,
 		string outputDirectory,
 		string serveDirectory,
 		string imageDirectory,
 		LikeC4ImageFormat format,
-		(string Command, string[] Prefix)? localCLI
+		(string Command, string[] Prefix)? localCLI,
+		string? containerUser = null
 	)
 	{
 		ArgumentNullException.ThrowIfNull(options);
@@ -108,6 +113,13 @@ static class LikeC4ImageExporter
 		var containerServePath = ToContainerPath(workspaceRoot, serveDirectory);
 		var tag = options.ContainerImageTag ?? LikeC4ServerResource.DefaultTag;
 
+		// The image runs as root, so on Linux its images would be root's; see HostUser.
+		var (beforeImage, afterImage) = HostUser.HandBackOwnership(
+			containerUser,
+			ContainerOutputPath,
+			[ImageEntrypoint, .. ExportArguments(FormatName(format), ContainerOutputPath, containerServePath)]
+		);
+
 		return (
 			options.ContainerRuntimeCommand,
 			[
@@ -125,12 +137,17 @@ static class LikeC4ImageExporter
 				new ContainerBindMount(imageDirectory, ContainerOutputPath).ToString(),
 				"--workdir",
 				ToContainerPath(workspaceRoot, outputDirectory),
+				.. beforeImage,
 				LikeC4ServerResource.GetImageReference(tag),
-				.. ExportArguments(FormatName(format), ContainerOutputPath, containerServePath),
+				// Without a hand-back the image's own entrypoint is the CLI, so drop it from the command.
+				.. beforeImage.Count == 0 ? afterImage.Skip(1) : afterImage,
 			],
 			workspaceRoot
 		);
 	}
+
+	/// <summary>The LikeC4 image's entrypoint, the CLI itself.</summary>
+	internal const string ImageEntrypoint = "/usr/local/bin/likec4";
 
 	static IReadOnlyList<string> ExportArguments(string format, string imageDirectory, string serveDirectory) =>
 		[
@@ -248,7 +265,8 @@ static class LikeC4ImageExporter
 					serveDirectory,
 					staging,
 					format,
-					localCLI
+					localCLI,
+					HostUser.ContainerUser
 				);
 
 				telemetry.ExportingImages(name, imageDirectory);
