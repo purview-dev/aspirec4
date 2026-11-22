@@ -48,8 +48,12 @@ sealed partial class AspireC4LifecycleHook(
 	// e.g. "http://localhost:51234/view/index". Used by the dashboard command handler.
 	volatile string? _diagramUrl;
 
-	// Debounce: cancels any pending delayed write when a new state change arrives.
-	CancellationTokenSource? _debounceCts;
+	// Debounce: runs one write once a burst of state changes has settled, superseding the write of a
+	// generation that a newer state change replaced. It owns its token source, so a superseded
+	// generation no longer reads a disposed token and reports a regeneration failure that never was.
+	readonly DebouncedWorkScheduler _regenerationScheduler = new(TimeSpan.FromMilliseconds(300), work =>
+		_ = Task.Run(work, CancellationToken.None)
+	);
 
 	// The header-stripped body of the last .c4 file written to disk.
 	// Used to skip writes when the generated content has not changed, preventing needless
@@ -60,8 +64,6 @@ sealed partial class AspireC4LifecycleHook(
 	// Set either from a pinned ContainerImageTag or by the latest-version check at startup.
 	// When non-null, it is injected as a "Version" metadata property on the AspireC4Resource.
 	volatile string? _resolvedLikeC4Version;
-
-	readonly Lock _debounceLock = new();
 
 	public Task SubscribeAsync(
 		IDistributedApplicationEventing eventing,

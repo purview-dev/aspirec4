@@ -122,7 +122,8 @@ sealed partial class AspireC4LifecycleHook
 										}
 									),
 								}
-							));
+							)
+					);
 				}
 
 				break; // Only inject once — the URL persists in the snapshot.
@@ -356,39 +357,31 @@ sealed partial class AspireC4LifecycleHook
 #pragma warning restore CA1031
 	}
 
+	/// <summary>
+	/// Requests a diagram regeneration once the current burst of state changes has settled, superseding
+	/// a regeneration that is still waiting.
+	/// </summary>
 	void ScheduleRegeneration(DistributedApplicationModel appModel, CancellationToken cancellationToken)
 	{
-		CancellationTokenSource newCts;
-		lock (_debounceLock)
+		_regenerationScheduler.Schedule(async () =>
 		{
-			_debounceCts?.Cancel();
-			_debounceCts?.Dispose();
-			newCts = _debounceCts = new CancellationTokenSource();
-		}
-
-		_ = Task.Run(
-			async () =>
+			try
 			{
-				try
-				{
-					await Task.Delay(TimeSpan.FromMilliseconds(300), newCts.Token);
-					telemetry.RegeneratingDiagramDueToStateChange();
-					await WriteC4FileAsync(appModel, cancellationToken);
-				}
-				catch (OperationCanceledException)
-				{
-					// Debounced — a newer state change superseded this one.
-				}
+				telemetry.RegeneratingDiagramDueToStateChange();
+				await WriteC4FileAsync(appModel, cancellationToken);
+			}
+			catch (OperationCanceledException)
+			{
+				// Normal on shutdown.
+			}
 #pragma warning disable CA1031 // intentional: a failed regeneration must not become an unobserved task exception
-				catch (Exception ex)
-				{
-					// The next state change schedules another attempt, so this is reported, not retried.
-					telemetry.DiagramRegenerationFailed(ex);
-					ReportToDashboard("AspireC4 could not regenerate the architecture diagram", ex);
-				}
+			catch (Exception ex)
+			{
+				// The next state change schedules another attempt, so this is reported, not retried.
+				telemetry.DiagramRegenerationFailed(ex);
+				ReportToDashboard("AspireC4 could not regenerate the architecture diagram", ex);
+			}
 #pragma warning restore CA1031
-			},
-			CancellationToken.None
-		);
+		});
 	}
 }

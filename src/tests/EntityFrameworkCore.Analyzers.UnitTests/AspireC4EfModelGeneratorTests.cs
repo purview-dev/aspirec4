@@ -13,27 +13,26 @@ public sealed partial class AspireC4EfModelGeneratorTests
 		string entities = "public class User { public int Id { get; set; } public string Name { get; set; } }",
 		string sets = "public DbSet<User> Users { get; set; }",
 		string onModelCreating = ""
-	) =>
-		$$"""
-			using System;
-			using System.Collections.Generic;
-			using Microsoft.EntityFrameworkCore;
-			using TestAnnotations;
+	) => $$"""
+		using System;
+		using System.Collections.Generic;
+		using Microsoft.EntityFrameworkCore;
+		using TestAnnotations;
 
-			namespace Sample;
+		namespace Sample;
 
-			{{entities}}
+		{{entities}}
 
-			public class AppDbContext : DbContext
+		public class AppDbContext : DbContext
+		{
+			{{sets}}
+
+			protected override void OnModelCreating(ModelBuilder modelBuilder)
 			{
-				{{sets}}
-
-				protected override void OnModelCreating(ModelBuilder modelBuilder)
-				{
-					{{onModelCreating}}
-				}
+				{{onModelCreating}}
 			}
-			""";
+		}
+		""";
 
 	async Task<string> GenerateDescriptorAsync(string source, CancellationToken cancellationToken)
 	{

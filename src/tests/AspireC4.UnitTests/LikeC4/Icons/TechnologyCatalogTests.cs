@@ -107,20 +107,19 @@ public sealed partial class TechnologyCatalogTests
 		return project;
 	}
 
-	static string CreateAssets(string dependencies = "", string frameworkReferences = "") =>
-		$$"""
-			{
-			  "version": 3,
-			  "project": {
-			    "frameworks": {
-			      "net10.0": {
-			        "dependencies": { {{dependencies}} },
-			        "frameworkReferences": { {{frameworkReferences}} }
-			      }
-			    }
-			  }
-			}
-			""";
+	static string CreateAssets(string dependencies = "", string frameworkReferences = "") => $$"""
+		{
+		  "version": 3,
+		  "project": {
+		    "frameworks": {
+		      "net10.0": {
+		        "dependencies": { {{dependencies}} },
+		        "frameworkReferences": { {{frameworkReferences}} }
+		      }
+		    }
+		  }
+		}
+		""";
 
 	static ProjectDirectory CreatePackageJson(params string[] dependencies) =>
 		new(
